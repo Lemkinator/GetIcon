@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.GetIcon" parent="OneUITheme">
+        <item name="colorPrimary">@color/primary_color_themed</item>
+        <item name="colorPrimaryDark">@color/primary_dark_color_themed</item>
+    </style>
+
+    <style name="Theme.GetIcon.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/oui_round_and_bgcolor</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher</item>
+        <item name="windowSplashScreenAnimationDuration">800</item>
+        <item name="postSplashScreenTheme">@style/Theme.GetIcon</item>
+    </style>
+
+    <style name="ButtonStyle.Colored" parent="OneUI.ButtonStyleColored">
+        <item name="android:backgroundTint">@color/primary_color_themed</item>
+        <item name="android:textColor">@color/primary_text_icon_color</item>
+        <item name="android:drawableTint">@color/primary_text_icon_color</item>
+        <item name="tint">@color/primary_text_icon_color</item>
+    </style>
+
+    <style name="ButtonStyle.Transparent" parent="OneUI.ButtonStyleTransparent">
+        <item name="android:backgroundTint">@android:color/transparent</item>
+        <item name="android:textColor">@color/primary_color_themed</item>
+        <item name="android:drawableTint">@color/primary_color_themed</item>
+        <item name="tint">@color/primary_color_themed</item>
+    </style>
+
+    <style name="ButtonStyle.Filled" parent="Widget.AppCompat.Button">
+        <item name="android:backgroundTint">@color/filled_background_color</item>
+        <item name="android:textColor">@color/primary_text_icon_color_themed</item>
+        <item name="android:drawableTint">@color/primary_text_icon_color_themed</item>
+        <item name="tint">@color/primary_text_icon_color_themed</item>
+    </style>
+
+</resources>
