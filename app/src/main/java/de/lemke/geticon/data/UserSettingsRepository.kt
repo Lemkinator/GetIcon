@@ -27,6 +27,7 @@ class UserSettingsRepository @Inject constructor(
             it[KEY_AUTO_DARK_MODE] = newSettings.autoDarkMode
             it[KEY_TOS_ACCEPTED] = newSettings.tosAccepted
             it[KEY_DEV_MODE_ENABLED] = newSettings.devModeEnabled
+            it[KEY_SEARCH] = newSettings.search
             it[KEY_SHOW_SYSTEM_APPS] = newSettings.showSystemApps
             it[KEY_MASK] = newSettings.mask
             it[KEY_COLOR_ENABLED] = newSettings.colorEnabled
@@ -44,6 +45,7 @@ class UserSettingsRepository @Inject constructor(
         autoDarkMode = prefs[KEY_AUTO_DARK_MODE] ?: true,
         tosAccepted = prefs[KEY_TOS_ACCEPTED] ?: false,
         devModeEnabled = prefs[KEY_DEV_MODE_ENABLED] ?: false,
+        search = prefs[KEY_SEARCH] ?: "",
         showSystemApps = prefs[KEY_SHOW_SYSTEM_APPS] ?: false,
         mask = prefs[KEY_MASK] ?: true,
         colorEnabled = prefs[KEY_COLOR_ENABLED] ?: false,
@@ -59,6 +61,7 @@ class UserSettingsRepository @Inject constructor(
         private val KEY_AUTO_DARK_MODE = booleanPreferencesKey("autoDarkMode")
         private val KEY_TOS_ACCEPTED = booleanPreferencesKey("tosAccepted")
         private val KEY_DEV_MODE_ENABLED = booleanPreferencesKey("devModeEnabled")
+        private val KEY_SEARCH = stringPreferencesKey("search")
         private val KEY_SHOW_SYSTEM_APPS = booleanPreferencesKey("showSystemApps")
         private val KEY_MASK = booleanPreferencesKey("mask")
         private val KEY_COLOR_ENABLED = booleanPreferencesKey("colorEnabled")
@@ -81,6 +84,8 @@ data class UserSettings(
     val tosAccepted: Boolean,
     /** devMode enabled */
     val devModeEnabled: Boolean,
+    /** search */
+    val search: String,
     /** show system apps*/
     val showSystemApps: Boolean,
     /** mask*/

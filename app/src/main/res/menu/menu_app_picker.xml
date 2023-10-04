@@ -2,11 +2,15 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
-
+    <item
+        android:id="@+id/menu_item_search"
+        android:icon="@drawable/ic_oui_search"
+        app:showAsAction="always"
+        android:title="@string/search"
+        tools:ignore="AlwaysShowAction,AppCompatResource" />
     <item
         android:id="@+id/menu_apppicker_system"
         android:title="@string/show_system_apps"
         app:showAsAction="never"
         tools:ignore="AppCompatResource" />
-
 </menu>

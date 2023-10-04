@@ -4,9 +4,9 @@
     <string name="ok" translatable="false" tools:ignore="ButtonCase,Typos">Ok</string>
     <string name="sesl_cancel">Cancel</string>
     <string name="sesl_navigate_up">Back</string>
-    <string name="settings">Settings</string>
 
-    <string name="all_apps">All apps</string>
     <string name="show_system_apps">Show system apps</string>
     <string name="hide_system_apps">Hide system apps</string>
+    <string name="search">Search</string>
+    <string name="no_entry">No entry</string>
 </resources>

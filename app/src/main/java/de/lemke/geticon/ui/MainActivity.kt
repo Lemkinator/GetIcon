@@ -1,5 +1,7 @@
 package de.lemke.geticon.ui
 
+import android.app.SearchManager
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -13,19 +15,30 @@ import android.os.Environment
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.CompoundButton
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SeslProgressBar
+import androidx.appcompat.widget.SearchView
 import androidx.apppickerview.widget.AppPickerView
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
+import com.airbnb.lottie.LottieProperty
+import com.airbnb.lottie.SimpleColorFilter
+import com.airbnb.lottie.model.KeyPath
+import com.airbnb.lottie.value.LottieValueCallback
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityMainBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import de.lemke.geticon.domain.setCustomOnBackPressedLogic
+import dev.oneuiproject.oneui.layout.ToolbarLayout
 import dev.oneuiproject.oneui.widget.Toast
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -36,16 +49,13 @@ import javax.inject.Inject
 
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity(), AppPickerView.OnBindListener {
+class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private var listType = AppPickerView.TYPE_GRID
+    private val backPressEnabled = MutableStateFlow(false)
     private var showSystemApps = false
-    private val items: MutableList<Boolean> = ArrayList()
-    private var isAllAppsSelected = false
-    private var checkedPosition = 0
-    private lateinit var appPickerView: AppPickerView
-    private lateinit var progress: SeslProgressBar
+    private var search: String? = null
     private var time: Long = 0
+    private var refreshAppsJob: Job? = null
     private var isUIReady = false
 
     private val iconSize = 512
@@ -101,272 +111,216 @@ class MainActivity : AppCompatActivity(), AppPickerView.OnBindListener {
             }
         }*/
 
-        progress = binding.apppickerProgress
-        appPickerView = binding.apppickerList
-        appPickerView.itemAnimator = null
-        appPickerView.seslSetSmoothScrollEnabled(true)
+
         lifecycleScope.launch {
-            binding.maskedCheckbox.isChecked = getUserSettings().mask
-            binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                lifecycleScope.launch { updateUserSettings { it.copy(mask = isChecked) } }
-            }
-            binding.colorCheckbox.isChecked = getUserSettings().colorEnabled
-            binding.colorCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                lifecycleScope.launch { updateUserSettings { it.copy(colorEnabled = isChecked) } }
-            }
-            binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(getUserSettings().recentBackgroundColors.first())
-            binding.colorButtonBackground.setOnClickListener {
-                lifecycleScope.launch {
-                    val userSettings = getUserSettings()
-                    val dialog = SeslColorPickerDialog(
-                        this@MainActivity,
-                        { color: Int ->
-                            val recentColors = userSettings.recentBackgroundColors.toMutableList()
-                            if (recentColors.size >= 6) recentColors.removeAt(5)
-                            recentColors.add(0, color)
-                            lifecycleScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
-                            binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(color)
-                        },
-                        userSettings.recentBackgroundColors.first(), buildIntArray(userSettings.recentBackgroundColors), true
-                    )
-                    dialog.setTransparencyControlEnabled(true)
-                    dialog.show()
-                }
-            }
-            binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(getUserSettings().recentForegroundColors.first())
-            binding.colorButtonForeground.setOnClickListener {
-                lifecycleScope.launch {
-                    val userSettings = getUserSettings()
-                    val dialog = SeslColorPickerDialog(
-                        this@MainActivity,
-                        { color: Int ->
-                            val recentColors = userSettings.recentForegroundColors.toMutableList()
-                            if (recentColors.size >= 6) recentColors.removeAt(5)
-                            recentColors.add(0, color)
-                            lifecycleScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
-                            binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(color)
-                        },
-                        userSettings.recentForegroundColors.first(), buildIntArray(userSettings.recentForegroundColors), true
-                    )
-                    dialog.setTransparencyControlEnabled(true)
-                    dialog.show()
-                }
-            }
+            setCustomOnBackPressedLogic(triggerStateFlow = backPressEnabled, onBackPressedLogic = { checkBackPressed() })
             showSystemApps = getUserSettings().showSystemApps
-            fillListView()
+            initSettingsViews()
+            initAppPicker()
+            binding.toolbarLayout.setSearchModeListener(SearchModeListener())
+            binding.toolbarLayout.searchView.setSearchableInfo(
+                (getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName)
+            )
             isUIReady = true
         }
     }
 
+    private fun checkBackPressed() {
+        when {
+            binding.toolbarLayout.isSearchMode -> {
+                if (ViewCompat.getRootWindowInsets(binding.root)!!.isVisible(WindowInsetsCompat.Type.ime())) {
+                    (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(
+                        currentFocus!!.windowToken,
+                        InputMethodManager.HIDE_NOT_ALWAYS
+                    )
+                } else {
+                    search = null
+                    binding.toolbarLayout.dismissSearchMode()
+                }
+            }
+
+            else -> {
+                //should not get here, callback should be disabled/unregistered
+                finishAffinity()
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent?.action == Intent.ACTION_SEARCH) binding.toolbarLayout.searchView.setQuery(
+            intent.getStringExtra(SearchManager.QUERY),
+            true
+        )
+    }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_app_picker, menu)
-        val systemAppsItem = menu.findItem(R.id.menu_apppicker_system)
         lifecycleScope.launch {
             showSystemApps = getUserSettings().showSystemApps
-            systemAppsItem.title = getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
+            menu.findItem(R.id.menu_apppicker_system).title =
+                getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
         }
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.menu_apppicker_system) {
-            showSystemApps = !showSystemApps
-            lifecycleScope.launch { updateUserSettings { it.copy(showSystemApps = showSystemApps) } }
-            item.title = getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
-            refreshListView()
+        when (item.itemId) {
+            R.id.menu_item_search -> {
+                binding.toolbarLayout.showSearchMode()
+                return true
+            }
+
+            R.id.menu_apppicker_system -> {
+                showSystemApps = !showSystemApps
+                lifecycleScope.launch { updateUserSettings { it.copy(showSystemApps = showSystemApps) } }
+                item.title = getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
+                refreshApps()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    inner class SearchModeListener : ToolbarLayout.SearchModeListener {
+        override fun onQueryTextSubmit(query: String?): Boolean {
+            if (search == null) return false
+            lifecycleScope.launch {
+                search = query ?: ""
+                updateUserSettings { it.copy(search = query ?: "") }
+                refreshApps()
+            }
             return true
         }
-        return false
-    }
 
-    private fun fillListView() {
-        isAllAppsSelected = false
-        showProgressCircle(true)
-        object : Thread() {
-            override fun run() {
-                runOnUiThread {
-                    val installedAppSet = ArrayList(installedPackageNameUnmodifiableSet)
-                    if (appPickerView.itemDecorationCount > 0) {
-                        for (i in 0 until appPickerView.itemDecorationCount) {
-                            appPickerView.removeItemDecorationAt(i)
-                        }
-                    }
-                    appPickerView.setAppPickerView(listType, installedAppSet, AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
-                    appPickerView.setOnBindListener(this@MainActivity)
-                    items.clear()
-                    if (listType == AppPickerView.TYPE_LIST_CHECKBOX_WITH_ALL_APPS
-                        || listType == AppPickerView.TYPE_LIST_SWITCH_WITH_ALL_APPS
-                    ) {
-                        items.add(java.lang.Boolean.FALSE)
-                    }
-                    for (app in installedAppSet) {
-                        items.add(java.lang.Boolean.FALSE)
-                    }
-                    showProgressCircle(false)
-                }
+        override fun onQueryTextChange(query: String?): Boolean {
+            if (search == null) return false
+            lifecycleScope.launch {
+                search = query ?: ""
+                updateUserSettings { it.copy(search = query ?: "") }
+                refreshApps()
             }
-        }.start()
-    }
+            return true
+        }
 
-    private fun refreshListView() {
-        showProgressCircle(true)
-        object : Thread() {
-            override fun run() {
-                runOnUiThread {
-                    val installedAppSet = ArrayList(installedPackageNameUnmodifiableSet)
-                    appPickerView.resetPackages(installedAppSet)
-                    items.clear()
-                    if (listType == AppPickerView.TYPE_LIST_CHECKBOX_WITH_ALL_APPS
-                        || listType == AppPickerView.TYPE_LIST_SWITCH_WITH_ALL_APPS
-                    ) {
-                        items.add(java.lang.Boolean.FALSE)
-                    }
-                    for (app in installedAppSet) {
-                        items.add(java.lang.Boolean.FALSE)
-                    }
-                    showProgressCircle(false)
-                }
-            }
-        }.start()
-    }
-
-    override fun onBindViewHolder(
-        holder: AppPickerView.ViewHolder,
-        position: Int, packageName: String
-    ) {
-        when (listType) {
-            AppPickerView.TYPE_LIST -> holder.item.setOnClickListener { }
-            AppPickerView.TYPE_LIST_ACTION_BUTTON ->
-                holder.actionButton.setOnClickListener { Toast.makeText(this, "onClick", Toast.LENGTH_SHORT).show() }
-
-            AppPickerView.TYPE_LIST_CHECKBOX -> {
-                val checkBox = holder.checkBox
-                checkBox.isChecked = items[position]
-                checkBox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean -> items[position] = isChecked }
-            }
-
-            AppPickerView.TYPE_LIST_CHECKBOX_WITH_ALL_APPS -> {
-                val checkBox = holder.checkBox
-                if (position == 0) {
-                    holder.appLabel.text = getString(R.string.all_apps)
-                    checkBox.isChecked = isAllAppsSelected
-                    checkBox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                        if (isAllAppsSelected != isChecked) {
-                            isAllAppsSelected = isChecked
-                            var i = 0
-                            while (i < items.size) {
-                                items[i] = isAllAppsSelected
-                                i++
-                            }
-                            appPickerView.refreshUI()
-                        }
-                    }
+        override fun onSearchModeToggle(searchView: SearchView, visible: Boolean) {
+            lifecycleScope.launch {
+                if (visible) {
+                    search = getUserSettings().search
+                    backPressEnabled.value = true
+                    searchView.setQuery(search, false)
+                    val autoCompleteTextView = searchView.seslGetAutoCompleteView()
+                    autoCompleteTextView.setText(search)
+                    autoCompleteTextView.setSelection(autoCompleteTextView.text.length)
+                    refreshApps()
                 } else {
-                    checkBox.isChecked = items[position]
-                    checkBox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                        items[position] = isChecked
-                        checkAllAppsToggle()
-                    }
+                    search = null
+                    backPressEnabled.value = false
+                    refreshApps()
                 }
-            }
-
-            AppPickerView.TYPE_LIST_RADIOBUTTON -> {
-                val radioButton = holder.radioButton
-                radioButton.isChecked = items[position]
-                holder.radioButton.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                    if (isChecked) {
-                        if (checkedPosition != position) {
-                            items[checkedPosition] = false
-                            appPickerView.refreshUI(checkedPosition)
-                        }
-                        items[position] = true
-                        checkedPosition = position
-                    }
-                }
-            }
-
-            AppPickerView.TYPE_LIST_SWITCH -> {
-                val switchWidget = holder.switch
-                switchWidget.isChecked = items[position]
-                switchWidget.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean -> items[position] = isChecked }
-            }
-
-            AppPickerView.TYPE_LIST_SWITCH_WITH_ALL_APPS -> {
-                val switchWidget = holder.switch
-                if (position == 0) {
-                    holder.appLabel.text = getString(R.string.all_apps)
-                    switchWidget.isChecked = isAllAppsSelected
-                    switchWidget.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                        if (isAllAppsSelected != isChecked) {
-                            isAllAppsSelected = isChecked
-                            var i = 0
-                            while (i < items.size) {
-                                items[i] = isAllAppsSelected
-                                i++
-                            }
-                            appPickerView.refreshUI()
-                        }
-                    }
-                } else {
-                    switchWidget.isChecked = items[position]
-                    switchWidget.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                        items[position] = isChecked
-                        checkAllAppsToggle()
-                    }
-                }
-            }
-
-            AppPickerView.TYPE_GRID -> holder.item.setOnClickListener {
-                saveIcon(packageName)
-            }
-
-            AppPickerView.TYPE_GRID_CHECKBOX -> {
-                val checkBox = holder.checkBox
-                checkBox.isChecked = items[position]
-                checkBox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean -> items[position] = isChecked }
-                holder.item.setOnClickListener { checkBox.isChecked = !checkBox.isChecked }
             }
         }
     }
 
-    private fun checkAllAppsToggle() {
-        isAllAppsSelected = true
-        for (selected in items) {
-            if (!selected) {
-                isAllAppsSelected = false
-                break
+    private fun initAppPicker() {
+        if (binding.apppickerList.itemDecorationCount > 0) {
+            for (i in 0 until binding.apppickerList.itemDecorationCount) {
+                binding.apppickerList.removeItemDecorationAt(i)
             }
         }
-        appPickerView.refreshUI(0)
+        binding.apppickerList.setAppPickerView(AppPickerView.TYPE_GRID, getApps(), AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
+        binding.apppickerList.setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
+            holder.item.setOnClickListener { saveIcon(packageName) }
+        }
+        binding.apppickerList.itemAnimator = null
+        binding.apppickerList.seslSetSmoothScrollEnabled(true)
     }
 
-    private fun showProgressCircle(show: Boolean) {
-        progress.visibility = if (show) View.VISIBLE else View.GONE
-        appPickerView.visibility = if (show) View.GONE else View.VISIBLE
+    private suspend fun initSettingsViews() {
+        val userSettings = getUserSettings()
+        binding.maskedCheckbox.isChecked = userSettings.mask
+        binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            lifecycleScope.launch { updateUserSettings { it.copy(mask = isChecked) } }
+        }
+        binding.colorCheckbox.isChecked = userSettings.colorEnabled
+        binding.colorCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            lifecycleScope.launch { updateUserSettings { it.copy(colorEnabled = isChecked) } }
+        }
+        binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(userSettings.recentBackgroundColors.first())
+        binding.colorButtonBackground.setOnClickListener {
+            lifecycleScope.launch {
+                val userSettingsColor = getUserSettings()
+                val dialog = SeslColorPickerDialog(
+                    this@MainActivity,
+                    { color: Int ->
+                        val recentColors = userSettingsColor.recentBackgroundColors.toMutableList()
+                        if (recentColors.size >= 6) recentColors.removeAt(5)
+                        recentColors.add(0, color)
+                        lifecycleScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
+                        binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(color)
+                    },
+                    userSettingsColor.recentBackgroundColors.first(), buildIntArray(userSettingsColor.recentBackgroundColors), true
+                )
+                dialog.setTransparencyControlEnabled(true)
+                dialog.show()
+            }
+        }
+        binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(userSettings.recentForegroundColors.first())
+        binding.colorButtonForeground.setOnClickListener {
+            lifecycleScope.launch {
+                val userSettingsColor = getUserSettings()
+                val dialog = SeslColorPickerDialog(
+                    this@MainActivity,
+                    { color: Int ->
+                        val recentColors = userSettingsColor.recentForegroundColors.toMutableList()
+                        if (recentColors.size >= 6) recentColors.removeAt(5)
+                        recentColors.add(0, color)
+                        lifecycleScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
+                        binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(color)
+                    },
+                    userSettingsColor.recentForegroundColors.first(), buildIntArray(userSettingsColor.recentForegroundColors), true
+                )
+                dialog.setTransparencyControlEnabled(true)
+                dialog.show()
+            }
+        }
     }
 
-    private val installedPackageNameUnmodifiableSet: Set<String>
-        get() {
-            val set = HashSet<String>()
-            for (appInfo in installedAppList) {
-                set.add(appInfo.packageName)
-            }
-            return Collections.unmodifiableSet(set)
-        }
+    private fun getApps(): List<String> {
+        val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+        val filteredApps = if (showSystemApps) apps
+        else apps.filter { it.flags and (ApplicationInfo.FLAG_UPDATED_SYSTEM_APP or ApplicationInfo.FLAG_SYSTEM) == 0 }
+        return if (search.isNullOrBlank()) filteredApps.map { it.packageName }
+        else filteredApps.filter {
+            packageManager.getApplicationLabel(it).toString().contains(search!!, ignoreCase = true) ||
+                    it.packageName.contains(search!!, ignoreCase = true)
+        }.map { it.packageName }
+    }
 
-    private val installedAppList: List<ApplicationInfo>
-        get() {
-            val list = ArrayList<ApplicationInfo>()
-            val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-            for (appInfo in apps) {
-                if (appInfo.flags and (ApplicationInfo.FLAG_UPDATED_SYSTEM_APP or ApplicationInfo.FLAG_SYSTEM) > 0 && !showSystemApps) {
-                    continue
-                }
-                list.add(appInfo)
+    private fun refreshApps() {
+        refreshAppsJob?.cancel()
+        if (!this@MainActivity::binding.isInitialized) return
+        refreshAppsJob = lifecycleScope.launch {
+            val apps = getApps()
+            if (apps.isEmpty() || search?.isBlank() == true) {
+                binding.apppickerList.visibility = View.GONE
+                binding.urlListLottie.cancelAnimation()
+                binding.urlListLottie.progress = 0f
+                binding.urlNoEntryScrollView.visibility = View.VISIBLE
+                binding.urlListLottie.addValueCallback(
+                    KeyPath("**"),
+                    LottieProperty.COLOR_FILTER,
+                    LottieValueCallback(SimpleColorFilter(getColor(R.color.primary_color_themed)))
+                )
+                binding.urlListLottie.postDelayed({ binding.urlListLottie.playAnimation() }, 400)
+            } else {
+                binding.apppickerList.resetPackages(apps)
+                binding.urlNoEntryScrollView.visibility = View.GONE
+                binding.apppickerList.visibility = View.VISIBLE
             }
-            return list
         }
-
+    }
 
     private fun saveIcon(packageName: String) {
         lifecycleScope.launch {

@@ -4,9 +4,9 @@
 
     <string name="sesl_cancel">Abbrechen</string>
     <string name="sesl_navigate_up">Zurück</string>
-    <string name="settings">Einstellungen</string>
 
-    <string name="all_apps">Alle Apps</string>
     <string name="show_system_apps">System Apps anzeigen</string>
     <string name="hide_system_apps">System Apps ausblenden</string>
+    <string name="search">Suche</string>
+    <string name="no_entry">Kein Eintrag</string>
 </resources>
