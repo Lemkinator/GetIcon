@@ -244,8 +244,17 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch { updateUserSettings { it.copy(mask = isChecked) } }
         }
         binding.colorCheckbox.isChecked = userSettings.colorEnabled
+        binding.colorButtonBackground.visibility = if (userSettings.colorEnabled) View.VISIBLE else View.GONE
+        binding.colorButtonForeground.visibility = if (userSettings.colorEnabled) View.VISIBLE else View.GONE
         binding.colorCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             lifecycleScope.launch { updateUserSettings { it.copy(colorEnabled = isChecked) } }
+            if (isChecked) {
+                binding.colorButtonBackground.visibility = View.VISIBLE
+                binding.colorButtonForeground.visibility = View.VISIBLE
+            } else {
+                binding.colorButtonBackground.visibility = View.GONE
+                binding.colorButtonForeground.visibility = View.GONE
+            }
         }
         binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(userSettings.recentBackgroundColors.first())
         binding.colorButtonBackground.setOnClickListener {
