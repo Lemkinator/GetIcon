@@ -1,22 +1,19 @@
 package de.lemke.geticon.ui
 
+import android.annotation.SuppressLint
+import android.app.ActivityOptions
 import android.app.SearchManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.AdaptiveIconDrawable
-import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
+import android.util.Pair
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.CompoundButton
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.apppickerview.widget.AppPickerView
@@ -24,28 +21,35 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.picker3.app.SeslColorPickerDialog
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.SimpleColorFilter
 import com.airbnb.lottie.model.KeyPath
 import com.airbnb.lottie.value.LottieValueCallback
+import com.google.android.material.appbar.AppBarLayout
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.model.UpdateAvailability
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.geticon.R
+import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.databinding.ActivityMainBinding
+import de.lemke.geticon.domain.AppStart
+import de.lemke.geticon.domain.CheckAppStartUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.domain.setCustomOnBackPressedLogic
+import dev.oneuiproject.oneui.layout.DrawerLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout
-import dev.oneuiproject.oneui.widget.Toast
+import dev.oneuiproject.oneui.utils.internal.ReflectUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.IOException
-import java.io.OutputStream
-import java.nio.file.Files
+import kotlinx.coroutines.withContext
 import java.util.*
 import javax.inject.Inject
+import kotlin.math.abs
 
 
 @AndroidEntryPoint
@@ -58,13 +62,14 @@ class MainActivity : AppCompatActivity() {
     private var refreshAppsJob: Job? = null
     private var isUIReady = false
 
-    private val iconSize = 512
-
     @Inject
     lateinit var getUserSettings: GetUserSettingsUseCase
 
     @Inject
     lateinit var updateUserSettings: UpdateUserSettingsUseCase
+
+    @Inject
+    lateinit var checkAppStart: CheckAppStartUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         /*  Note: https://stackoverflow.com/a/69831106/18332741
@@ -113,21 +118,57 @@ class MainActivity : AppCompatActivity() {
 
 
         lifecycleScope.launch {
+            when (checkAppStart()) {
+                AppStart.FIRST_TIME -> openOOBE()
+                AppStart.NORMAL -> checkTOS(getUserSettings())
+                AppStart.FIRST_TIME_VERSION -> checkTOS(getUserSettings())
+            }
+        }
+    }
+
+    private suspend fun openOOBE() {
+        //manually waiting for the animation to finish :/
+        delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
+        startActivity(Intent(applicationContext, OOBEActivity::class.java))
+        if (Build.VERSION.SDK_INT < 34) {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        }
+        finish()
+    }
+
+    private suspend fun checkTOS(userSettings: UserSettings) {
+        if (!userSettings.tosAccepted) openOOBE()
+        else openMain()
+    }
+
+    private fun openMain() {
+        lifecycleScope.launch {
             setCustomOnBackPressedLogic(triggerStateFlow = backPressEnabled, onBackPressedLogic = { checkBackPressed() })
+            initDrawer()
             showSystemApps = getUserSettings().showSystemApps
-            initSettingsViews()
             initAppPicker()
-            binding.toolbarLayout.setSearchModeListener(SearchModeListener())
-            binding.toolbarLayout.searchView.setSearchableInfo(
+            binding.drawerLayoutMain.setSearchModeListener(SearchModeListener())
+            binding.drawerLayoutMain.searchView.setSearchableInfo(
                 (getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName)
             )
+            //manually waiting for the animation to finish :/
+            delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
             isUIReady = true
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        lifecycleScope.launch {
+            delay(500) //delay, so closing the drawer is not visible for the user
+            binding.drawerLayoutMain.setDrawerOpen(false, false)
         }
     }
 
     private fun checkBackPressed() {
         when {
-            binding.toolbarLayout.isSearchMode -> {
+            binding.drawerLayoutMain.isSearchMode -> {
                 if (ViewCompat.getRootWindowInsets(binding.root)!!.isVisible(WindowInsetsCompat.Type.ime())) {
                     (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(
                         currentFocus!!.windowToken,
@@ -135,8 +176,15 @@ class MainActivity : AppCompatActivity() {
                     )
                 } else {
                     search = null
-                    binding.toolbarLayout.dismissSearchMode()
+                    binding.drawerLayoutMain.dismissSearchMode()
                 }
+            }
+
+            binding.drawerLayoutMain.findViewById<androidx.drawerlayout.widget.DrawerLayout>(dev.oneuiproject.oneui.design.R.id.drawerlayout_drawer)
+                .isDrawerOpen(
+                    binding.drawerLayoutMain.findViewById<LinearLayout>(dev.oneuiproject.oneui.design.R.id.drawerlayout_drawer_content)
+                ) -> {
+                binding.drawerLayoutMain.setDrawerOpen(false, true)
             }
 
             else -> {
@@ -149,7 +197,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent?.action == Intent.ACTION_SEARCH) binding.toolbarLayout.searchView.setQuery(
+        if (intent?.action == Intent.ACTION_SEARCH) binding.drawerLayoutMain.searchView.setQuery(
             intent.getStringExtra(SearchManager.QUERY),
             true
         )
@@ -168,7 +216,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_item_search -> {
-                binding.toolbarLayout.showSearchMode()
+                binding.drawerLayoutMain.showSearchMode()
                 return true
             }
 
@@ -223,7 +271,61 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun initAppPicker() {
+    @SuppressLint("RestrictedApi")
+    private fun initDrawer() {
+        val aboutAppOption = findViewById<LinearLayout>(R.id.draweritem_about_app)
+        val aboutMeOption = findViewById<LinearLayout>(R.id.draweritem_about_me)
+        val settingsOption = findViewById<LinearLayout>(R.id.draweritem_settings)
+        aboutAppOption.setOnClickListener {
+            startActivity(Intent(this@MainActivity, AboutActivity::class.java))
+        }
+        aboutMeOption.setOnClickListener {
+            startActivity(Intent(this@MainActivity, AboutMeActivity::class.java))
+        }
+        settingsOption.setOnClickListener {
+            startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+        }
+        binding.drawerLayoutMain.setDrawerButtonIcon(getDrawable(dev.oneuiproject.oneui.R.drawable.ic_oui_info_outline))
+        binding.drawerLayoutMain.setDrawerButtonOnClickListener {
+            startActivity(Intent().setClass(this@MainActivity, AboutActivity::class.java))
+        }
+        binding.drawerLayoutMain.setDrawerButtonTooltip(getText(R.string.about_app))
+        binding.drawerLayoutMain.setSearchModeListener(SearchModeListener())
+        binding.drawerLayoutMain.searchView.setSearchableInfo(
+            (getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName)
+        )
+        AppUpdateManagerFactory.create(this).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE)
+                binding.drawerLayoutMain.setButtonBadges(ToolbarLayout.N_BADGE, DrawerLayout.N_BADGE)
+        }
+        binding.drawerLayoutMain.appBarLayout.addOnOffsetChangedListener { layout: AppBarLayout, verticalOffset: Int ->
+            val totalScrollRange = layout.totalScrollRange
+            val inputMethodWindowVisibleHeight = ReflectUtils.genericInvokeMethod(
+                InputMethodManager::class.java,
+                getSystemService(INPUT_METHOD_SERVICE),
+                "getInputMethodWindowVisibleHeight"
+            ) as Int
+            if (totalScrollRange != 0) binding.iconNoEntryView.translationY = (abs(verticalOffset) - totalScrollRange).toFloat() / 2.0f
+            else binding.iconNoEntryView.translationY = (abs(verticalOffset) - inputMethodWindowVisibleHeight).toFloat() / 2.0f
+        }
+        binding.drawerLayoutMain.findViewById<androidx.drawerlayout.widget.DrawerLayout>(dev.oneuiproject.oneui.design.R.id.drawerlayout_drawer)
+            .addDrawerListener(
+                object : androidx.drawerlayout.widget.DrawerLayout.DrawerListener {
+                    override fun onDrawerSlide(drawerView: View, slideOffset: Float) {}
+                    override fun onDrawerOpened(drawerView: View) {
+                        backPressEnabled.value = true
+                    }
+
+                    override fun onDrawerClosed(drawerView: View) {
+                        backPressEnabled.value = false
+                    }
+
+                    override fun onDrawerStateChanged(newState: Int) {}
+                }
+            )
+    }
+
+    private suspend fun initAppPicker() {
         if (binding.apppickerList.itemDecorationCount > 0) {
             for (i in 0 until binding.apppickerList.itemDecorationCount) {
                 binding.apppickerList.removeItemDecorationAt(i)
@@ -231,76 +333,28 @@ class MainActivity : AppCompatActivity() {
         }
         binding.apppickerList.setAppPickerView(AppPickerView.TYPE_GRID, getApps(), AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
         binding.apppickerList.setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
-            holder.item.setOnClickListener { saveIcon(packageName) }
+            holder.item.setOnClickListener {
+                startActivity(
+                    Intent(this@MainActivity, IconActivity::class.java)
+                        .putExtra("packageName", packageName),
+                    ActivityOptions
+                        .makeSceneTransitionAnimation(
+                            this@MainActivity,
+                            Pair.create(holder.appIcon, "icon"),
+                        )
+                        .toBundle()
+                )
+            }
         }
         binding.apppickerList.itemAnimator = null
         binding.apppickerList.seslSetSmoothScrollEnabled(true)
     }
 
-    private suspend fun initSettingsViews() {
-        val userSettings = getUserSettings()
-        binding.maskedCheckbox.isChecked = userSettings.mask
-        binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-            lifecycleScope.launch { updateUserSettings { it.copy(mask = isChecked) } }
-        }
-        binding.colorCheckbox.isChecked = userSettings.colorEnabled
-        binding.colorButtonBackground.visibility = if (userSettings.colorEnabled) View.VISIBLE else View.GONE
-        binding.colorButtonForeground.visibility = if (userSettings.colorEnabled) View.VISIBLE else View.GONE
-        binding.colorCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-            lifecycleScope.launch { updateUserSettings { it.copy(colorEnabled = isChecked) } }
-            if (isChecked) {
-                binding.colorButtonBackground.visibility = View.VISIBLE
-                binding.colorButtonForeground.visibility = View.VISIBLE
-            } else {
-                binding.colorButtonBackground.visibility = View.GONE
-                binding.colorButtonForeground.visibility = View.GONE
-            }
-        }
-        binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(userSettings.recentBackgroundColors.first())
-        binding.colorButtonBackground.setOnClickListener {
-            lifecycleScope.launch {
-                val userSettingsColor = getUserSettings()
-                val dialog = SeslColorPickerDialog(
-                    this@MainActivity,
-                    { color: Int ->
-                        val recentColors = userSettingsColor.recentBackgroundColors.toMutableList()
-                        if (recentColors.size >= 6) recentColors.removeAt(5)
-                        recentColors.add(0, color)
-                        lifecycleScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
-                        binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(color)
-                    },
-                    userSettingsColor.recentBackgroundColors.first(), buildIntArray(userSettingsColor.recentBackgroundColors), true
-                )
-                dialog.setTransparencyControlEnabled(true)
-                dialog.show()
-            }
-        }
-        binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(userSettings.recentForegroundColors.first())
-        binding.colorButtonForeground.setOnClickListener {
-            lifecycleScope.launch {
-                val userSettingsColor = getUserSettings()
-                val dialog = SeslColorPickerDialog(
-                    this@MainActivity,
-                    { color: Int ->
-                        val recentColors = userSettingsColor.recentForegroundColors.toMutableList()
-                        if (recentColors.size >= 6) recentColors.removeAt(5)
-                        recentColors.add(0, color)
-                        lifecycleScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
-                        binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(color)
-                    },
-                    userSettingsColor.recentForegroundColors.first(), buildIntArray(userSettingsColor.recentForegroundColors), true
-                )
-                dialog.setTransparencyControlEnabled(true)
-                dialog.show()
-            }
-        }
-    }
-
-    private fun getApps(): List<String> {
+    private suspend fun getApps(): List<String> = withContext(Dispatchers.Default) {
         val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
         val filteredApps = if (showSystemApps) apps
         else apps.filter { it.flags and (ApplicationInfo.FLAG_UPDATED_SYSTEM_APP or ApplicationInfo.FLAG_SYSTEM) == 0 }
-        return if (search.isNullOrBlank()) filteredApps.map { it.packageName }
+        return@withContext if (search.isNullOrBlank()) filteredApps.map { it.packageName }
         else filteredApps.filter {
             packageManager.getApplicationLabel(it).toString().contains(search!!, ignoreCase = true) ||
                     it.packageName.contains(search!!, ignoreCase = true)
@@ -308,107 +362,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshApps() {
+        binding.iconListLottie.visibility = View.GONE
+        binding.apppickerList.visibility = View.GONE
+        binding.apppickerProgress.visibility = View.VISIBLE
         refreshAppsJob?.cancel()
         if (!this@MainActivity::binding.isInitialized) return
         refreshAppsJob = lifecycleScope.launch {
             val apps = getApps()
             if (apps.isEmpty() || search?.isBlank() == true) {
                 binding.apppickerList.visibility = View.GONE
-                binding.urlListLottie.cancelAnimation()
-                binding.urlListLottie.progress = 0f
-                binding.urlNoEntryScrollView.visibility = View.VISIBLE
-                binding.urlListLottie.addValueCallback(
+                binding.apppickerProgress.visibility = View.GONE
+                binding.iconListLottie.cancelAnimation()
+                binding.iconListLottie.progress = 0f
+                binding.iconNoEntryScrollView.visibility = View.VISIBLE
+                binding.iconListLottie.addValueCallback(
                     KeyPath("**"),
                     LottieProperty.COLOR_FILTER,
                     LottieValueCallback(SimpleColorFilter(getColor(R.color.primary_color_themed)))
                 )
-                binding.urlListLottie.postDelayed({ binding.urlListLottie.playAnimation() }, 400)
+                binding.iconListLottie.postDelayed({ binding.iconListLottie.playAnimation() }, 400)
             } else {
                 binding.apppickerList.resetPackages(apps)
-                binding.urlNoEntryScrollView.visibility = View.GONE
+                binding.iconNoEntryScrollView.visibility = View.GONE
+                binding.apppickerProgress.visibility = View.GONE
                 binding.apppickerList.visibility = View.VISIBLE
             }
         }
     }
-
-    private fun saveIcon(packageName: String) {
-        lifecycleScope.launch {
-            val userSettings = getUserSettings()
-            try {
-                val timeStamp = System.currentTimeMillis()
-                val base = packageManager.getApplicationIcon(packageName)
-                val icon = buildIcon(
-                    base,
-                    iconSize,
-                    userSettings.mask,
-                    userSettings.colorEnabled,
-                    userSettings.recentForegroundColors.first(),
-                    userSettings.recentBackgroundColors.first()
-                )
-                val suffix = if (userSettings.mask) "mask" else "default" + if (userSettings.colorEnabled) "_mono" else ""
-                val fileName = String.format("%s_%s_%d.png", packageName, suffix, timeStamp)
-                try {
-                    saveBitmap(icon, fileName)
-                } catch (e: IOException) {
-                    Toast.makeText(this@MainActivity, e.message, Toast.LENGTH_SHORT).show()
-                    e.printStackTrace()
-                }
-                Toast.makeText(this@MainActivity, fileName, Toast.LENGTH_SHORT).show()
-            } catch (e: PackageManager.NameNotFoundException) {
-                Toast.makeText(this@MainActivity, e.message, Toast.LENGTH_SHORT).show()
-                e.printStackTrace()
-            }
-        }
-    }
-
-    private fun buildIcon(
-        drawable: Drawable,
-        size: Int,
-        mask: Boolean,
-        color: Boolean,
-        foregroundColor: Int,
-        backgroundColor: Int
-    ): Bitmap {
-        if (drawable is AdaptiveIconDrawable) {
-            drawable.setBounds(0, 0, size, size)
-            val background = drawable.background.mutate()
-            var foreground = drawable.foreground.mutate()
-            if (color && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val monochrome = drawable.monochrome
-                if (monochrome != null) foreground = monochrome.mutate()
-            }
-            if (color) {
-                background.setTint(backgroundColor)
-                foreground.setTint(foregroundColor)
-            }
-            val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(output)
-            if (mask) canvas.clipPath(drawable.iconMask)
-            background.draw(canvas)
-            foreground.draw(canvas)
-            return output
-        }
-        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-        drawable.draw(canvas)
-        return output
-    }
-
-    @Throws(IOException::class)
-    private fun saveBitmap(bitmap: Bitmap, fileName: String) {
-        val os: OutputStream =
-            Files.newOutputStream(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName).toPath())
-        bitmap.compress(Bitmap.CompressFormat.PNG, 0, os)
-        os.close()
-    }
-
-    private fun buildIntArray(integers: List<Int>): IntArray {
-        val ints = IntArray(integers.size)
-        var i = 0
-        for (n in integers) {
-            ints[i++] = n
-        }
-        return ints
-    }
-
 }

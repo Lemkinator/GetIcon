@@ -105,23 +105,19 @@ configurations.configureEach {
 
 dependencies {
     implementation("io.github.oneuiproject:design:1.2.6")
-
     implementation("io.github.oneuiproject.sesl:appcompat:1.4.0")
-    implementation("io.github.oneuiproject.sesl:coordinatorlayout:1.0.0")
-    implementation("io.github.oneuiproject.sesl:drawerlayout:1.0.0")
-    implementation("io.github.oneuiproject.sesl:recyclerview:1.4.1")
-
     implementation("io.github.oneuiproject.sesl:material:1.5.0")
-
+    implementation("io.github.oneuiproject.sesl:preference:1.1.0")
+    implementation("io.github.oneuiproject.sesl:recyclerview:1.4.1")
     implementation("io.github.oneuiproject.sesl:apppickerview:1.0.0")
     implementation("io.github.oneuiproject.sesl:picker-basic:1.2.0")
     implementation("io.github.oneuiproject.sesl:picker-color:1.1.0")
-
     implementation("io.github.oneuiproject:icons:1.1.0")
 
     implementation("com.airbnb.android:lottie:6.1.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.core:core-animation:1.0.0-rc01")
+    implementation("com.google.android.play:core-ktx:1.8.1")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
     //noinspection GradleDependency

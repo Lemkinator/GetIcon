@@ -1,7 +1,9 @@
 package de.lemke.geticon.data
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
+import de.lemke.geticon.R
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -29,10 +31,13 @@ class UserSettingsRepository @Inject constructor(
             it[KEY_DEV_MODE_ENABLED] = newSettings.devModeEnabled
             it[KEY_SEARCH] = newSettings.search
             it[KEY_SHOW_SYSTEM_APPS] = newSettings.showSystemApps
-            it[KEY_MASK] = newSettings.mask
+            it[KEY_ICON_SIZE] = newSettings.iconSize
+            it[KEY_MASK_ENABLED] = newSettings.maskEnabled
             it[KEY_COLOR_ENABLED] = newSettings.colorEnabled
             it[KEY_RECENT_BACKGROUND_COLORS] = newSettings.recentBackgroundColors.joinToString(",")
             it[KEY_RECENT_FOREGROUND_COLORS] = newSettings.recentForegroundColors.joinToString(",")
+            it[KEY_SAVE_LOCATION] = newSettings.saveLocation.ordinal
+            it[KEY_LAST_IN_APP_REVIEW_REQUEST] = newSettings.lastInAppReviewRequest
         }
         return settingsFromPreferences(prefs)
     }
@@ -47,10 +52,13 @@ class UserSettingsRepository @Inject constructor(
         devModeEnabled = prefs[KEY_DEV_MODE_ENABLED] ?: false,
         search = prefs[KEY_SEARCH] ?: "",
         showSystemApps = prefs[KEY_SHOW_SYSTEM_APPS] ?: false,
-        mask = prefs[KEY_MASK] ?: true,
+        iconSize = prefs[KEY_ICON_SIZE] ?: 512,
+        maskEnabled = prefs[KEY_MASK_ENABLED] ?: true,
         colorEnabled = prefs[KEY_COLOR_ENABLED] ?: false,
         recentBackgroundColors = prefs[KEY_RECENT_BACKGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-16547330),
         recentForegroundColors = prefs[KEY_RECENT_FOREGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-1),
+        saveLocation = SaveLocation.values()[prefs[KEY_SAVE_LOCATION] ?: SaveLocation.default.ordinal],
+        lastInAppReviewRequest = prefs[KEY_LAST_IN_APP_REVIEW_REQUEST] ?: System.currentTimeMillis(),
     )
 
 
@@ -63,10 +71,13 @@ class UserSettingsRepository @Inject constructor(
         private val KEY_DEV_MODE_ENABLED = booleanPreferencesKey("devModeEnabled")
         private val KEY_SEARCH = stringPreferencesKey("search")
         private val KEY_SHOW_SYSTEM_APPS = booleanPreferencesKey("showSystemApps")
-        private val KEY_MASK = booleanPreferencesKey("mask")
+        private val KEY_ICON_SIZE = intPreferencesKey("iconSize")
+        private val KEY_MASK_ENABLED = booleanPreferencesKey("maskEnabled")
         private val KEY_COLOR_ENABLED = booleanPreferencesKey("colorEnabled")
         private val KEY_RECENT_BACKGROUND_COLORS = stringPreferencesKey("recentBackgroundColors")
         private val KEY_RECENT_FOREGROUND_COLORS = stringPreferencesKey("recentForegroundColors")
+        private val KEY_SAVE_LOCATION = intPreferencesKey("saveLocation")
+        private val KEY_LAST_IN_APP_REVIEW_REQUEST = longPreferencesKey("lastInAppReviewRequest")
     }
 }
 
@@ -88,13 +99,40 @@ data class UserSettings(
     val search: String,
     /** show system apps*/
     val showSystemApps: Boolean,
-    /** mask*/
-    val mask: Boolean,
+    /** icon Size*/
+    val iconSize: Int,
+    /** mask enabled*/
+    val maskEnabled: Boolean,
     /** color enabled*/
     val colorEnabled: Boolean,
     /** recent background colors */
     val recentBackgroundColors: List<Int>,
     /** recent foreground colors */
     val recentForegroundColors: List<Int>,
-
+    /** save location */
+    val saveLocation: SaveLocation,
+    /** last time in app review was requested */
+    val lastInAppReviewRequest: Long,
 )
+
+enum class SaveLocation {
+    CUSTOM,
+    DOWNLOADS,
+    PICTURES,
+    DCIM,
+    ;
+
+    companion object {
+        val default: SaveLocation
+            get() = CUSTOM
+    }
+
+    fun toLocalizedString(context: Context): String {
+        return when (this) {
+            CUSTOM -> context.getString(R.string.custom)
+            DOWNLOADS -> "Downloads"
+            PICTURES -> "Pictures"
+            DCIM -> "DCIM"
+        }
+    }
+}

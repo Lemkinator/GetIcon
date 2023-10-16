@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<dev.oneuiproject.oneui.layout.ToolbarLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<dev.oneuiproject.oneui.layout.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/toolbar_layout"
+    android:id="@+id/drawer_layout_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:expanded="false"
@@ -11,155 +10,84 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_gravity="center"
         android:orientation="vertical">
 
-        <dev.oneuiproject.oneui.widget.RoundFrameLayout
+        <androidx.apppickerview.widget.AppPickerView
+            android:id="@+id/apppicker_list"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/oui_background_color"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="4dp">
+            android:layout_height="match_parent"
+            android:background="@color/oui_background_color" />
+
+        <dev.oneuiproject.oneui.widget.RoundFrameLayout
+            android:id="@+id/apppicker_progress"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            android:layout_weight="1">
+
+            <androidx.appcompat.widget.SeslProgressBar
+                style="@style/Widget.AppCompat.ProgressBar.Large"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" />
+
+        </dev.oneuiproject.oneui.widget.RoundFrameLayout>
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/icon_no_entry_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
             <LinearLayout
+                android:id="@+id/icon_no_entry_view"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:gravity="center"
                 android:orientation="vertical">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <FrameLayout
+                    android:layout_width="102.0dp"
+                    android:layout_height="102.0dp">
+
+                    <androidx.appcompat.widget.AppCompatImageView
+                        android:layout_width="82.0dp"
+                        android:layout_height="82.0dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/sad_face_background"
+                        android:elevation="6.0dp" />
+
+                    <com.airbnb.lottie.LottieAnimationView
+                        android:id="@+id/icon_list_lottie"
+                        android:layout_width="74.0dp"
+                        android:layout_height="74.0dp"
+                        android:layout_gravity="center"
+                        android:translationZ="7.0dp"
+                        app:lottie_autoPlay="false"
+                        app:lottie_fileName="sad_face.json"
+                        app:lottie_loop="false" />
+
+                </FrameLayout>
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/icon_no_entry_text"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <androidx.appcompat.widget.AppCompatCheckBox
-                        android:id="@+id/masked_checkbox"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginVertical="6dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:text="Masked"
-                        tools:ignore="HardcodedText" />
-
-                    <androidx.appcompat.widget.AppCompatCheckBox
-                        android:id="@+id/color_checkbox"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginVertical="6dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:text="Color"
-                        tools:ignore="HardcodedText" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/color_button_background"
-                        style="@style/ButtonStyle.Colored"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginVertical="6dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:text="Background"
-                        tools:ignore="HardcodedText" />
-
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/color_button_foreground"
-                        style="@style/ButtonStyle.Colored"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginVertical="6dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:text="Foreground"
-                        android:textColor="@android:color/black"
-                        tools:ignore="HardcodedText" />
-
-                </LinearLayout>
+                    android:text="@string/no_entry"
+                    android:textColor="@color/primary_text_icon_color_themed"
+                    android:textSize="17.0sp" />
 
             </LinearLayout>
 
-        </dev.oneuiproject.oneui.widget.RoundFrameLayout>
-
-        <dev.oneuiproject.oneui.widget.Separator
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <dev.oneuiproject.oneui.widget.RoundFrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <androidx.apppickerview.widget.AppPickerView
-                android:id="@+id/apppicker_list"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@color/oui_background_color" />
-
-            <androidx.core.widget.NestedScrollView
-                android:id="@+id/url_no_entry_scroll_view"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone"
-                app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-                <LinearLayout
-                    android:id="@+id/url_no_entry_view"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_gravity="center"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <FrameLayout
-                        android:layout_width="102.0dp"
-                        android:layout_height="102.0dp">
-
-                        <androidx.appcompat.widget.AppCompatImageView
-                            android:layout_width="82.0dp"
-                            android:layout_height="82.0dp"
-                            android:layout_gravity="center"
-                            android:background="@drawable/sad_face_background"
-                            android:elevation="6.0dp" />
-
-                        <com.airbnb.lottie.LottieAnimationView
-                            android:id="@+id/url_list_lottie"
-                            android:layout_width="74.0dp"
-                            android:layout_height="74.0dp"
-                            android:layout_gravity="center"
-                            android:translationZ="7.0dp"
-                            app:lottie_autoPlay="false"
-                            app:lottie_fileName="sad_face.json"
-                            app:lottie_loop="false" />
-
-                    </FrameLayout>
-
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:id="@+id/url_no_entry_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/no_entry"
-                        android:textColor="@color/primary_text_icon_color_themed"
-                        android:textSize="17.0sp" />
-
-                </LinearLayout>
-
-            </androidx.core.widget.NestedScrollView>
-
-        </dev.oneuiproject.oneui.widget.RoundFrameLayout>
+        </androidx.core.widget.NestedScrollView>
 
     </LinearLayout>
 
-</dev.oneuiproject.oneui.layout.ToolbarLayout>
+    <include layout="@layout/content_drawer" />
+
+</dev.oneuiproject.oneui.layout.DrawerLayout>
 
 
