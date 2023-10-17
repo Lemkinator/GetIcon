@@ -19,88 +19,111 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/oui_background_color"
-            android:orientation="vertical">
+            android:paddingHorizontal="16dp"
+            android:gravity="center"
+            android:paddingVertical="8dp">
 
             <ImageView
                 android:id="@+id/icon"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:contentDescription="App Icon"
                 android:transitionName="icon"
                 tools:ignore="HardcodedText" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <androidx.appcompat.widget.AppCompatCheckBox
-                        android:id="@+id/masked_checkbox"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginVertical="6dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:text="@string/masked" />
-
-                    <androidx.appcompat.widget.AppCompatCheckBox
-                        android:id="@+id/color_checkbox"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginVertical="6dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:text="@string/color" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/color_button_background"
-                        style="@style/ButtonStyle.Colored"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginVertical="6dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:text="@string/background" />
-
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/color_button_foreground"
-                        style="@style/ButtonStyle.Colored"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginVertical="6dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:text="@string/foreground" />
-
-                </LinearLayout>
-
-            </LinearLayout>
-
         </dev.oneuiproject.oneui.widget.RoundLinearLayout>
 
     </androidx.core.widget.NestedScrollView>
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/icon_bnv"
+    <dev.oneuiproject.oneui.widget.RoundLinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_location="footer"
-        app:menu="@menu/icon_bnv" />
+        android:layout_marginVertical="8dp"
+        android:background="@color/oui_background_color"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        app:layout_location="footer">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="6dp"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.SeslSeekBar
+                android:id="@+id/size_seekbar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                app:seslSeekBarMode="expand" />
+
+            <EditText
+                android:id="@+id/size_edittext"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:hint="@string/size"
+                android:importantForAutofill="no"
+                android:inputType="number"
+                android:maxLength="4"
+                android:maxLines="1" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="6dp"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.AppCompatCheckBox
+                android:id="@+id/masked_checkbox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/masked" />
+
+            <androidx.appcompat.widget.AppCompatCheckBox
+                android:id="@+id/color_checkbox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/color" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/color_button_background"
+                style="@style/ButtonStyle.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="6dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/background" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/color_button_foreground"
+                style="@style/ButtonStyle.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="6dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/foreground" />
+
+        </LinearLayout>
+
+    </dev.oneuiproject.oneui.widget.RoundLinearLayout>
 
 </dev.oneuiproject.oneui.layout.ToolbarLayout>

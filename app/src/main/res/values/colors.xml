@@ -13,4 +13,9 @@
     <color name="background_color">#fffcfcfc</color>
     <color name="filled_background_color">#e2e2e2</color>
     <color name="ripple_color">#0d000000</color>
+
+    <!-- apply theme color to seekbar -->
+    <color name="sesl_thumb_control_color_activated">@color/primary_color_themed</color>
+    <color name="sesl_seekbar_control_color_activated">@color/primary_color_themed</color>
+
 </resources>

@@ -88,5 +88,6 @@
     <string name="color">Color</string>
     <string name="save_location">File storage location</string>
     <string name="custom">Custom</string>
+    <string name="size">Size</string>
 
 </resources>

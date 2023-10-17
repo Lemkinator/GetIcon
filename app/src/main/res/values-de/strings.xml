@@ -70,4 +70,5 @@
     <string name="color">Farbe</string>
     <string name="save_location">Dateispeicherort</string>
     <string name="custom">Benutzerdefiniert</string>
+    <string name="size">Größe</string>
 </resources>
