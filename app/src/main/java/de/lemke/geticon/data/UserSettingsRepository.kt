@@ -123,8 +123,7 @@ enum class SaveLocation {
     ;
 
     companion object {
-        val default: SaveLocation
-            get() = CUSTOM
+        val default = CUSTOM
     }
 
     fun toLocalizedString(context: Context): String {

@@ -37,7 +37,7 @@ import de.lemke.geticon.domain.AppStart
 import de.lemke.geticon.domain.CheckAppStartUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import de.lemke.geticon.domain.setCustomOnBackPressedLogic
+import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
 import dev.oneuiproject.oneui.layout.DrawerLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout
 import dev.oneuiproject.oneui.utils.internal.ReflectUtils

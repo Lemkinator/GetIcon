@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
@@ -38,7 +39,7 @@ import de.lemke.geticon.data.SaveLocation
 import de.lemke.geticon.databinding.ActivityIconBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import de.lemke.geticon.domain.setCustomOnBackPressedLogic
+import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
 import dev.oneuiproject.oneui.widget.Toast
 import kotlinx.coroutines.launch
 import java.io.File
@@ -91,9 +92,8 @@ class IconActivity : AppCompatActivity() {
 
     private val fileName: String
         get() {
-            val timeStamp = System.currentTimeMillis()
             val suffix = if (maskEnabled) "mask" else "default" + if (colorEnabled) "_mono" else ""
-            return String.format("%s_%s_%d.png", applicationInfo.packageName, suffix, timeStamp)
+            return String.format("%s_%s_%d.png", applicationInfo.packageName, suffix, System.currentTimeMillis())
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -175,8 +175,16 @@ class IconActivity : AppCompatActivity() {
                 return true
             }
 
-            R.id.menu_item_icon_copy -> {
-                copyIconToClipboard()
+            R.id.menu_item_icon_share -> {
+                val cacheFile = File(cacheDir, "icon.png")
+                icon.compress(Bitmap.CompressFormat.PNG, 100, cacheFile.outputStream())
+                val uri = FileProvider.getUriForFile(this, "de.lemke.geticon.fileprovider", cacheFile)
+                val sendIntent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    type = "image/png"
+                }
+                startActivity(Intent.createChooser(sendIntent, null))
                 return true
             }
         }
@@ -185,11 +193,7 @@ class IconActivity : AppCompatActivity() {
 
     private suspend fun initViews() {
         generateIcon()
-        binding.icon.setOnClickListener { saveIcon() }
-        binding.icon.setOnLongClickListener {
-            copyIconToClipboard()
-            true
-        }
+        binding.icon.setOnClickListener { copyIconToClipboard() }
         binding.maskedCheckbox.isChecked = maskEnabled
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             maskEnabled = isChecked
@@ -337,7 +341,7 @@ class IconActivity : AppCompatActivity() {
         val cacheFile = File(cacheDir, "icon.png")
         icon.compress(Bitmap.CompressFormat.PNG, 100, cacheFile.outputStream())
         val uri = FileProvider.getUriForFile(this, "de.lemke.geticon.fileprovider", cacheFile)
-        val clip = ClipData.newUri(contentResolver, "qr-code", uri)
+        val clip = ClipData.newUri(contentResolver, "icon", uri)
         (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
         Toast.makeText(this, R.string.copied_to_clipboard, android.widget.Toast.LENGTH_SHORT).show()
     }
