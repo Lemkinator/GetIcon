@@ -28,7 +28,6 @@ import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.toColor
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
 import androidx.reflect.app.SeslApplicationPackageManagerReflector
@@ -37,15 +36,14 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.geticon.R
 import de.lemke.geticon.data.SaveLocation
 import de.lemke.geticon.databinding.ActivityIconBinding
+import de.lemke.geticon.domain.ExportIconToSaveLocationUseCase
+import de.lemke.geticon.domain.ExportIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
 import dev.oneuiproject.oneui.widget.Toast
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.IOException
-import java.io.OutputStream
-import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -71,6 +69,12 @@ class IconActivity : AppCompatActivity() {
     @Inject
     lateinit var updateUserSettings: UpdateUserSettingsUseCase
 
+    @Inject
+    lateinit var exportIcon: ExportIconUseCase
+
+    @Inject
+    lateinit var exportIconToSaveLocation: ExportIconToSaveLocationUseCase
+
     private val isAdaptiveIcon: Boolean
         get() = appIcon is AdaptiveIconDrawable
 
@@ -91,10 +95,7 @@ class IconActivity : AppCompatActivity() {
     } else maskedAppIcon
 
     private val fileName: String
-        get() {
-            val suffix = if (maskEnabled) "mask" else "default" + if (colorEnabled) "_mono" else ""
-            return String.format("%s_%s_%d.png", applicationInfo.packageName, suffix, System.currentTimeMillis())
-        }
+        get() = applicationInfo.packageName + "_" + if (maskEnabled) "mask" else "default" + if (colorEnabled) "_mono" else ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -121,13 +122,7 @@ class IconActivity : AppCompatActivity() {
             initViews()
         }
         pickExportFolderActivityResultLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
-            if (uri == null)
-                android.widget.Toast.makeText(
-                    this@IconActivity,
-                    getString(R.string.error_no_folder_selected),
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            else lifecycleScope.launch { exportIcon(uri) }
+            lifecycleScope.launch { exportIcon(uri, icon, fileName) }
         }
         setCustomOnBackPressedLogic { showInAppReviewOrFinish() }
     }
@@ -171,7 +166,11 @@ class IconActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_item_icon_save_as_image -> {
-                saveIcon()
+                if (saveLocation == SaveLocation.CUSTOM) {
+                    pickExportFolderActivityResultLauncher.launch(Uri.fromFile(File(Environment.getExternalStorageDirectory().absolutePath)))
+                } else {
+                    lifecycleScope.launch { exportIconToSaveLocation(saveLocation, icon, fileName) }
+                }
                 return true
             }
 
@@ -288,9 +287,11 @@ class IconActivity : AppCompatActivity() {
         if (!isAdaptiveIcon || !colorEnabled) {
             binding.colorButtonBackground.isEnabled = false
             binding.colorButtonForeground.isEnabled = false
-            binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(getColor(dev.oneuiproject.oneui.design.R.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonBackground.backgroundTintList =
+                ColorStateList.valueOf(getColor(dev.oneuiproject.oneui.design.R.color.sesl_show_button_shapes_color_disabled))
             binding.colorButtonBackground.setTextColor(getColor(R.color.secondary_text_icon_color))
-            binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(getColor(dev.oneuiproject.oneui.design.R.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonForeground.backgroundTintList =
+                ColorStateList.valueOf(getColor(dev.oneuiproject.oneui.design.R.color.sesl_show_button_shapes_color_disabled))
             binding.colorButtonForeground.setTextColor(getColor(R.color.secondary_text_icon_color))
             return
         }
@@ -346,31 +347,4 @@ class IconActivity : AppCompatActivity() {
         Toast.makeText(this, R.string.copied_to_clipboard, android.widget.Toast.LENGTH_SHORT).show()
     }
 
-    private fun saveIcon() {
-        if (saveLocation == SaveLocation.CUSTOM) {
-            pickExportFolderActivityResultLauncher.launch(Uri.fromFile(File(Environment.getExternalStorageDirectory().absolutePath)))
-            return
-        }
-        val dir: String = when (saveLocation) {
-            SaveLocation.DOWNLOADS -> Environment.DIRECTORY_DOWNLOADS
-            SaveLocation.PICTURES -> Environment.DIRECTORY_PICTURES
-            SaveLocation.DCIM -> Environment.DIRECTORY_DCIM
-            SaveLocation.CUSTOM -> Environment.DIRECTORY_DOWNLOADS // should never happen
-        }
-        try {
-            val os: OutputStream = Files.newOutputStream(File(Environment.getExternalStoragePublicDirectory(dir), fileName).toPath())
-            icon.compress(Bitmap.CompressFormat.PNG, 100, os)
-            os.close()
-        } catch (e: IOException) {
-            Toast.makeText(this@IconActivity, e.message, Toast.LENGTH_SHORT).show()
-            e.printStackTrace()
-        }
-        Toast.makeText(this, getString(R.string.icon_saved) + ": ${saveLocation.toLocalizedString(this)}", android.widget.Toast.LENGTH_SHORT).show()
-    }
-
-    private fun exportIcon(uri: Uri) {
-        val pngFile = DocumentFile.fromTreeUri(this, uri)!!.createFile("image/png", fileName)
-        icon.compress(Bitmap.CompressFormat.PNG, 100, contentResolver.openOutputStream(pngFile!!.uri)!!)
-        Toast.makeText(this, R.string.icon_saved, android.widget.Toast.LENGTH_SHORT).show()
-    }
 }

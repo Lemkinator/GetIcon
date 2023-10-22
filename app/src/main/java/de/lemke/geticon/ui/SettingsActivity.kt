@@ -202,7 +202,7 @@ class SettingsActivity : AppCompatActivity() {
                     return true
                 }
                 "save_location_pref" -> {
-                    val saveLocation = SaveLocation.valueOf(newValue as String)
+                    val saveLocation = SaveLocation.fromStringOrDefault(newValue as String)
                     lifecycleScope.launch {
                         updateUserSettings { it.copy(saveLocation = saveLocation) }
                     }

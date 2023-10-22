@@ -49,6 +49,8 @@
     <string name="more_information">More Information</string>
     <string name="privacy_information">Privacy information</string>
     <string name="report_bug">Report bug or improvement</string>
+    <string name="save_location">File storage location</string>
+    <string name="custom">Custom</string>
 
     <!--OOBE-->
     <string name="oobe_onboard_msg1_title">Beautiful design</string>.
@@ -86,8 +88,6 @@
     <string name="foreground">Foreground</string>
     <string name="masked">Masked</string>
     <string name="color">Color</string>
-    <string name="save_location">File storage location</string>
-    <string name="custom">Custom</string>
     <string name="size">Size</string>
 
 </resources>

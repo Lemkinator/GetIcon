@@ -124,6 +124,8 @@ enum class SaveLocation {
 
     companion object {
         val default = CUSTOM
+
+        fun fromStringOrDefault(string: String?): SaveLocation = values().firstOrNull { it.toString() == string } ?: default
     }
 
     fun toLocalizedString(context: Context): String {
