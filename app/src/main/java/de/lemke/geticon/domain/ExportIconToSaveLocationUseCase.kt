@@ -4,6 +4,7 @@ package de.lemke.geticon.domain
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Environment
+import android.util.Log
 import dagger.hilt.android.qualifiers.ActivityContext
 import de.lemke.geticon.R
 import de.lemke.geticon.data.SaveLocation
@@ -21,21 +22,27 @@ class ExportIconToSaveLocationUseCase @Inject constructor(
     @ActivityContext private val context: Context,
 ) {
     operator fun invoke(saveLocation: SaveLocation, qrCode: Bitmap, name: String) {
-        val fileName = "${name}_${SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.GERMANY).format(Date())}.png"
-        val dir: String = when (saveLocation) {
-            SaveLocation.DOWNLOADS -> Environment.DIRECTORY_DOWNLOADS
-            SaveLocation.PICTURES -> Environment.DIRECTORY_PICTURES
-            SaveLocation.DCIM -> Environment.DIRECTORY_DCIM
-            SaveLocation.CUSTOM -> Environment.DIRECTORY_PICTURES // should never happen
-        }
         try {
+            val dir: String = when (saveLocation) {
+                SaveLocation.DOWNLOADS -> Environment.DIRECTORY_DOWNLOADS
+                SaveLocation.PICTURES -> Environment.DIRECTORY_PICTURES
+                SaveLocation.DCIM -> Environment.DIRECTORY_DCIM
+                SaveLocation.CUSTOM -> Environment.DIRECTORY_PICTURES // should never happen
+            }
+            val fileName = "${name}_${SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.GERMANY).format(Date())}"
+                .replace("https://", "")
+                .replace("[^a-zA-Z0-9]+".toRegex(), "_")
+                .replace("_+".toRegex(), "_")
+                .replace("^_".toRegex(), "") +
+                    ".png"
             val os: OutputStream = Files.newOutputStream(File(Environment.getExternalStoragePublicDirectory(dir), fileName).toPath())
             qrCode.compress(Bitmap.CompressFormat.PNG, 100, os)
             os.close()
+            Toast.makeText(context, context.getString(R.string.icon_saved) + ": ${saveLocation.toLocalizedString(context)}", Toast.LENGTH_SHORT).show()
         } catch (e: IOException) {
-            Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.error_creating_file), Toast.LENGTH_SHORT).show()
+            Log.e("ExportIconToSaveLocationUseCase", e.message.toString())
             e.printStackTrace()
         }
-        Toast.makeText(context, context.getString(R.string.icon_saved) + ": ${saveLocation.toLocalizedString(context)}", Toast.LENGTH_SHORT).show()
     }
 }

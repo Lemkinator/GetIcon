@@ -62,6 +62,7 @@
     <string name="save_as_image">Als Bild speichern</string>
     <string name="error_app_not_found">App nicht gefunden</string>
     <string name="error_no_folder_selected">Kein Ordner ausgewählt</string>
+    <string name="error_creating_file">Fehler beim Erstellen der Datei</string>
     <string name="icon_saved">Icon gespeichert</string>
     <string name="copied_to_clipboard">In Zwischenablage kopiert</string>
     <string name="background">Hintergrund</string>

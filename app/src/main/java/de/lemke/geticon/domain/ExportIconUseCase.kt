@@ -25,9 +25,19 @@ class ExportIconUseCase @Inject constructor(
             ).show()
             return
         }
-        val timestamp = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.GERMANY).format(Date())
-        val pngFile = DocumentFile.fromTreeUri(context, uri)!!.createFile("image/png", "${name}_$timestamp")
-        icon.compress(Bitmap.CompressFormat.PNG, 100, context.contentResolver.openOutputStream(pngFile!!.uri)!!)
+        val filename = "${name}_${SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.GERMANY).format(Date())}"
+            .replace("https://", "")
+            .replace("[^a-zA-Z0-9]+".toRegex(), "_")
+            .replace("_+".toRegex(), "_")
+            .replace("^_".toRegex(), "") +
+                ".png"
+        val pngFile = DocumentFile.fromTreeUri(context, uri)!!.createFile("image/png", filename)
+        val os = pngFile?.uri?.let { context.contentResolver.openOutputStream(it) }
+        if (pngFile == null || os == null) {
+            Toast.makeText(context, R.string.error_creating_file, Toast.LENGTH_SHORT).show()
+            return
+        }
+        icon.compress(Bitmap.CompressFormat.PNG, 100, os)
         Toast.makeText(context, R.string.icon_saved, Toast.LENGTH_SHORT).show()
     }
 }
