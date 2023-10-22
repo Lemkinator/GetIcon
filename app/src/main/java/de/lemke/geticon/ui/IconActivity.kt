@@ -16,7 +16,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.inputmethod.InputMethodManager
@@ -31,7 +30,6 @@ import androidx.core.graphics.toColor
 import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
 import androidx.reflect.app.SeslApplicationPackageManagerReflector
-import com.google.android.play.core.review.ReviewManagerFactory
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.geticon.R
 import de.lemke.geticon.data.SaveLocation
@@ -39,12 +37,12 @@ import de.lemke.geticon.databinding.ActivityIconBinding
 import de.lemke.geticon.domain.ExportIconToSaveLocationUseCase
 import de.lemke.geticon.domain.ExportIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
+import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
 import dev.oneuiproject.oneui.widget.Toast
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 
@@ -75,6 +73,9 @@ class IconActivity : AppCompatActivity() {
     @Inject
     lateinit var exportIconToSaveLocation: ExportIconToSaveLocationUseCase
 
+    @Inject
+    lateinit var showInAppReviewOrFinish: ShowInAppReviewOrFinishUseCase
+
     private val isAdaptiveIcon: Boolean
         get() = appIcon is AdaptiveIconDrawable
 
@@ -101,7 +102,7 @@ class IconActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityIconBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.root.setNavigationButtonOnClickListener { showInAppReviewOrFinish() }
+        binding.root.setNavigationButtonOnClickListener { lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) } }
         binding.root.tooltipText = getString(R.string.sesl_navigate_up)
         val packageName = intent.getStringExtra("packageName")
         if (packageName == null) {
@@ -124,38 +125,7 @@ class IconActivity : AppCompatActivity() {
         pickExportFolderActivityResultLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             lifecycleScope.launch { exportIcon(uri, icon, fileName) }
         }
-        setCustomOnBackPressedLogic { showInAppReviewOrFinish() }
-    }
-
-    private fun showInAppReviewOrFinish() {
-        lifecycleScope.launch {
-            try {
-                val lastInAppReviewRequest = getUserSettings().lastInAppReviewRequest
-                val daysSinceLastRequest = TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis() - lastInAppReviewRequest)
-                if (daysSinceLastRequest < 14) {
-                    finishAfterTransition()
-                    return@launch
-                }
-                updateUserSettings { it.copy(lastInAppReviewRequest = System.currentTimeMillis()) }
-                val manager = ReviewManagerFactory.create(this@IconActivity)
-                //val manager = FakeReviewManager(context);
-                val request = manager.requestReviewFlow()
-                request.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        val reviewInfo = task.result
-                        val flow = manager.launchReviewFlow(this@IconActivity, reviewInfo)
-                        flow.addOnCompleteListener { finishAfterTransition() }
-                    } else {
-                        // There was some problem, log or handle the error code.
-                        Log.e("InAppReview", "Review task failed: ${task.exception?.message}")
-                        finishAfterTransition()
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("InAppReview", "Error: ${e.message}")
-                finishAfterTransition()
-            }
-        }
+        setCustomOnBackPressedLogic { lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) } }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
