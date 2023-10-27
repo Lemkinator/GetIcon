@@ -19,8 +19,8 @@ android {
         applicationId = "de.lemke.geticon"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
         resourceConfigurations += listOf("en", "de")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -117,6 +117,7 @@ dependencies {
     implementation("com.airbnb.android:lottie:6.1.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.core:core-animation:1.0.0-rc01")
+    implementation("com.google.android.play:core:1.10.3")
     implementation("com.google.android.play:core-ktx:1.8.1")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
