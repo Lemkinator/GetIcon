@@ -20,6 +20,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.inputmethod.InputMethodManager
 import android.widget.CompoundButton
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -40,7 +41,6 @@ import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
-import dev.oneuiproject.oneui.widget.Toast
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -106,11 +106,18 @@ class IconActivity : AppCompatActivity() {
         binding.root.tooltipText = getString(R.string.sesl_navigate_up)
         val packageName = intent.getStringExtra("packageName")
         if (packageName == null) {
-            android.widget.Toast.makeText(this, getString(R.string.error_app_not_found), android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()
             finish()
             return
         }
-        applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+        try {
+            applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
         binding.root.setTitle(packageManager.getApplicationLabel(applicationInfo))
         lifecycleScope.launch {
             val userSettings = getUserSettings()
@@ -186,7 +193,6 @@ class IconActivity : AppCompatActivity() {
                 InputMethodManager.HIDE_NOT_ALWAYS
             )
             textView.clearFocus()
-
             true
         }
         binding.sizeSeekbar.min = minSize
@@ -314,7 +320,7 @@ class IconActivity : AppCompatActivity() {
         val uri = FileProvider.getUriForFile(this, "de.lemke.geticon.fileprovider", cacheFile)
         val clip = ClipData.newUri(contentResolver, "icon", uri)
         (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
-        Toast.makeText(this, R.string.copied_to_clipboard, android.widget.Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
     }
 
 }

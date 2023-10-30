@@ -331,7 +331,7 @@ class MainActivity : AppCompatActivity() {
                 binding.apppickerList.removeItemDecorationAt(i)
             }
         }
-        binding.apppickerList.setAppPickerView(AppPickerView.TYPE_GRID, getApps(), AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
+        binding.apppickerList.setAppPickerView(AppPickerView.TYPE_GRID, getApps(null), AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
         binding.apppickerList.setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
             holder.item.setOnClickListener {
                 startActivity(
@@ -350,14 +350,14 @@ class MainActivity : AppCompatActivity() {
         binding.apppickerList.seslSetSmoothScrollEnabled(true)
     }
 
-    private suspend fun getApps(): List<String> = withContext(Dispatchers.Default) {
+    private suspend fun getApps(search: String?): List<String> = withContext(Dispatchers.Default) {
         val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
         val filteredApps = if (showSystemApps) apps
         else apps.filter { it.flags and (ApplicationInfo.FLAG_UPDATED_SYSTEM_APP or ApplicationInfo.FLAG_SYSTEM) == 0 }
         return@withContext if (search.isNullOrBlank()) filteredApps.map { it.packageName }
         else filteredApps.filter {
-            packageManager.getApplicationLabel(it).toString().contains(search!!, ignoreCase = true) ||
-                    it.packageName.contains(search!!, ignoreCase = true)
+            packageManager.getApplicationLabel(it).toString().contains(search, ignoreCase = true) ||
+                    it.packageName.contains(search, ignoreCase = true)
         }.map { it.packageName }
     }
 
@@ -368,7 +368,7 @@ class MainActivity : AppCompatActivity() {
         refreshAppsJob?.cancel()
         if (!this@MainActivity::binding.isInitialized) return
         refreshAppsJob = lifecycleScope.launch {
-            val apps = getApps()
+            val apps = getApps(search)
             if (apps.isEmpty() || search?.isBlank() == true) {
                 binding.apppickerList.visibility = View.GONE
                 binding.apppickerProgress.visibility = View.GONE
