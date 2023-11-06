@@ -20,7 +20,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.inputmethod.InputMethodManager
 import android.widget.CompoundButton
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -41,6 +40,7 @@ import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
+import android.widget.Toast
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -80,7 +80,11 @@ class IconActivity : AppCompatActivity() {
         get() = appIcon is AdaptiveIconDrawable
 
     private val appIcon: Drawable
-        get() = packageManager.getApplicationIcon(applicationInfo.packageName)
+        get() = try {
+            packageManager.getApplicationIcon(applicationInfo.packageName)
+        } catch (e: Exception) {
+            getDrawable(dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)!!
+        }
 
     private val maskedAppIcon: Drawable
         @SuppressLint("RestrictedApi")
@@ -290,7 +294,7 @@ class IconActivity : AppCompatActivity() {
 
     private fun generateIcon() {
         val drawable = appIcon.mutate()
-        if (drawable is AdaptiveIconDrawable) {
+        if (drawable is AdaptiveIconDrawable && drawable.foreground != null && drawable.background != null) {
             icon = drawable.toBitmap(size, size)
             drawable.setBounds(0, 0, size, size)
             val background = drawable.background.mutate()

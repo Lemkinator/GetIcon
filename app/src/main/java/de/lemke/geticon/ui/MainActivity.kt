@@ -14,6 +14,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.apppickerview.widget.AppPickerView
@@ -351,14 +352,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun getApps(search: String?): List<String> = withContext(Dispatchers.Default) {
-        val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-        val filteredApps = if (showSystemApps) apps
-        else apps.filter { it.flags and (ApplicationInfo.FLAG_UPDATED_SYSTEM_APP or ApplicationInfo.FLAG_SYSTEM) == 0 }
-        return@withContext if (search.isNullOrBlank()) filteredApps.map { it.packageName }
-        else filteredApps.filter {
-            packageManager.getApplicationLabel(it).toString().contains(search, ignoreCase = true) ||
-                    it.packageName.contains(search, ignoreCase = true)
-        }.map { it.packageName }
+        try {
+            val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+            val filteredApps = if (showSystemApps) apps
+            else apps.filter { it.flags and (ApplicationInfo.FLAG_UPDATED_SYSTEM_APP or ApplicationInfo.FLAG_SYSTEM) == 0 }
+            return@withContext if (search.isNullOrBlank()) filteredApps.map { it.packageName }
+            else filteredApps.filter {
+                packageManager.getApplicationLabel(it).toString().contains(search, ignoreCase = true) ||
+                        it.packageName.toString().contains(search, ignoreCase = true)
+            }.map { it.packageName }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this@MainActivity, R.string.error_loading_apps, Toast.LENGTH_LONG).show()
+            emptyList()
+        }
     }
 
     private fun refreshApps() {

@@ -48,6 +48,7 @@
 
     <!--General-->
     <string name="no_email_app_installed">Keine E-Mail-App installiert…</string>
+    <string name="no_browser_app_installed">Keine Browser-App installiert…</string>
 
     <!--sesl???-->
     <string name="search">Suche</string>
@@ -63,6 +64,7 @@
     <string name="error_app_not_found">App nicht gefunden</string>
     <string name="error_no_folder_selected">Kein Ordner ausgewählt</string>
     <string name="error_creating_file">Fehler beim Erstellen der Datei</string>
+    <string name="error_loading_apps">Fehler beim Laden der Apps</string>
     <string name="icon_saved">Icon gespeichert</string>
     <string name="copied_to_clipboard">In Zwischenablage kopiert</string>
     <string name="background">Hintergrund</string>

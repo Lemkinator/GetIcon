@@ -68,6 +68,7 @@
     <!--General-->
     <string name="ok" translatable="false" tools:ignore="ButtonCase,Typos">Ok</string>
     <string name="no_email_app_installed">No e-mail app installed…</string>
+    <string name="no_browser_app_installed">No browser app installed…</string>
 
     <!--sesl???-->
     <string name="search">Search</string>
@@ -83,6 +84,7 @@
     <string name="error_app_not_found">App not found</string>
     <string name="error_no_folder_selected">No folder selected</string>
     <string name="error_creating_file">Error creating file</string>
+    <string name="error_loading_apps">Error loading apps</string>
     <string name="icon_saved">Icon saved</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
     <string name="background">Background</string>
