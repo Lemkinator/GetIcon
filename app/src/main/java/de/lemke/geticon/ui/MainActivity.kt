@@ -145,7 +145,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun openMain() {
         lifecycleScope.launch {
-            setCustomOnBackPressedLogic(triggerStateFlow = backPressEnabled, onBackPressedLogic = { checkBackPressed() })
+            setCustomOnBackPressedLogic(backPressEnabled) { checkBackPressed() }
             initDrawer()
             showSystemApps = getUserSettings().showSystemApps
             initAppPicker()

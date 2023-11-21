@@ -132,11 +132,13 @@ class IconActivity : AppCompatActivity() {
             backgroundColor = userSettings.recentBackgroundColors.first()
             saveLocation = userSettings.saveLocation
             initViews()
+            if (showInAppReviewOrFinish.canShowInAppReview()) {
+                setCustomOnBackPressedLogic { lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) } }
+            }
         }
         pickExportFolderActivityResultLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             lifecycleScope.launch { exportIcon(uri, icon, fileName) }
         }
-        setCustomOnBackPressedLogic { lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) } }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
