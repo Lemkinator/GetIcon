@@ -73,10 +73,6 @@ class MainActivity : AppCompatActivity() {
     lateinit var checkAppStart: CheckAppStartUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        /*  Note: https://stackoverflow.com/a/69831106/18332741
-         On Android 12 just running the app via android studio doesn't show the full splash screen.
-         You have to kill it and open the app from the launcher.
-         */
         val splashScreen = installSplashScreen()
         time = System.currentTimeMillis()
         super.onCreate(savedInstanceState)
