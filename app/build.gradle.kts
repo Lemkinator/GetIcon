@@ -19,8 +19,8 @@ android {
         applicationId = "de.lemke.geticon"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.0.6"
+        versionCode = 8
+        versionName = "1.0.7"
         resourceConfigurations += listOf("en", "de")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -114,12 +114,15 @@ dependencies {
     implementation("io.github.oneuiproject.sesl:picker-color:1.1.0")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
-    implementation("com.airbnb.android:lottie:6.3.0")
+    implementation("com.airbnb.android:lottie:6.4.1")
     implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("com.google.android.play:core:1.10.3")
-    implementation("com.google.android.play:core-ktx:1.8.1")
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("com.google.android.play:review:2.0.1")
+    implementation("com.google.android.play:review-ktx:2.0.1")
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
 
+    //noinspection GradleDependency
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
     //noinspection GradleDependency
     implementation("androidx.core:core-ktx:1.9.0")
     //noinspection GradleDependency
