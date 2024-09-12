@@ -22,8 +22,6 @@ android {
         versionCode = 8
         versionName = "1.0.7"
         resourceConfigurations += listOf("en", "de")
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
