@@ -22,20 +22,6 @@
         <item name="tint">@color/primary_text_icon_color</item>
     </style>
 
-    <style name="ButtonStyle.Transparent" parent="OneUI.ButtonStyleTransparent">
-        <item name="android:backgroundTint">@android:color/transparent</item>
-        <item name="android:textColor">@color/primary_color_themed</item>
-        <item name="android:drawableTint">@color/primary_color_themed</item>
-        <item name="tint">@color/primary_color_themed</item>
-    </style>
-
-    <style name="ButtonStyle.Filled" parent="Widget.AppCompat.Button">
-        <item name="android:backgroundTint">@color/filled_background_color</item>
-        <item name="android:textColor">@color/primary_text_icon_color_themed</item>
-        <item name="android:drawableTint">@color/primary_text_icon_color_themed</item>
-        <item name="tint">@color/primary_text_icon_color_themed</item>
-    </style>
-
     <style name="DrawerDividerStyle">
         <item name="android:layout_marginTop">6dp</item>
         <item name="android:layout_marginBottom">6dp</item>

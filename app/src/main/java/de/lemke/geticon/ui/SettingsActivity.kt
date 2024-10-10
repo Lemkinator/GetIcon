@@ -97,8 +97,8 @@ class SettingsActivity : AppCompatActivity() {
                     try {
                         startActivity(intent)
                     } catch (e: ActivityNotFoundException) {
-                        Toast.makeText(settingsActivity, getString(R.string.change_language_not_supported_by_device), Toast.LENGTH_SHORT)
-                            .show()
+                        e.printStackTrace()
+                        Toast.makeText(settingsActivity, getString(R.string.change_language_not_supported_by_device), Toast.LENGTH_SHORT).show()
                     }
                     true
                 }
@@ -109,8 +109,8 @@ class SettingsActivity : AppCompatActivity() {
                 autoDarkModePref.isChecked = userSettings.autoDarkMode
                 darkModePref.isEnabled = !autoDarkModePref.isChecked
                 darkModePref.value = if (userSettings.darkMode) "1" else "0"
-                saveLocationPref.entries = SaveLocation.values().map { it.toLocalizedString(requireContext()) }.toTypedArray()
-                saveLocationPref.entryValues = SaveLocation.values().map { it.name }.toTypedArray()
+                saveLocationPref.entries = SaveLocation.entries.map { it.toLocalizedString(requireContext()) }.toTypedArray()
+                saveLocationPref.entryValues = SaveLocation.entries.map { it.name }.toTypedArray()
                 saveLocationPref.value = userSettings.saveLocation.name
             }
 
@@ -136,7 +136,8 @@ class SettingsActivity : AppCompatActivity() {
                 intent.putExtra(Intent.EXTRA_TEXT, "")
                 try {
                     startActivity(intent)
-                } catch (ex: ActivityNotFoundException) {
+                } catch (e: ActivityNotFoundException) {
+                    e.printStackTrace()
                     Toast.makeText(requireContext(), getString(R.string.no_email_app_installed), Toast.LENGTH_SHORT).show()
                 }
                 true

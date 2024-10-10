@@ -41,6 +41,7 @@ import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
 import android.widget.Toast
+import androidx.appcompat.content.res.AppCompatResources
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -57,7 +58,7 @@ class IconActivity : AppCompatActivity() {
     private var colorEnabled: Boolean = false
     private var foregroundColor: Int = 0
     private var backgroundColor: Int = 0
-    private lateinit var pickExportFolderActivityResultLauncher: ActivityResultLauncher<Uri>
+    private lateinit var pickExportFolderActivityResultLauncher: ActivityResultLauncher<Uri?>
     private val minSize = 16
     private val maxSize = 1024
 
@@ -82,8 +83,8 @@ class IconActivity : AppCompatActivity() {
     private val appIcon: Drawable
         get() = try {
             packageManager.getApplicationIcon(applicationInfo.packageName)
-        } catch (e: Exception) {
-            getDrawable(dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)!!
+        } catch (_: Exception) {
+            AppCompatResources.getDrawable(this, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)!!
         }
 
     private val maskedAppIcon: Drawable
@@ -173,7 +174,8 @@ class IconActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private suspend fun initViews() {
+    @SuppressLint("SetTextI18n")
+    private fun initViews() {
         generateIcon()
         binding.icon.setOnClickListener { copyIconToClipboard() }
         binding.maskedCheckbox.isChecked = maskEnabled
@@ -265,15 +267,16 @@ class IconActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("PrivateResource")
     private fun setButtonColors() {
         if (!isAdaptiveIcon || !colorEnabled) {
             binding.colorButtonBackground.isEnabled = false
             binding.colorButtonForeground.isEnabled = false
             binding.colorButtonBackground.backgroundTintList =
-                ColorStateList.valueOf(getColor(dev.oneuiproject.oneui.design.R.color.sesl_show_button_shapes_color_disabled))
-            binding.colorButtonBackground.setTextColor(getColor(R.color.secondary_text_icon_color))
+                ColorStateList.valueOf(getColor(androidx.appcompat.R.color.sesl_show_button_shapes_color_disabled))
             binding.colorButtonForeground.backgroundTintList =
-                ColorStateList.valueOf(getColor(dev.oneuiproject.oneui.design.R.color.sesl_show_button_shapes_color_disabled))
+                ColorStateList.valueOf(getColor(androidx.appcompat.R.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonBackground.setTextColor(getColor(R.color.secondary_text_icon_color))
             binding.colorButtonForeground.setTextColor(getColor(R.color.secondary_text_icon_color))
             return
         }

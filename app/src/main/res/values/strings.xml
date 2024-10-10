@@ -1,5 +1,5 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!--General-->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en">
+<!--General-->
     <string name="app_name" translatable="false">Get Icon</string>
     <string name="leo" translatable="false">Leonard Lemke</string>
     <string name="leo_job" translatable="false">Softwaredeveloper</string>

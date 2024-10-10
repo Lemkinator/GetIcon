@@ -5,7 +5,6 @@ import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -69,11 +68,4 @@ inline fun AppCompatActivity.setCustomOnBackPressedLogic(
             }
         }
     }
-}
-
-inline fun Fragment.setCustomOnBackPressedLogic(
-    triggerStateFlow: StateFlow<Boolean>? = null,
-    crossinline onBackPressedLogic: () -> Unit
-) {
-    (this.requireActivity() as AppCompatActivity).setCustomOnBackPressedLogic(triggerStateFlow, onBackPressedLogic)
 }

@@ -46,18 +46,18 @@ class UserSettingsRepository @Inject constructor(
     private fun settingsFromPreferences(prefs: Preferences) = UserSettings(
         lastVersionCode = prefs[KEY_LAST_VERSION_CODE] ?: -1,
         lastVersionName = prefs[KEY_LAST_VERSION_NAME] ?: "0.0",
-        darkMode = prefs[KEY_DARK_MODE] ?: true,
-        autoDarkMode = prefs[KEY_AUTO_DARK_MODE] ?: true,
-        tosAccepted = prefs[KEY_TOS_ACCEPTED] ?: false,
-        devModeEnabled = prefs[KEY_DEV_MODE_ENABLED] ?: false,
+        darkMode = prefs[KEY_DARK_MODE] == true,
+        autoDarkMode = prefs[KEY_AUTO_DARK_MODE] == true,
+        tosAccepted = prefs[KEY_TOS_ACCEPTED] == true,
+        devModeEnabled = prefs[KEY_DEV_MODE_ENABLED] == true,
         search = prefs[KEY_SEARCH] ?: "",
-        showSystemApps = prefs[KEY_SHOW_SYSTEM_APPS] ?: false,
+        showSystemApps = prefs[KEY_SHOW_SYSTEM_APPS] == true,
         iconSize = prefs[KEY_ICON_SIZE] ?: 512,
-        maskEnabled = prefs[KEY_MASK_ENABLED] ?: true,
-        colorEnabled = prefs[KEY_COLOR_ENABLED] ?: false,
+        maskEnabled = prefs[KEY_MASK_ENABLED] == true,
+        colorEnabled = prefs[KEY_COLOR_ENABLED] == true,
         recentBackgroundColors = prefs[KEY_RECENT_BACKGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-16547330),
         recentForegroundColors = prefs[KEY_RECENT_FOREGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-1),
-        saveLocation = SaveLocation.values()[prefs[KEY_SAVE_LOCATION] ?: SaveLocation.default.ordinal],
+        saveLocation = SaveLocation.entries[prefs[KEY_SAVE_LOCATION] ?: SaveLocation.default.ordinal],
         lastInAppReviewRequest = prefs[KEY_LAST_IN_APP_REVIEW_REQUEST] ?: System.currentTimeMillis(),
     )
 
@@ -125,7 +125,7 @@ enum class SaveLocation {
     companion object {
         val default = CUSTOM
 
-        fun fromStringOrDefault(string: String?): SaveLocation = values().firstOrNull { it.toString() == string } ?: default
+        fun fromStringOrDefault(string: String?): SaveLocation = SaveLocation.entries.firstOrNull { it.toString() == string } ?: default
     }
 
     fun toLocalizedString(context: Context): String {
