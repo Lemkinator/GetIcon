@@ -6,8 +6,10 @@ import android.app.SearchManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.Pair
 import android.view.Menu
 import android.view.MenuItem
@@ -15,6 +17,8 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SearchView
@@ -49,6 +53,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 import kotlin.math.abs
 
@@ -56,6 +62,7 @@ import kotlin.math.abs
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
+    private lateinit var pickApkActivityResultLauncher: ActivityResultLauncher<String>
     private val backPressEnabled = MutableStateFlow(false)
     private var showSystemApps = false
     private var search: String? = null
@@ -113,12 +120,38 @@ class MainActivity : AppCompatActivity() {
             }
         }*/
 
-
         lifecycleScope.launch {
             when (checkAppStart()) {
                 AppStart.FIRST_TIME -> openOOBE()
                 AppStart.NORMAL -> checkTOS(getUserSettings())
                 AppStart.FIRST_TIME_VERSION -> checkTOS(getUserSettings())
+            }
+        }
+        pickApkActivityResultLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            try {
+                if (uri == null) {
+                    Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                    return@registerForActivityResult
+                }
+                val tempFile = File.createTempFile("extractIcon", ".apk", cacheDir)
+                contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
+                val path = tempFile.absolutePath
+                val packageInfo = packageManager.getPackageArchiveInfo(path, 0)
+                val applicationInfo = packageInfo?.applicationInfo
+                Log.d("MainActivity", "extract from apk: uri: $uri, path: $path, applicationInfo: $applicationInfo")
+                if (applicationInfo == null) {
+                    Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                    return@registerForActivityResult
+                }
+                applicationInfo.sourceDir = path
+                applicationInfo.publicSourceDir = path
+                startActivity(
+                    Intent(this@MainActivity, IconActivity::class.java)
+                        .putExtra("applicationInfo", applicationInfo)
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -270,9 +303,13 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("RestrictedApi")
     private fun initDrawer() {
+        val pickIconFromApkOption = findViewById<LinearLayout>(R.id.draweritem_extract_icon_from_apk)
         val aboutAppOption = findViewById<LinearLayout>(R.id.draweritem_about_app)
         val aboutMeOption = findViewById<LinearLayout>(R.id.draweritem_about_me)
         val settingsOption = findViewById<LinearLayout>(R.id.draweritem_settings)
+        pickIconFromApkOption.setOnClickListener {
+            pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
+        }
         aboutAppOption.setOnClickListener {
             startActivity(Intent(this@MainActivity, AboutActivity::class.java))
         }
@@ -282,7 +319,12 @@ class MainActivity : AppCompatActivity() {
         settingsOption.setOnClickListener {
             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
         }
-        binding.drawerLayoutMain.setDrawerButtonIcon(AppCompatResources.getDrawable(this, dev.oneuiproject.oneui.R.drawable.ic_oui_info_outline))
+        binding.drawerLayoutMain.setDrawerButtonIcon(
+            AppCompatResources.getDrawable(
+                this,
+                dev.oneuiproject.oneui.R.drawable.ic_oui_info_outline
+            )
+        )
         binding.drawerLayoutMain.setDrawerButtonOnClickListener {
             startActivity(Intent().setClass(this@MainActivity, AboutActivity::class.java))
         }
@@ -331,16 +373,21 @@ class MainActivity : AppCompatActivity() {
         binding.apppickerList.setAppPickerView(AppPickerView.TYPE_GRID, getApps(null), AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
         binding.apppickerList.setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
             holder.item.setOnClickListener {
-                startActivity(
-                    Intent(this@MainActivity, IconActivity::class.java)
-                        .putExtra("packageName", packageName),
-                    ActivityOptions
-                        .makeSceneTransitionAnimation(
-                            this@MainActivity,
-                            Pair.create(holder.appIcon, "icon"),
-                        )
-                        .toBundle()
-                )
+                try {
+                    startActivity(
+                        Intent(this@MainActivity, IconActivity::class.java)
+                            .putExtra("applicationInfo", packageManager.getApplicationInfo(packageName, 0)),
+                        ActivityOptions
+                            .makeSceneTransitionAnimation(
+                                this@MainActivity,
+                                Pair.create(holder.appIcon, "icon"),
+                            )
+                            .toBundle()
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this@MainActivity, R.string.error_app_not_found, Toast.LENGTH_SHORT).show()
+                }
             }
         }
         binding.apppickerList.itemAnimator = null

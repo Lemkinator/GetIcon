@@ -16,13 +16,16 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.inputmethod.InputMethodManager
 import android.widget.CompoundButton
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
@@ -40,8 +43,6 @@ import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
-import android.widget.Toast
-import androidx.appcompat.content.res.AppCompatResources
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -53,12 +54,12 @@ class IconActivity : AppCompatActivity() {
     private lateinit var icon: Bitmap
     private lateinit var applicationInfo: ApplicationInfo
     private lateinit var saveLocation: SaveLocation
+    private lateinit var pickExportFolderActivityResultLauncher: ActivityResultLauncher<Uri?>
     private var size: Int = 0
     private var maskEnabled: Boolean = true
     private var colorEnabled: Boolean = false
     private var foregroundColor: Int = 0
     private var backgroundColor: Int = 0
-    private lateinit var pickExportFolderActivityResultLauncher: ActivityResultLauncher<Uri?>
     private val minSize = 16
     private val maxSize = 1024
 
@@ -77,53 +78,60 @@ class IconActivity : AppCompatActivity() {
     @Inject
     lateinit var showInAppReviewOrFinish: ShowInAppReviewOrFinishUseCase
 
-    private val isAdaptiveIcon: Boolean
-        get() = appIcon is AdaptiveIconDrawable
-
     private val appIcon: Drawable
         get() = try {
-            packageManager.getApplicationIcon(applicationInfo.packageName)
-        } catch (_: Exception) {
+            applicationInfo.loadIcon(packageManager)
+        } catch (e: Exception) {
+            e.printStackTrace()
             AppCompatResources.getDrawable(this, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)!!
         }
 
-    private val maskedAppIcon: Drawable
+    private val isAdaptiveIcon get() = appIcon is AdaptiveIconDrawable
+
+    private val maskedAppIcon: Drawable?
         @SuppressLint("RestrictedApi")
         get() = SeslApplicationPackageManagerReflector.semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
-            ?: appIcon
+
+    private val hasMaskedAppIcon get() = isAdaptiveIcon || maskedAppIcon != null
 
     @Suppress("unused")
     @SuppressLint("RestrictedApi")
-    private fun getMaskedAppIcon(activityName: String?): Drawable = if (!activityName.isNullOrBlank()) {
+    private fun getMaskedAactivityIcon(activityName: String?): Drawable? = if (activityName.isNullOrBlank()) maskedAppIcon
+    else {
         val componentName = ComponentName(applicationInfo.packageName, activityName)
         SeslApplicationPackageManagerReflector.semGetActivityIconForIconTray(packageManager, componentName, 1)
-            ?: packageManager.getActivityIcon(componentName)
-    } else maskedAppIcon
+    }
 
     private val fileName: String
         get() = applicationInfo.packageName + "_" + if (maskEnabled) "mask" else "default" + if (colorEnabled) "_mono" else ""
 
+    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityIconBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.setNavigationButtonOnClickListener { lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) } }
         binding.root.tooltipText = getString(R.string.sesl_navigate_up)
-        val packageName = intent.getStringExtra("packageName")
-        if (packageName == null) {
-            Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
         try {
-            applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+            val nullableApplicationInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra("applicationInfo", ApplicationInfo::class.java)
+            } else {
+                intent.getParcelableExtra("applicationInfo")
+            }
+            if (nullableApplicationInfo == null) {
+                Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()
+                finish()
+                return
+            } else {
+                applicationInfo = nullableApplicationInfo
+            }
+            binding.root.setTitle(applicationInfo.loadLabel(packageManager))
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()
             finish()
             return
         }
-        binding.root.setTitle(packageManager.getApplicationLabel(applicationInfo))
         lifecycleScope.launch {
             val userSettings = getUserSettings()
             size = userSettings.iconSize
@@ -178,15 +186,16 @@ class IconActivity : AppCompatActivity() {
     private fun initViews() {
         generateIcon()
         binding.icon.setOnClickListener { copyIconToClipboard() }
-        binding.maskedCheckbox.isChecked = maskEnabled
+        binding.maskedCheckbox.isChecked = maskEnabled && hasMaskedAppIcon
+        binding.maskedCheckbox.isEnabled = hasMaskedAppIcon
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             maskEnabled = isChecked
             generateIcon()
             lifecycleScope.launch { updateUserSettings { it.copy(maskEnabled = isChecked) } }
         }
-        setButtonColors()
-        binding.colorCheckbox.isChecked = colorEnabled
+        binding.colorCheckbox.isChecked = colorEnabled && isAdaptiveIcon
         binding.colorCheckbox.isEnabled = isAdaptiveIcon
+        setButtonColors()
         binding.sizeEdittext.setText(size.toString())
         binding.sizeEdittext.setOnEditorActionListener { textView, _, _ ->
             val newSize = textView.text.toString().toIntOrNull()
@@ -226,19 +235,17 @@ class IconActivity : AppCompatActivity() {
             }
             binding.colorButtonBackground.setOnClickListener {
                 lifecycleScope.launch {
-                    val userSettingsColor = getUserSettings()
+                    val userSettings = getUserSettings()
                     val dialog = SeslColorPickerDialog(
                         this@IconActivity,
                         { color: Int ->
                             backgroundColor = color
                             generateIcon()
-                            val recentColors = userSettingsColor.recentBackgroundColors.toMutableList()
-                            if (recentColors.size >= 6) recentColors.removeAt(5)
-                            recentColors.add(0, color)
-                            lifecycleScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
                             setButtonColors()
+                            val recentColors = (listOf(color) + userSettings.recentBackgroundColors).distinct().take(6)
+                            lifecycleScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
                         },
-                        userSettingsColor.recentBackgroundColors.first(), buildIntArray(userSettingsColor.recentBackgroundColors), true
+                        userSettings.recentBackgroundColors.first(), userSettings.recentBackgroundColors.toIntArray(), true
                     )
                     dialog.setTransparencyControlEnabled(true)
                     dialog.show()
@@ -246,19 +253,17 @@ class IconActivity : AppCompatActivity() {
             }
             binding.colorButtonForeground.setOnClickListener {
                 lifecycleScope.launch {
-                    val userSettingsColor = getUserSettings()
+                    val userSettings = getUserSettings()
                     val dialog = SeslColorPickerDialog(
                         this@IconActivity,
                         { color: Int ->
                             foregroundColor = color
                             generateIcon()
-                            val recentColors = userSettingsColor.recentForegroundColors.toMutableList()
-                            if (recentColors.size >= 6) recentColors.removeAt(5)
-                            recentColors.add(0, color)
-                            lifecycleScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
                             setButtonColors()
+                            val recentColors = (listOf(color) + userSettings.recentForegroundColors).distinct().take(6)
+                            lifecycleScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
                         },
-                        userSettingsColor.recentForegroundColors.first(), buildIntArray(userSettingsColor.recentForegroundColors), true
+                        userSettings.recentForegroundColors.first(), userSettings.recentForegroundColors.toIntArray(), true
                     )
                     dialog.setTransparencyControlEnabled(true)
                     dialog.show()
@@ -269,37 +274,29 @@ class IconActivity : AppCompatActivity() {
 
     @SuppressLint("PrivateResource")
     private fun setButtonColors() {
-        if (!isAdaptiveIcon || !colorEnabled) {
+        if (isAdaptiveIcon && colorEnabled) {
+            binding.colorButtonBackground.isEnabled = true
+            binding.colorButtonBackground.setTextColor(if (backgroundColor.toColor().luminance() >= 0.5) Color.BLACK else Color.WHITE)
+            binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(backgroundColor)
+            binding.colorButtonForeground.isEnabled = true
+            binding.colorButtonForeground.setTextColor(if (foregroundColor.toColor().luminance() >= 0.5) Color.BLACK else Color.WHITE)
+            binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(foregroundColor)
+        } else {
             binding.colorButtonBackground.isEnabled = false
-            binding.colorButtonForeground.isEnabled = false
+            binding.colorButtonBackground.setTextColor(getColor(R.color.secondary_text_icon_color))
             binding.colorButtonBackground.backgroundTintList =
                 ColorStateList.valueOf(getColor(androidx.appcompat.R.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonForeground.isEnabled = false
+            binding.colorButtonForeground.setTextColor(getColor(R.color.secondary_text_icon_color))
             binding.colorButtonForeground.backgroundTintList =
                 ColorStateList.valueOf(getColor(androidx.appcompat.R.color.sesl_show_button_shapes_color_disabled))
-            binding.colorButtonBackground.setTextColor(getColor(R.color.secondary_text_icon_color))
-            binding.colorButtonForeground.setTextColor(getColor(R.color.secondary_text_icon_color))
-            return
         }
-        binding.colorButtonBackground.isEnabled = true
-        binding.colorButtonForeground.isEnabled = true
-        binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(backgroundColor)
-        binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(foregroundColor)
-        binding.colorButtonBackground.setTextColor(if (backgroundColor.toColor().luminance() >= 0.5) Color.BLACK else Color.WHITE)
-        binding.colorButtonForeground.setTextColor(if (foregroundColor.toColor().luminance() >= 0.5) Color.BLACK else Color.WHITE)
-    }
-
-    private fun buildIntArray(integers: List<Int>): IntArray {
-        val ints = IntArray(integers.size)
-        var i = 0
-        for (n in integers) {
-            ints[i++] = n
-        }
-        return ints
     }
 
     private fun generateIcon() {
         val drawable = appIcon.mutate()
         if (drawable is AdaptiveIconDrawable && drawable.foreground != null && drawable.background != null) {
+            Log.d("IconActivity", "Icon is adaptive and has foreground and background")
             icon = drawable.toBitmap(size, size)
             drawable.setBounds(0, 0, size, size)
             val background = drawable.background.mutate()
@@ -317,7 +314,8 @@ class IconActivity : AppCompatActivity() {
             background.draw(canvas)
             foreground.draw(canvas)
         } else {
-            icon = if (maskEnabled) maskedAppIcon.toBitmap(size, size)
+            Log.d("IconActivity", "Icon is not adaptive or has no foreground or background")
+            icon = if (maskEnabled && hasMaskedAppIcon) maskedAppIcon?.toBitmap(size, size) ?: appIcon.toBitmap(size, size)
             else drawable.toBitmap(size, size)
         }
         binding.icon.setImageBitmap(icon)

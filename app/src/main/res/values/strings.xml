@@ -83,6 +83,7 @@
     <string name="save_as_image">Save as image</string>
     <string name="error_app_not_found">App not found</string>
     <string name="error_no_folder_selected">No folder selected</string>
+    <string name="error_no_valid_file_selected">No valid file selected</string>
     <string name="error_creating_file">Error creating file</string>
     <string name="error_loading_apps">Error loading apps</string>
     <string name="icon_saved">Icon saved</string>
@@ -92,5 +93,7 @@
     <string name="masked">Masked</string>
     <string name="color">Color</string>
     <string name="size">Size</string>
+
+    <string name="extract_icon_from_apk">Extract icon from APK</string>
 
 </resources>
