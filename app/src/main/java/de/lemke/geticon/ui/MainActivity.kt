@@ -133,8 +133,40 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
                     return@registerForActivityResult
                 }
+                /*val importFile = DocumentFile.fromSingleUri(this, uri)
+                if (importFile == null || !importFile.exists() || !importFile.canRead()) {
+                    Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                    return@registerForActivityResult
+                }
+                Log.d("MainActivity", "importFile: uri: $uri, name: ${importFile.name}, type: ${importFile.type}")*/
                 val tempFile = File.createTempFile("extractIcon", ".apk", cacheDir)
                 contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
+                /*when (importFile.type) {
+                    "application/vnd.android.package-archive" -> {
+                        contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
+                    }
+
+                    "application/octet-stream" -> {
+                        val zipInputStream = ZipInputStream(contentResolver.openInputStream(uri)!!)
+                        var zipEntry = zipInputStream.nextEntry
+                        while (zipEntry != null) {
+                            val fileName = zipEntry.name
+                            Log.d("MainActivity", "extract from apks: fileName: $fileName")
+                            if (fileName == "base.apk") {
+                                tempFile.outputStream().use { zipInputStream.copyTo(it) }
+                                break
+                            }
+                            zipEntry = zipInputStream.nextEntry
+                            zipInputStream.closeEntry()
+                        }
+                        zipInputStream.close()
+                    }
+
+                    else -> {
+                        Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                        return@registerForActivityResult
+                    }
+                }*/
                 val path = tempFile.absolutePath
                 val packageInfo = packageManager.getPackageArchiveInfo(path, 0)
                 val applicationInfo = packageInfo?.applicationInfo
@@ -309,6 +341,7 @@ class MainActivity : AppCompatActivity() {
         val settingsOption = findViewById<LinearLayout>(R.id.draweritem_settings)
         pickIconFromApkOption.setOnClickListener {
             pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
+            //pickApkActivityResultLauncher.launch("*/*")
         }
         aboutAppOption.setOnClickListener {
             startActivity(Intent(this@MainActivity, AboutActivity::class.java))
