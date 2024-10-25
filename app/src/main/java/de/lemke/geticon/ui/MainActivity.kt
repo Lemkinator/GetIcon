@@ -242,13 +242,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            binding.drawerLayoutMain.findViewById<androidx.drawerlayout.widget.DrawerLayout>(dev.oneuiproject.oneui.design.R.id.drawerlayout_drawer)
-                .isDrawerOpen(
-                    binding.drawerLayoutMain.findViewById<LinearLayout>(dev.oneuiproject.oneui.design.R.id.drawerlayout_drawer_content)
-                ) -> {
-                binding.drawerLayoutMain.setDrawerOpen(false, true)
-            }
-
             else -> {
                 //should not get here, callback should be disabled/unregistered
                 finishAffinity()
@@ -380,21 +373,6 @@ class MainActivity : AppCompatActivity() {
             if (totalScrollRange != 0) binding.iconNoEntryView.translationY = (abs(verticalOffset) - totalScrollRange).toFloat() / 2.0f
             else binding.iconNoEntryView.translationY = (abs(verticalOffset) - inputMethodWindowVisibleHeight).toFloat() / 2.0f
         }
-        binding.drawerLayoutMain.findViewById<androidx.drawerlayout.widget.DrawerLayout>(dev.oneuiproject.oneui.design.R.id.drawerlayout_drawer)
-            .addDrawerListener(
-                object : androidx.drawerlayout.widget.DrawerLayout.DrawerListener {
-                    override fun onDrawerSlide(drawerView: View, slideOffset: Float) {}
-                    override fun onDrawerOpened(drawerView: View) {
-                        backPressEnabled.value = true
-                    }
-
-                    override fun onDrawerClosed(drawerView: View) {
-                        backPressEnabled.value = false
-                    }
-
-                    override fun onDrawerStateChanged(newState: Int) {}
-                }
-            )
     }
 
     private suspend fun initAppPicker() {
