@@ -111,7 +111,12 @@ class SettingsActivity : AppCompatActivity() {
                 darkModePref.value = if (userSettings.darkMode) "1" else "0"
                 saveLocationPref.entries = SaveLocation.entries.map { it.toLocalizedString(requireContext()) }.toTypedArray()
                 saveLocationPref.entryValues = SaveLocation.entries.map { it.name }.toTypedArray()
-                saveLocationPref.value = userSettings.saveLocation.name
+                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+                    saveLocationPref.value = SaveLocation.CUSTOM.name
+                    saveLocationPref.isEnabled = false
+                } else {
+                    saveLocationPref.value = userSettings.saveLocation.name
+                }
             }
 
             findPreference<PreferenceScreen>("privacy_pref")!!.onPreferenceClickListener = OnPreferenceClickListener {
@@ -189,6 +194,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     return true
                 }
+
                 "dark_mode_auto_pref" -> {
                     val autoDarkMode = newValue as Boolean
                     darkModePref.isEnabled = !autoDarkMode
@@ -202,6 +208,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     return true
                 }
+
                 "save_location_pref" -> {
                     val saveLocation = SaveLocation.fromStringOrDefault(newValue as String)
                     lifecycleScope.launch {
@@ -217,7 +224,14 @@ class SettingsActivity : AppCompatActivity() {
             if (relatedCard == null) {
                 relatedCard = createRelatedCard(settingsActivity)
                 relatedCard?.setTitleText(getString(dev.oneuiproject.oneui.design.R.string.oui_relative_description))
-                relatedCard?.addButton(getString(R.string.about_me)) { startActivity(Intent(settingsActivity, AboutMeActivity::class.java)) }
+                relatedCard?.addButton(getString(R.string.about_me)) {
+                    startActivity(
+                        Intent(
+                            settingsActivity,
+                            AboutMeActivity::class.java
+                        )
+                    )
+                }
                     ?.show(this)
             }
         }

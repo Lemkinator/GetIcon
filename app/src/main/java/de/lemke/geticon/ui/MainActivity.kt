@@ -127,65 +127,7 @@ class MainActivity : AppCompatActivity() {
                 AppStart.FIRST_TIME_VERSION -> checkTOS(getUserSettings())
             }
         }
-        pickApkActivityResultLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            try {
-                if (uri == null) {
-                    Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
-                    return@registerForActivityResult
-                }
-                /*val importFile = DocumentFile.fromSingleUri(this, uri)
-                if (importFile == null || !importFile.exists() || !importFile.canRead()) {
-                    Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
-                    return@registerForActivityResult
-                }
-                Log.d("MainActivity", "importFile: uri: $uri, name: ${importFile.name}, type: ${importFile.type}")*/
-                val tempFile = File.createTempFile("extractIcon", ".apk", cacheDir)
-                contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
-                /*when (importFile.type) {
-                    "application/vnd.android.package-archive" -> {
-                        contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
-                    }
-
-                    "application/octet-stream" -> {
-                        val zipInputStream = ZipInputStream(contentResolver.openInputStream(uri)!!)
-                        var zipEntry = zipInputStream.nextEntry
-                        while (zipEntry != null) {
-                            val fileName = zipEntry.name
-                            Log.d("MainActivity", "extract from apks: fileName: $fileName")
-                            if (fileName == "base.apk") {
-                                tempFile.outputStream().use { zipInputStream.copyTo(it) }
-                                break
-                            }
-                            zipEntry = zipInputStream.nextEntry
-                            zipInputStream.closeEntry()
-                        }
-                        zipInputStream.close()
-                    }
-
-                    else -> {
-                        Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
-                        return@registerForActivityResult
-                    }
-                }*/
-                val path = tempFile.absolutePath
-                val packageInfo = packageManager.getPackageArchiveInfo(path, 0)
-                val applicationInfo = packageInfo?.applicationInfo
-                Log.d("MainActivity", "extract from apk: uri: $uri, path: $path, applicationInfo: $applicationInfo")
-                if (applicationInfo == null) {
-                    Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
-                    return@registerForActivityResult
-                }
-                applicationInfo.sourceDir = path
-                applicationInfo.publicSourceDir = path
-                startActivity(
-                    Intent(this@MainActivity, IconActivity::class.java)
-                        .putExtra("applicationInfo", applicationInfo)
-                )
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
-            }
-        }
+        pickApkActivityResultLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { processApk(it) }
     }
 
     private suspend fun openOOBE() {
@@ -448,6 +390,66 @@ class MainActivity : AppCompatActivity() {
                 binding.apppickerProgress.visibility = View.GONE
                 binding.apppickerList.visibility = View.VISIBLE
             }
+        }
+    }
+
+    private fun processApk(uri: Uri?) {
+        try {
+            if (uri == null) {
+                Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                return
+            }
+            /*val importFile = DocumentFile.fromSingleUri(this, uri)
+            if (importFile == null || !importFile.exists() || !importFile.canRead()) {
+                Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                return
+            }
+            Log.d("MainActivity", "importFile: uri: $uri, name: ${importFile.name}, type: ${importFile.type}")*/
+            val tempFile = File.createTempFile("extractIcon", ".apk", cacheDir)
+            contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
+            /*when (importFile.type) {
+                "application/vnd.android.package-archive" -> {
+                    contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
+                }
+
+                "application/octet-stream" -> {
+                    val zipInputStream = ZipInputStream(contentResolver.openInputStream(uri)!!)
+                    var zipEntry = zipInputStream.nextEntry
+                    while (zipEntry != null) {
+                        val fileName = zipEntry.name
+                        Log.d("MainActivity", "extract from apks: fileName: $fileName")
+                        if (fileName == "base.apk") {
+                            tempFile.outputStream().use { zipInputStream.copyTo(it) }
+                            break
+                        }
+                        zipEntry = zipInputStream.nextEntry
+                        zipInputStream.closeEntry()
+                    }
+                    zipInputStream.close()
+                }
+
+                else -> {
+                    Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                    return
+                }
+            }*/
+            val path = tempFile.absolutePath
+            val packageInfo = packageManager.getPackageArchiveInfo(path, 0)
+            val applicationInfo = packageInfo?.applicationInfo
+            Log.d("MainActivity", "extract from apk: uri: $uri, path: $path, applicationInfo: $applicationInfo")
+            if (applicationInfo == null) {
+                Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                return
+            }
+            applicationInfo.sourceDir = path
+            applicationInfo.publicSourceDir = path
+            startActivity(
+                Intent(this@MainActivity, IconActivity::class.java)
+                    .putExtra("applicationInfo", applicationInfo)
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
         }
     }
 }

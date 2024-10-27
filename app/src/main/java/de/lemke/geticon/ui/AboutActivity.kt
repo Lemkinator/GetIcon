@@ -1,6 +1,5 @@
 package de.lemke.geticon.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities

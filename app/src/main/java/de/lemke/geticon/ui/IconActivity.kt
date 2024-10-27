@@ -158,7 +158,7 @@ class IconActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_item_icon_save_as_image -> {
-                if (saveLocation == SaveLocation.CUSTOM) {
+                if (saveLocation == SaveLocation.CUSTOM || Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
                     pickExportFolderActivityResultLauncher.launch(Uri.fromFile(File(Environment.getExternalStorageDirectory().absolutePath)))
                 } else {
                     lifecycleScope.launch { exportIconToSaveLocation(saveLocation, icon, fileName) }
