@@ -120,7 +120,7 @@ class IconActivity : AppCompatActivity() {
             }
             if (nullableApplicationInfo == null) {
                 Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()
-                finish()
+                finishAfterTransition()
                 return
             } else {
                 applicationInfo = nullableApplicationInfo
@@ -129,7 +129,7 @@ class IconActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()
-            finish()
+            finishAfterTransition()
             return
         }
         lifecycleScope.launch {
