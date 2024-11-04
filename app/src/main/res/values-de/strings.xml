@@ -55,6 +55,7 @@
     <string name="sesl_cancel">Abbrechen</string>
     <string name="sesl_navigate_up">Zurück</string>
 
+    <string name="search_apps">Apps suchen</string>
     <string name="show_system_apps">System Apps anzeigen</string>
     <string name="hide_system_apps">System Apps ausblenden</string>
     <string name="no_entry">Kein Eintrag</string>

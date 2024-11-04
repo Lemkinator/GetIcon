@@ -76,6 +76,7 @@
     <string name="sesl_cancel">Cancel</string>
     <string name="sesl_navigate_up">Back</string>
 
+    <string name="search_apps">Search Apps</string>
     <string name="show_system_apps">Show system apps</string>
     <string name="hide_system_apps">Hide system apps</string>
     <string name="no_entry">No entry</string>

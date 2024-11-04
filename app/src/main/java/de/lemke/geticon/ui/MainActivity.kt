@@ -14,7 +14,6 @@ import android.util.Pair
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -24,14 +23,11 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SearchView
 import androidx.apppickerview.widget.AppPickerView
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.SimpleColorFilter
 import com.airbnb.lottie.model.KeyPath
 import com.airbnb.lottie.value.LottieValueCallback
-import com.google.android.material.appbar.AppBarLayout
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.install.model.UpdateAvailability
@@ -43,27 +39,24 @@ import de.lemke.geticon.domain.AppStart
 import de.lemke.geticon.domain.CheckAppStartUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
-import dev.oneuiproject.oneui.layout.DrawerLayout
+import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
+import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.layout.ToolbarLayout
-import dev.oneuiproject.oneui.utils.internal.ReflectUtils
+import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.CLEAR_DISMISS
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
-import kotlin.math.abs
 
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var pickApkActivityResultLauncher: ActivityResultLauncher<String>
-    private val backPressEnabled = MutableStateFlow(false)
     private var showSystemApps = false
     private var search: String? = null
     private var time: Long = 0
@@ -148,46 +141,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun openMain() {
         lifecycleScope.launch {
-            setCustomOnBackPressedLogic(backPressEnabled) { checkBackPressed() }
             initDrawer()
             showSystemApps = getUserSettings().showSystemApps
             initAppPicker()
-            binding.drawerLayoutMain.setSearchModeListener(SearchModeListener())
             binding.drawerLayoutMain.searchView.setSearchableInfo(
                 (getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName)
             )
             //manually waiting for the animation to finish :/
             delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
             isUIReady = true
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        lifecycleScope.launch {
-            delay(500) //delay, so closing the drawer is not visible for the user
-            binding.drawerLayoutMain.setDrawerOpen(false, false)
-        }
-    }
-
-    private fun checkBackPressed() {
-        when {
-            binding.drawerLayoutMain.isSearchMode -> {
-                if (ViewCompat.getRootWindowInsets(binding.root)!!.isVisible(WindowInsetsCompat.Type.ime())) {
-                    (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(
-                        currentFocus!!.windowToken,
-                        InputMethodManager.HIDE_NOT_ALWAYS
-                    )
-                } else {
-                    search = null
-                    binding.drawerLayoutMain.dismissSearchMode()
-                }
-            }
-
-            else -> {
-                //should not get here, callback should be disabled/unregistered
-                finishAffinity()
-            }
         }
     }
 
@@ -213,7 +175,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_item_search -> {
-                binding.drawerLayoutMain.showSearchMode()
+                binding.drawerLayoutMain.startSearchMode(SearchModeListener(), CLEAR_DISMISS) //TODO do not clear the query
                 return true
             }
 
@@ -228,40 +190,29 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    private fun updateSearch(query: String?): Boolean {
+        if (search == null) return false
+        search = query ?: ""
+        refreshApps()
+        lifecycleScope.launch { updateUserSettings { it.copy(search = query ?: "") } }
+        return true
+    }
+
     inner class SearchModeListener : ToolbarLayout.SearchModeListener {
-        override fun onQueryTextSubmit(query: String?): Boolean {
-            if (search == null) return false
-            lifecycleScope.launch {
-                search = query ?: ""
-                updateUserSettings { it.copy(search = query ?: "") }
-                refreshApps()
-            }
-            return true
-        }
-
-        override fun onQueryTextChange(query: String?): Boolean {
-            if (search == null) return false
-            lifecycleScope.launch {
-                search = query ?: ""
-                updateUserSettings { it.copy(search = query ?: "") }
-                refreshApps()
-            }
-            return true
-        }
-
+        override fun onQueryTextSubmit(query: String?): Boolean = updateSearch(query)
+        override fun onQueryTextChange(query: String?): Boolean = updateSearch(query)
         override fun onSearchModeToggle(searchView: SearchView, visible: Boolean) {
             lifecycleScope.launch {
                 if (visible) {
                     search = getUserSettings().search
-                    backPressEnabled.value = true
                     searchView.setQuery(search, false)
                     val autoCompleteTextView = searchView.seslGetAutoCompleteView()
                     autoCompleteTextView.setText(search)
                     autoCompleteTextView.setSelection(autoCompleteTextView.text.length)
+                    searchView.queryHint = getString(R.string.search_apps)
                     refreshApps()
                 } else {
                     search = null
-                    backPressEnabled.value = false
                     refreshApps()
                 }
             }
@@ -297,24 +248,14 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent().setClass(this@MainActivity, AboutActivity::class.java))
         }
         binding.drawerLayoutMain.setDrawerButtonTooltip(getText(R.string.about_app))
-        binding.drawerLayoutMain.setSearchModeListener(SearchModeListener())
         binding.drawerLayoutMain.searchView.setSearchableInfo(
             (getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName)
         )
         AppUpdateManagerFactory.create(this).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE)
-                binding.drawerLayoutMain.setButtonBadges(ToolbarLayout.N_BADGE, DrawerLayout.N_BADGE)
+                binding.drawerLayoutMain.setButtonBadges(ToolbarLayout.Badge.Dot(), ToolbarLayout.Badge.Dot())
         }
-        binding.drawerLayoutMain.appBarLayout.addOnOffsetChangedListener { layout: AppBarLayout, verticalOffset: Int ->
-            val totalScrollRange = layout.totalScrollRange
-            val inputMethodWindowVisibleHeight = ReflectUtils.genericInvokeMethod(
-                InputMethodManager::class.java,
-                getSystemService(INPUT_METHOD_SERVICE),
-                "getInputMethodWindowVisibleHeight"
-            ) as Int
-            if (totalScrollRange != 0) binding.iconNoEntryView.translationY = (abs(verticalOffset) - totalScrollRange).toFloat() / 2.0f
-            else binding.iconNoEntryView.translationY = (abs(verticalOffset) - inputMethodWindowVisibleHeight).toFloat() / 2.0f
-        }
+        binding.iconNoEntryView.translateYWithAppBar(binding.drawerLayoutMain.appBarLayout, this)
     }
 
     private suspend fun initAppPicker() {
@@ -365,7 +306,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshApps() {
-        binding.iconListLottie.visibility = View.GONE
+        binding.iconNoEntryScrollView.visibility = View.GONE
         binding.apppickerList.visibility = View.GONE
         binding.apppickerProgress.visibility = View.VISIBLE
         refreshAppsJob?.cancel()
