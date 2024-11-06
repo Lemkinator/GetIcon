@@ -86,10 +86,10 @@ dependencies {
     implementation("sesl.androidx.preference:preference:1.2.1+1.0.4-sesl6+rev3")
     //SESL6(OneUI 6) Samsung
     implementation("sesl.androidx.picker:picker-color:1.0.6+1.0.6-sesl6+rev3")
-    implementation("sesl.androidx.apppickerview:apppickerview:1.0.1+1.0.1-sesl6+rev2")
+    implementation("sesl.androidx.apppickerview:apppickerview:1.0.1+1.0.1-sesl6+rev3")
     //SESL6(OneUI 6) Material Components + Design Lib + Icons
     implementation("sesl.com.google.android.material:material:1.12.0+1.0.23-sesl6+rev1")
-    implementation("io.github.tribalfs:oneui-design:0.1.4+oneui6")
+    implementation("io.github.tribalfs:oneui-design:0.1.5+oneui6")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
     implementation("com.airbnb.android:lottie:6.6.0")
