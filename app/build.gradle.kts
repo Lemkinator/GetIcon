@@ -18,8 +18,8 @@ android {
         applicationId = "de.lemke.geticon"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "1.1.3"
+        versionCode = 14
+        versionName = "1.1.4"
         resourceConfigurations += listOf("en", "de")
     }
 
