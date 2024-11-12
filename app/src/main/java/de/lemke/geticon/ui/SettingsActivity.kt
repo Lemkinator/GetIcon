@@ -32,6 +32,7 @@ import de.lemke.geticon.data.SaveLocation
 import de.lemke.geticon.databinding.ActivitySettingsBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import de.lemke.geticon.domain.setCustomBackPressAnimation
 import dev.oneuiproject.oneui.preference.HorizontalRadioPreference
 import dev.oneuiproject.oneui.preference.internal.PreferenceRelatedCard
 import dev.oneuiproject.oneui.utils.PreferenceUtils.createRelatedCard
@@ -48,6 +49,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.toolbarLayout.setNavigationButtonTooltip(getString(R.string.sesl_navigate_up))
         binding.toolbarLayout.setNavigationButtonOnClickListener { finishAfterTransition() }
         if (savedInstanceState == null) supportFragmentManager.beginTransaction().replace(R.id.settings, SettingsFragment()).commit()
+        setCustomBackPressAnimation(binding.root)
     }
 
     @AndroidEntryPoint

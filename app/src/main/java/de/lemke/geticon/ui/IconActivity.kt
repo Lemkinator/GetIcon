@@ -42,7 +42,7 @@ import de.lemke.geticon.domain.ExportIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
+import de.lemke.geticon.domain.setCustomAnimatedOnBackPressedLogic
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -141,8 +141,8 @@ class IconActivity : AppCompatActivity() {
             backgroundColor = userSettings.recentBackgroundColors.first()
             saveLocation = userSettings.saveLocation
             initViews()
-            if (showInAppReviewOrFinish.canShowInAppReview()) {
-                setCustomOnBackPressedLogic { lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) } }
+            setCustomAnimatedOnBackPressedLogic(binding.root, showInAppReviewOrFinish.canShowInAppReview()) {
+                lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) }
             }
         }
         pickExportFolderActivityResultLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->

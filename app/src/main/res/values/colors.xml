@@ -13,5 +13,5 @@
     <!-- apply theme color to seekbar -->
     <color name="sesl_thumb_control_color_activated" tools:ignore="PrivateResource">@color/primary_color_themed</color>
     <color name="sesl_seekbar_control_color_activated" tools:ignore="PrivateResource">@color/primary_color_themed</color>
-
+    <color name="transparent_window_bg_color">#3B000000</color>
 </resources>

@@ -1,4 +1,4 @@
-package de.lemke.geticon.domain.utils
+package de.lemke.geticon.ui.view
 
 import android.content.Context
 import android.graphics.Typeface

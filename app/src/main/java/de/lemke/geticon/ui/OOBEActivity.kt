@@ -14,7 +14,6 @@ import android.text.style.ClickableSpan
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -22,8 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityOobeBinding
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import de.lemke.geticon.domain.utils.TipsItemView
-import de.lemke.geticon.domain.utils.setCustomOnBackPressedLogic
+import de.lemke.geticon.ui.view.TipsItemView
 import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
@@ -31,8 +29,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class OOBEActivity : AppCompatActivity() {
     private lateinit var binding: ActivityOobeBinding
-    private lateinit var toSDialog: AlertDialog
-    private var time: Long = 0
 
     @Inject
     lateinit var updateUserSettings: UpdateUserSettingsUseCase
@@ -44,13 +40,6 @@ class OOBEActivity : AppCompatActivity() {
         }
         binding = ActivityOobeBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        setCustomOnBackPressedLogic {
-            if (System.currentTimeMillis() - time < 3000) finishAffinity()
-            else {
-                Toast.makeText(this@OOBEActivity, resources.getString(R.string.press_again_to_exit), Toast.LENGTH_SHORT).show()
-                time = System.currentTimeMillis()
-            }
-        }
         initTipsItems()
         initToSView()
         initFooterButton()
@@ -81,7 +70,11 @@ class OOBEActivity : AppCompatActivity() {
         tosLink.setSpan(
             object : ClickableSpan() {
                 override fun onClick(widget: View) {
-                    toSDialog.show()
+                    AlertDialog.Builder(this@OOBEActivity)
+                        .setTitle(getString(R.string.tos))
+                        .setMessage(getString(R.string.tos_content))
+                        .setPositiveButton(R.string.ok) { dialog: DialogInterface, _: Int -> dialog.dismiss() }
+                        .show()
                 }
 
                 override fun updateDrawState(ds: TextPaint) {
@@ -95,15 +88,6 @@ class OOBEActivity : AppCompatActivity() {
         binding.oobeIntroFooterTosText.text = tosLink
         binding.oobeIntroFooterTosText.movementMethod = LinkMovementMethod.getInstance()
         binding.oobeIntroFooterTosText.highlightColor = Color.TRANSPARENT
-        initToSDialog()
-    }
-
-    private fun initToSDialog() {
-        toSDialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.tos))
-            .setMessage(getString(R.string.tos_content))
-            .setPositiveButton(R.string.ok) { dialog: DialogInterface, _: Int -> dialog.dismiss() }
-            .create()
     }
 
     private fun initFooterButton() {

@@ -28,6 +28,7 @@ import de.lemke.geticon.databinding.ActivityAboutBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.OpenAppUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import de.lemke.geticon.domain.setCustomBackPressAnimation
 import dev.oneuiproject.oneui.layout.AppInfoLayout.LOADING
 import dev.oneuiproject.oneui.layout.AppInfoLayout.NOT_UPDATEABLE
 import dev.oneuiproject.oneui.layout.AppInfoLayout.NO_CONNECTION
@@ -104,6 +105,7 @@ class AboutActivity : AppCompatActivity() {
             }
         }
         checkUpdate()
+        setCustomBackPressAnimation(binding.root)
     }
 
     private fun setVersionTextView(textView: TextView, devModeEnabled: Boolean) {

@@ -52,13 +52,20 @@
             android:name="theming-meta-xml"
             android:value="@xml/meta_998_sesl_app" />
 
+        <activity android:name=".ui.OOBEActivity" />
+        <activity
+            android:name=".ui.AboutMeActivity"
+            android:theme="@style/Theme.OneURL.TransparentWindow" />
+        <activity
+            android:name=".ui.AboutActivity"
+            android:theme="@style/Theme.OneURL.TransparentWindow" />
+        <activity
+            android:name=".ui.IconActivity"
+            android:theme="@style/Theme.OneURL.TransparentWindow" />
         <activity
             android:name=".ui.SettingsActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
-        <activity android:name=".ui.AboutMeActivity" />
-        <activity android:name=".ui.AboutActivity" />
-        <activity android:name=".ui.OOBEActivity" />
-        <activity android:name=".ui.IconActivity" />
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:theme="@style/Theme.OneURL.TransparentWindow" />
         <activity
             android:name=".ui.MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"

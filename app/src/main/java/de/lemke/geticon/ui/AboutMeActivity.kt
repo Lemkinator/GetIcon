@@ -19,6 +19,7 @@ import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityAboutMeBinding
 import de.lemke.geticon.databinding.ActivityAboutMeContentBinding
 import de.lemke.geticon.domain.OpenAppUseCase
+import de.lemke.geticon.domain.setCustomBackPressAnimation
 import dev.oneuiproject.oneui.utils.ViewUtils
 import dev.oneuiproject.oneui.utils.internal.ToolbarLayoutUtils
 import javax.inject.Inject
@@ -45,6 +46,7 @@ class AboutMeActivity : AppCompatActivity(), View.OnClickListener {
         binding.aboutToolbar.setNavigationOnClickListener { finishAfterTransition() }
         resetAppBar(resources.configuration)
         initContent()
+        setCustomBackPressAnimation(binding.root)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
