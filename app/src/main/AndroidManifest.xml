@@ -55,17 +55,17 @@
         <activity android:name=".ui.OOBEActivity" />
         <activity
             android:name=".ui.AboutMeActivity"
-            android:theme="@style/Theme.OneURL.TransparentWindow" />
+            android:theme="@style/Theme.GetIcon.TransparentWindow" />
         <activity
             android:name=".ui.AboutActivity"
-            android:theme="@style/Theme.OneURL.TransparentWindow" />
+            android:theme="@style/Theme.GetIcon.TransparentWindow" />
         <activity
             android:name=".ui.IconActivity"
-            android:theme="@style/Theme.OneURL.TransparentWindow" />
+            android:theme="@style/Theme.GetIcon.TransparentWindow" />
         <activity
             android:name=".ui.SettingsActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:theme="@style/Theme.OneURL.TransparentWindow" />
+            android:theme="@style/Theme.GetIcon.TransparentWindow" />
         <activity
             android:name=".ui.MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
