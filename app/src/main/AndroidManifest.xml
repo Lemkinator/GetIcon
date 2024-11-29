@@ -90,7 +90,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="de.lemke.geticon.fileprovider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
