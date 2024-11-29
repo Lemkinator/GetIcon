@@ -16,7 +16,7 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         app:layout_location="main_content">
 
-        <dev.oneuiproject.oneui.widget.RoundLinearLayout
+        <dev.oneuiproject.oneui.widget.RoundedLinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/oui_background_color"
@@ -33,11 +33,11 @@
                 android:transitionName="icon"
                 tools:ignore="HardcodedText" />
 
-        </dev.oneuiproject.oneui.widget.RoundLinearLayout>
+        </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
 
     </androidx.core.widget.NestedScrollView>
 
-    <dev.oneuiproject.oneui.widget.RoundLinearLayout
+    <dev.oneuiproject.oneui.widget.RoundedLinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginVertical="8dp"
@@ -125,6 +125,6 @@
 
         </LinearLayout>
 
-    </dev.oneuiproject.oneui.widget.RoundLinearLayout>
+    </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
 
 </dev.oneuiproject.oneui.layout.ToolbarLayout>

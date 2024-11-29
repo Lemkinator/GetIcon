@@ -41,6 +41,7 @@ import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
+import dev.oneuiproject.oneui.layout.Badge
 import dev.oneuiproject.oneui.layout.ToolbarLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISMISS
 import kotlinx.coroutines.Dispatchers
@@ -261,7 +262,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         )
         AppUpdateManagerFactory.create(this).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE)
-                binding.drawerLayoutMain.setButtonBadges(ToolbarLayout.Badge.Dot(), ToolbarLayout.Badge.Dot())
+                binding.drawerLayoutMain.setButtonBadges(Badge.DOT, Badge.DOT)
         }
         binding.iconNoEntryView.translateYWithAppBar(binding.drawerLayoutMain.appBarLayout, this)
     }

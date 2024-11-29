@@ -4,6 +4,7 @@
     android:id="@+id/drawer_layout_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    app:drawerBackAnimation="true"
     app:expanded="false"
     app:title="@string/app_name">
 
@@ -19,12 +20,12 @@
             android:layout_height="match_parent"
             android:background="@color/oui_background_color" />
 
-        <dev.oneuiproject.oneui.widget.RoundFrameLayout
+        <dev.oneuiproject.oneui.widget.RoundedFrameLayout
             android:id="@+id/apppicker_progress"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:visibility="gone"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:visibility="gone">
 
             <androidx.appcompat.widget.SeslProgressBar
                 style="@style/Widget.AppCompat.ProgressBar.Large"
@@ -32,7 +33,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center" />
 
-        </dev.oneuiproject.oneui.widget.RoundFrameLayout>
+        </dev.oneuiproject.oneui.widget.RoundedFrameLayout>
 
         <androidx.core.widget.NestedScrollView
             android:id="@+id/icon_no_entry_scroll_view"
