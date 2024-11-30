@@ -59,6 +59,7 @@ class AboutActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityAboutBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setCustomBackPressAnimation(binding.root)
         appUpdateManager = AppUpdateManagerFactory.create(this)
         binding.appInfoLayout.addOptionalText(getString(R.string.about_page_optional_text))
         binding.appInfoLayout.status = LOADING
@@ -101,7 +102,6 @@ class AboutActivity : AppCompatActivity() {
             }
         }
         checkUpdate()
-        setCustomBackPressAnimation(binding.root)
     }
 
     private fun setVersionTextView(textView: TextView, devModeEnabled: Boolean) {

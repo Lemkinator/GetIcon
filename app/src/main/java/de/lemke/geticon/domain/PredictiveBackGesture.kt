@@ -1,11 +1,15 @@
 package de.lemke.geticon.domain
 
+import android.annotation.SuppressLint
 import android.graphics.Outline
+import android.os.Build
 import android.view.View
 import android.view.ViewOutlineProvider
+import android.view.WindowManager
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.util.SeslMisc
 import androidx.core.view.animation.PathInterpolatorCompat
 import de.lemke.geticon.R
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,6 +78,7 @@ inline fun AppCompatActivity.setCustomAnimatedOnBackPressedLogic(
     backPressLogicEnabled: StateFlow<Boolean>? = null,
     crossinline onBackPressedLogic: () -> Unit = {}
 ) {
+    setWindowTransparent(true)
     val predictiveBackMargin = resources.getDimension(R.dimen.predictive_back_margin)
     var initialTouchY = -1f
     var outlineProvider = BackAnimationOutlineProvider()
@@ -134,3 +139,29 @@ inline fun AppCompatActivity.setCustomAnimatedOnBackPressedLogic(
         }
     )
 }
+
+fun AppCompatActivity.setWindowTransparent(transparent: Boolean) {
+    window.apply {
+        if (transparent) {
+            clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setBackgroundDrawableResource(R.color.transparent_window_bg_color)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                setTranslucent(true)
+            }
+        } else {
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setBackgroundDrawableResource(defaultWindowBackground)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                setTranslucent(false)
+            }
+        }
+    }
+}
+
+val AppCompatActivity.defaultWindowBackground: Int
+    @SuppressLint("RestrictedApi", "PrivateResource")
+    get() = if (SeslMisc.isLightTheme(this)) {
+        androidx.appcompat.R.color.sesl_round_and_bgcolor_light
+    } else {
+        androidx.appcompat.R.color.sesl_round_and_bgcolor_dark
+    }

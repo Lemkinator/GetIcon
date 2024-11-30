@@ -46,10 +46,10 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setCustomBackPressAnimation(binding.root)
         binding.toolbarLayout.setNavigationButtonTooltip(getString(R.string.sesl_navigate_up))
         binding.toolbarLayout.setNavigationButtonOnClickListener { finishAfterTransition() }
         if (savedInstanceState == null) supportFragmentManager.beginTransaction().replace(R.id.settings, SettingsFragment()).commit()
-        setCustomBackPressAnimation(binding.root)
     }
 
     @AndroidEntryPoint
@@ -100,7 +100,8 @@ class SettingsActivity : AppCompatActivity() {
                         startActivity(intent)
                     } catch (e: ActivityNotFoundException) {
                         e.printStackTrace()
-                        Toast.makeText(settingsActivity, getString(R.string.change_language_not_supported_by_device), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(settingsActivity, getString(R.string.change_language_not_supported_by_device), Toast.LENGTH_SHORT)
+                            .show()
                     }
                     true
                 }
@@ -122,7 +123,12 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             findPreference<PreferenceScreen>("privacy_pref")!!.onPreferenceClickListener = OnPreferenceClickListener {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_website))))
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_website))))
+                } catch (e: ActivityNotFoundException) {
+                    e.printStackTrace()
+                    Toast.makeText(settingsActivity, getString(R.string.no_browser_app_installed), Toast.LENGTH_SHORT).show()
+                }
                 true
             }
 
@@ -131,7 +137,6 @@ class SettingsActivity : AppCompatActivity() {
                     .setTitle(getString(R.string.tos))
                     .setMessage(getString(R.string.tos_content))
                     .setPositiveButton(R.string.ok) { dialog: DialogInterface, _: Int -> dialog.dismiss() }
-                    .create()
                     .show()
                 true
             }
@@ -162,7 +167,6 @@ class SettingsActivity : AppCompatActivity() {
                     .setPositiveButton(R.string.ok) { _: DialogInterface, _: Int ->
                         (settingsActivity.getSystemService(ACTIVITY_SERVICE) as ActivityManager).clearApplicationUserData()
                     }
-                    .create()
                     .show()
                 true
             }

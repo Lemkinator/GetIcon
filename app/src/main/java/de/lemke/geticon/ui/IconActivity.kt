@@ -43,6 +43,7 @@ import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.domain.setCustomAnimatedOnBackPressedLogic
+import de.lemke.geticon.domain.setWindowTransparent
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -110,6 +111,7 @@ class IconActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityIconBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setWindowTransparent(true)
         binding.root.setNavigationButtonOnClickListener { lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) } }
         binding.root.tooltipText = getString(R.string.sesl_navigate_up)
         try {
@@ -329,5 +331,4 @@ class IconActivity : AppCompatActivity() {
         (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
         Toast.makeText(this, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
     }
-
 }

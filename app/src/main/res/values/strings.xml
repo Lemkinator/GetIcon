@@ -23,6 +23,7 @@
     <!--AboutMe-->
     <string name="about_me">About me</string>
     <string name="write_email">Write an e-mail</string>
+    <string name="instagram" translatable="false">Instagram</string>
     <string name="tiktok" translatable="false">TikTok</string>
     <string name="website">Website</string>
     <string name="support_me_text">If you want to support me in any way, feel free to send me an e-mail</string>
