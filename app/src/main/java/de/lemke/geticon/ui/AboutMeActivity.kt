@@ -71,7 +71,6 @@ class AboutMeActivity : AppCompatActivity() {
         }
     }
 
-
     @SuppressLint("RestrictedApi")
     private fun refreshAppBar(config: Configuration) {
         ToolbarLayoutUtils.hideStatusBarForLandscape(this, config.orientation)
