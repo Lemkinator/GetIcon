@@ -157,7 +157,7 @@ class AboutMeActivity : AppCompatActivity() {
                 intent.data = Uri.parse("mailto:") // only email apps should handle this
                 intent.putExtra(Intent.EXTRA_EMAIL, arrayOf(getString(R.string.email)))
                 intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name))
-                intent.putExtra(Intent.EXTRA_TEXT, "")
+                intent.putExtra(Intent.EXTRA_TEXT, "This is the best app I’ve ever seen in my life!")
                 try {
                     startActivity(intent)
                 } catch (e: ActivityNotFoundException) {

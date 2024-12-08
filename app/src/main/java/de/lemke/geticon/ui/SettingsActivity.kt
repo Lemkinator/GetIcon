@@ -31,6 +31,7 @@ import de.lemke.geticon.R
 import de.lemke.geticon.data.SaveLocation
 import de.lemke.geticon.databinding.ActivitySettingsBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
+import de.lemke.geticon.domain.OpenAppUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.domain.setCustomBackPressAnimation
 import dev.oneuiproject.oneui.preference.HorizontalRadioPreference
@@ -59,6 +60,9 @@ class SettingsActivity : AppCompatActivity() {
         private lateinit var autoDarkModePref: SwitchPreferenceCompat
         private lateinit var saveLocationPref: DropDownPreference
         private var relatedCard: PreferenceRelatedCard? = null
+
+        @Inject
+        lateinit var openApp: OpenAppUseCase
 
         @Inject
         lateinit var getUserSettings: GetUserSettingsUseCase
@@ -145,7 +149,10 @@ class SettingsActivity : AppCompatActivity() {
                 intent.data = Uri.parse("mailto:") // only email apps should handle this
                 intent.putExtra(Intent.EXTRA_EMAIL, arrayOf(getString(R.string.email)))
                 intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name))
-                intent.putExtra(Intent.EXTRA_TEXT, "")
+                intent.putExtra(
+                    Intent.EXTRA_TEXT,
+                    "I can’t imagine a better app than this — it’s perfect and doesn’t need any improvements. But here’s a bug report anyway: "
+                )
                 try {
                     startActivity(intent)
                 } catch (e: ActivityNotFoundException) {
@@ -230,14 +237,14 @@ class SettingsActivity : AppCompatActivity() {
             if (relatedCard == null) {
                 relatedCard = createRelatedCard(settingsActivity)
                 relatedCard?.setTitleText(getString(dev.oneuiproject.oneui.design.R.string.oui_relative_description))
-                relatedCard?.addButton(getString(R.string.about_me)) {
-                    startActivity(
-                        Intent(
-                            settingsActivity,
-                            AboutMeActivity::class.java
-                        )
-                    )
-                }
+                    ?.addButton(getString(R.string.share_app)) {
+                        startActivity(Intent.createChooser(Intent().apply {
+                            action = Intent.ACTION_SEND
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, getString(R.string.playstore_link) + requireContext().packageName)
+                        }, null))
+                    }
+                    ?.addButton(getString(R.string.rate_app)) { openApp(settingsActivity.packageName, false) }
                     ?.show(this)
             }
         }

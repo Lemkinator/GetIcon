@@ -319,7 +319,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
     }
 
-
     private var offsetUpdaterJob: Job? = null
     private fun startOffsetUpdater() {
         offsetUpdaterJob = CoroutineScope(Dispatchers.Main).launch {

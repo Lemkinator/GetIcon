@@ -53,14 +53,6 @@
             android:key="report_bug_pref"
             android:title="@string/report_bug" />
 
-        <PreferenceScreen
-            android:key="about_app_pref"
-            android:title="@string/about_app">
-            <intent
-                android:targetClass="de.lemke.geticon.ui.AboutActivity"
-                android:targetPackage="de.lemke.geticon" />
-        </PreferenceScreen>
-
     </PreferenceCategory>
 
 </PreferenceScreen>
