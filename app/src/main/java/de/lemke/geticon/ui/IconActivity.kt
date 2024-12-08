@@ -51,6 +51,9 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class IconActivity : AppCompatActivity() {
+    companion object {
+        const val KEY_APPLICATION_INFO = "applicationInfo"
+    }
     private lateinit var binding: ActivityIconBinding
     private lateinit var icon: Bitmap
     private lateinit var applicationInfo: ApplicationInfo
@@ -116,9 +119,9 @@ class IconActivity : AppCompatActivity() {
         binding.root.tooltipText = getString(R.string.sesl_navigate_up)
         try {
             val nullableApplicationInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra("applicationInfo", ApplicationInfo::class.java)
+                intent.getParcelableExtra(KEY_APPLICATION_INFO, ApplicationInfo::class.java)
             } else {
-                intent.getParcelableExtra("applicationInfo")
+                intent.getParcelableExtra(KEY_APPLICATION_INFO)
             }
             if (nullableApplicationInfo == null) {
                 Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()

@@ -18,8 +18,8 @@ android {
         applicationId = "de.lemke.geticon"
         minSdk = 26
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.1.6"
+        versionCode = 17
+        versionName = "1.1.7"
         resourceConfigurations += listOf("en", "de")
     }
 
@@ -50,6 +50,8 @@ android {
             }
         }
         debug {
+            applicationIdSuffix = ".debug"
+            resValue("string", "app_name", "GetIcon (Debug)")
             isDebuggable = true
             isMinifyEnabled = false
             isShrinkResources = false
@@ -89,10 +91,10 @@ dependencies {
     implementation("sesl.androidx.apppickerview:apppickerview:1.0.1+1.0.1-sesl6+rev3")
     //SESL6(OneUI 6) Material Components + Design Lib + Icons
     implementation("sesl.com.google.android.material:material:1.12.0+1.0.23-sesl6+rev2")
-    implementation("io.github.tribalfs:oneui-design:0.2.7+oneui6")
+    implementation("io.github.tribalfs:oneui-design:0.3.0+oneui6")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
-    implementation("com.airbnb.android:lottie:6.6.0")
+    implementation("com.airbnb.android:lottie:6.6.1")
     implementation("com.google.android.play:review-ktx:2.0.2")
     implementation("com.google.android.play:app-update-ktx:2.1.0")
 
@@ -103,8 +105,8 @@ dependencies {
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
-    implementation("com.google.dagger:hilt-android:2.52")
-    ksp("com.google.dagger:hilt-compiler:2.52")
+    implementation("com.google.dagger:hilt-android:2.53")
+    ksp("com.google.dagger:hilt-compiler:2.53")
 }
 
 configurations.implementation {

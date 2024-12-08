@@ -8,6 +8,7 @@
     android:background="?roundedCornerColor"
     android:orientation="vertical"
     app:expandable="true"
+    app:navigationIcon="@drawable/ic_oui_back"
     tools:context=".ui.AboutActivity">
 
     <androidx.appcompat.widget.AppCompatButton

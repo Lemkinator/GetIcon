@@ -14,7 +14,10 @@ import android.util.Pair
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.MarginLayoutParams
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,6 +26,8 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SearchView
 import androidx.apppickerview.widget.AppPickerView
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.children
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.SimpleColorFilter
@@ -39,25 +44,33 @@ import de.lemke.geticon.domain.AppStart
 import de.lemke.geticon.domain.CheckAppStartUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import de.lemke.geticon.ui.IconActivity.Companion.KEY_APPLICATION_INFO
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
+import dev.oneuiproject.oneui.ktx.dpToPx
 import dev.oneuiproject.oneui.layout.Badge
+import dev.oneuiproject.oneui.layout.DrawerLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISMISS
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
+import kotlin.sequences.forEach
 
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var pickApkActivityResultLauncher: ActivityResultLauncher<String>
+    private lateinit var drawerListView: LinearLayout
+    private val drawerItemTitles: MutableList<TextView> = mutableListOf()
     private var showSystemApps = false
     private var search: String? = null
     private var time: Long = 0
@@ -145,7 +158,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             initDrawer()
             showSystemApps = getUserSettings().showSystemApps
             initAppPicker()
-            binding.drawerLayoutMain.searchView.setSearchableInfo(
+            binding.drawerLayout.searchView.setSearchableInfo(
                 (getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName)
             )
             //manually waiting for the animation to finish :/
@@ -154,18 +167,10 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        lifecycleScope.launch {
-            delay(500) //delay, so closing the drawer is not visible for the user
-            binding.drawerLayoutMain.setDrawerOpen(false, false)
-        }
-    }
-
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent?.action == Intent.ACTION_SEARCH) binding.drawerLayoutMain.searchView.setQuery(
+        if (intent?.action == Intent.ACTION_SEARCH) binding.drawerLayout.searchView.setQuery(
             intent.getStringExtra(SearchManager.QUERY),
             true
         )
@@ -184,7 +189,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_item_search -> {
-                binding.drawerLayoutMain.startSearchMode(SearchModeListener(), DISMISS)
+                binding.drawerLayout.startSearchMode(SearchModeListener(), DISMISS)
                 return true
             }
 
@@ -228,43 +233,119 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
     }
 
+    fun closeDrawerAfterDelay() {
+        if (binding.drawerLayout.isLargeScreenMode) return
+        lifecycleScope.launch {
+            delay(500) //delay, so closing the drawer is not visible for the user
+            binding.drawerLayout.setDrawerOpen(false, false)
+        }
+    }
+
     @SuppressLint("RestrictedApi")
     private fun initDrawer() {
-        val pickIconFromApkOption = findViewById<LinearLayout>(R.id.draweritem_extract_icon_from_apk)
-        val aboutAppOption = findViewById<LinearLayout>(R.id.draweritem_about_app)
-        val aboutMeOption = findViewById<LinearLayout>(R.id.draweritem_about_me)
-        val settingsOption = findViewById<LinearLayout>(R.id.draweritem_settings)
+        val pickIconFromApkOption = findViewById<LinearLayout>(R.id.drawerItemExtractIconFromApk)
+        val aboutAppOption = findViewById<LinearLayout>(R.id.drawerItemAboutApp)
+        val aboutMeOption = findViewById<LinearLayout>(R.id.drawerItemAboutMe)
+        val settingsOption = findViewById<LinearLayout>(R.id.drawerItemSettings)
+        drawerListView = findViewById(R.id.drawerListView)
+        drawerItemTitles.apply {
+            clear()
+            add(findViewById(R.id.drawerItemExtractIconFromApkTitle))
+            add(findViewById(R.id.drawerItemAboutAppTitle))
+            add(findViewById(R.id.drawerItemAboutMeTitle))
+            add(findViewById(R.id.drawerItemSettingsTitle))
+        }
         pickIconFromApkOption.setOnClickListener {
             pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
             //pickApkActivityResultLauncher.launch("*/*")
+            closeDrawerAfterDelay()
         }
         aboutAppOption.setOnClickListener {
             startActivity(Intent(this@MainActivity, AboutActivity::class.java))
+            closeDrawerAfterDelay()
         }
         aboutMeOption.setOnClickListener {
             startActivity(Intent(this@MainActivity, AboutMeActivity::class.java))
+            closeDrawerAfterDelay()
         }
         settingsOption.setOnClickListener {
             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+            closeDrawerAfterDelay()
         }
-        binding.drawerLayoutMain.setDrawerButtonIcon(
-            AppCompatResources.getDrawable(
-                this,
-                dev.oneuiproject.oneui.R.drawable.ic_oui_info_outline
-            )
-        )
-        binding.drawerLayoutMain.setDrawerButtonOnClickListener {
-            startActivity(Intent().setClass(this@MainActivity, AboutActivity::class.java))
+        binding.drawerLayout.apply {
+            setHeaderButtonIcon(AppCompatResources.getDrawable(this@MainActivity, dev.oneuiproject.oneui.R.drawable.ic_oui_info_outline))
+            setHeaderButtonTooltip(getString(R.string.about_app))
+            setHeaderButtonOnClickListener {
+                startActivity(Intent().setClass(this@MainActivity, AboutActivity::class.java))
+                closeDrawerAfterDelay()
+            }
+            searchView.setSearchableInfo((getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName))
+            setNavRailContentMinSideMargin(14)
+            lockNavRailOnActionMode = true
+            lockNavRailOnSearchMode = true
         }
-        binding.drawerLayoutMain.setDrawerButtonTooltip(getText(R.string.about_app))
-        binding.drawerLayoutMain.searchView.setSearchableInfo(
-            (getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName)
-        )
         AppUpdateManagerFactory.create(this).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE)
-                binding.drawerLayoutMain.setButtonBadges(Badge.DOT, Badge.DOT)
+                binding.drawerLayout.setButtonBadges(Badge.DOT, Badge.DOT)
         }
-        binding.iconNoEntryView.translateYWithAppBar(binding.drawerLayoutMain.appBarLayout, this)
+        binding.iconNoEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
+
+        //setupNavRailFadeEffect
+        binding.drawerLayout.apply {
+            if (!isLargeScreenMode) return
+            setDrawerStateListener {
+                when (it) {
+                    DrawerLayout.DrawerState.OPEN -> {
+                        offsetUpdaterJob?.cancel()
+                        updateOffset(1f)
+                    }
+
+                    DrawerLayout.DrawerState.CLOSE -> {
+                        offsetUpdaterJob?.cancel()
+                        updateOffset(0f)
+                    }
+
+                    DrawerLayout.DrawerState.CLOSING,
+                    DrawerLayout.DrawerState.OPENING -> {
+                        startOffsetUpdater()
+                    }
+                }
+            }
+        }
+
+        //Set initial offset
+        binding.drawerLayout.post {
+            updateOffset(binding.drawerLayout.drawerOffset)
+        }
+    }
+
+
+    private var offsetUpdaterJob: Job? = null
+    private fun startOffsetUpdater() {
+        offsetUpdaterJob = CoroutineScope(Dispatchers.Main).launch {
+            while (isActive) {
+                updateOffset(binding.drawerLayout.drawerOffset)
+                delay(50)
+            }
+        }
+    }
+
+    fun updateOffset(offset: Float) {
+        drawerItemTitles.forEach { it.alpha = offset }
+        drawerListView.children.forEach {
+            if (offset == 0f) {
+                it.post {
+                    it.updateLayoutParams<MarginLayoutParams> {
+                        width = if (it is LinearLayout) 52f.dpToPx(it.context.resources)
+                        else 25f.dpToPx(it.context.resources)
+                    }
+                }
+            } else {
+                it.updateLayoutParams<MarginLayoutParams> {
+                    width = MATCH_PARENT
+                }
+            }
+        }
     }
 
     private suspend fun initAppPicker() {
@@ -279,7 +360,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 try {
                     startActivity(
                         Intent(this@MainActivity, IconActivity::class.java)
-                            .putExtra("applicationInfo", packageManager.getApplicationInfo(packageName, 0)),
+                            .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(packageName, 0)),
                         ActivityOptions
                             .makeSceneTransitionAnimation(
                                 this@MainActivity,
@@ -395,7 +476,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             applicationInfo.publicSourceDir = path
             startActivity(
                 Intent(this@MainActivity, IconActivity::class.java)
-                    .putExtra("applicationInfo", applicationInfo)
+                    .putExtra(KEY_APPLICATION_INFO, applicationInfo)
             )
         } catch (e: Exception) {
             e.printStackTrace()
