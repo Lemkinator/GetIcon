@@ -21,7 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityOobeBinding
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import de.lemke.geticon.ui.view.TipsItemView
+import de.lemke.commonutils.widget.TipsItemView
 import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
@@ -64,16 +64,16 @@ class OOBEActivity : AppCompatActivity() {
     }
 
     private fun initToSView() {
-        val tos = getString(R.string.tos)
-        val tosText = getString(R.string.oobe_tos_text, tos)
+        val tos = getString(de.lemke.commonutils.R.string.tos)
+        val tosText = getString(de.lemke.commonutils.R.string.oobe_tos_text, tos)
         val tosLink = SpannableString(tosText)
         tosLink.setSpan(
             object : ClickableSpan() {
                 override fun onClick(widget: View) {
                     AlertDialog.Builder(this@OOBEActivity)
-                        .setTitle(getString(R.string.tos))
+                        .setTitle(getString(de.lemke.commonutils.R.string.tos))
                         .setMessage(getString(R.string.tos_content))
-                        .setPositiveButton(R.string.ok) { dialog: DialogInterface, _: Int -> dialog.dismiss() }
+                        .setPositiveButton(de.lemke.commonutils.R.string.ok) { dialog: DialogInterface, _: Int -> dialog.dismiss() }
                         .show()
                 }
 

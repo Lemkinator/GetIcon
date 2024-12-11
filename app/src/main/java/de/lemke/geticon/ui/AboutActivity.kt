@@ -1,6 +1,5 @@
 package de.lemke.geticon.ui
 
-import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
@@ -21,13 +20,13 @@ import com.google.android.play.core.install.model.ActivityResult
 import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.openApp
+import de.lemke.commonutils.setCustomBackPressAnimation
 import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityAboutBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
-import de.lemke.geticon.domain.OpenAppUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import de.lemke.geticon.domain.setCustomBackPressAnimation
 import dev.oneuiproject.oneui.layout.AppInfoLayout.LOADING
 import dev.oneuiproject.oneui.layout.AppInfoLayout.NOT_UPDATEABLE
 import dev.oneuiproject.oneui.layout.AppInfoLayout.NO_CONNECTION
@@ -45,9 +44,6 @@ class AboutActivity : AppCompatActivity() {
     private lateinit var appUpdateInfoTask: Task<AppUpdateInfo>
     private lateinit var activityResultLauncher: ActivityResultLauncher<IntentSenderRequest>
     private var clicks = 0
-
-    @Inject
-    lateinit var openApp: OpenAppUseCase
 
     @Inject
     lateinit var getUserSettings: GetUserSettingsUseCase
@@ -88,9 +84,6 @@ class AboutActivity : AppCompatActivity() {
             }
         }
         binding.aboutBtnOpenInStore.setOnClickListener { openApp(packageName, false) }
-        binding.aboutBtnAboutMe.setOnClickListener {
-            startActivity(Intent(this@AboutActivity, AboutMeActivity::class.java))
-        }
 
         activityResultLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
             when (result.resultCode) {

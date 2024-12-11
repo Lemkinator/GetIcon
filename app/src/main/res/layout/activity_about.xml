@@ -8,17 +8,12 @@
     android:background="?roundedCornerColor"
     android:orientation="vertical"
     app:expandable="true"
-    app:navigationIcon="@drawable/ic_oui_back"
+    app:showNavButtonAsBack="true"
     tools:context=".ui.AboutActivity">
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/about_btn_open_in_store"
         style="@style/OneUI.AppInfoButton"
         android:text="@string/open_in_playstore" />
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/about_btn_about_me"
-        style="@style/OneUI.AppInfoButton"
-        android:text="@string/about_me" />
 
 </dev.oneuiproject.oneui.layout.AppInfoLayout>

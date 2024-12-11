@@ -3,7 +3,6 @@ package de.lemke.geticon.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
-import de.lemke.geticon.R
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -130,7 +129,7 @@ enum class SaveLocation {
 
     fun toLocalizedString(context: Context): String {
         return when (this) {
-            CUSTOM -> context.getString(R.string.custom)
+            CUSTOM -> context.getString(de.lemke.commonutils.R.string.custom)
             DOWNLOADS -> "Downloads"
             PICTURES -> "Pictures"
             DCIM -> "DCIM"

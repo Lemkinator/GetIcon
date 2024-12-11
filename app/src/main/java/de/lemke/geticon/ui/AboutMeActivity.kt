@@ -1,14 +1,10 @@
 package de.lemke.geticon.ui
 
 import android.annotation.SuppressLint
-import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.content.res.Configuration
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.*
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.WindowInsetsCompat
@@ -16,23 +12,23 @@ import androidx.core.view.updateLayoutParams
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.OnOffsetChangedListener
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.openApp
+import de.lemke.commonutils.openURL
+import de.lemke.commonutils.sendEmailAboutMe
+import de.lemke.commonutils.setCustomBackPressAnimation
+import de.lemke.commonutils.shareApp
 import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityAboutMeBinding
-import de.lemke.geticon.domain.OpenAppUseCase
-import de.lemke.geticon.domain.setCustomBackPressAnimation
 import dev.oneuiproject.oneui.ktx.isInMultiWindowModeCompat
 import dev.oneuiproject.oneui.ktx.semSetToolTipText
-import dev.oneuiproject.oneui.utils.internal.ToolbarLayoutUtils
-import javax.inject.Inject
+import dev.oneuiproject.oneui.utils.internal.ToolbarLayoutUtils.updateAdaptiveSideMargins
+import dev.oneuiproject.oneui.utils.internal.ToolbarLayoutUtils.updateStatusBarVisibility
 import kotlin.math.abs
 
 @AndroidEntryPoint
 class AboutMeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAboutMeBinding
     private val appBarListener: AboutAppBarListener = AboutAppBarListener()
-
-    @Inject
-    lateinit var openApp: OpenAppUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,8 +69,8 @@ class AboutMeActivity : AppCompatActivity() {
 
     @SuppressLint("RestrictedApi")
     private fun refreshAppBar(config: Configuration) {
-        ToolbarLayoutUtils.hideStatusBarForLandscape(this, config.orientation)
-        ToolbarLayoutUtils.updateListBothSideMargin(this, binding.aboutBottomContainer)
+        updateStatusBarVisibility()
+        binding.aboutBottomContainer.updateAdaptiveSideMargins(this)
         if (config.orientation != Configuration.ORIENTATION_LANDSCAPE && !isInMultiWindowModeCompat) {
             binding.aboutAppBar.apply {
                 seslSetCustomHeightProportion(true, 0.5f)//expanded
@@ -103,14 +99,14 @@ class AboutMeActivity : AppCompatActivity() {
     }
 
     private fun initContent() {
-        val appIcon = AppCompatResources.getDrawable(this, R.drawable.me4_round)
-        binding.aboutHeaderIcon.setImageDrawable(appIcon)
-        binding.aboutBottomIcon.setImageDrawable(appIcon)
-        binding.aboutHeaderGithub.semSetToolTipText(getString(R.string.github))
-        binding.aboutHeaderPlayStore.semSetToolTipText(getString(R.string.playstore))
-        binding.aboutHeaderWebsite.semSetToolTipText(getString(R.string.website))
-        binding.aboutHeaderInsta.semSetToolTipText(getString(R.string.instagram))
-        binding.aboutHeaderTiktok.semSetToolTipText(getString(R.string.tiktok))
+        val icon = AppCompatResources.getDrawable(this, de.lemke.commonutils.R.drawable.me4_round)
+        binding.aboutHeaderIcon.setImageDrawable(icon)
+        binding.aboutBottomIcon.setImageDrawable(icon)
+        binding.aboutHeaderGithub.semSetToolTipText(getString(de.lemke.commonutils.R.string.github))
+        binding.aboutHeaderPlayStore.semSetToolTipText(getString(de.lemke.commonutils.R.string.playstore))
+        binding.aboutHeaderWebsite.semSetToolTipText(getString(de.lemke.commonutils.R.string.website))
+        binding.aboutHeaderInsta.semSetToolTipText(getString(de.lemke.commonutils.R.string.instagram))
+        binding.aboutHeaderTiktok.semSetToolTipText(getString(de.lemke.commonutils.R.string.tiktok))
     }
 
     private fun setBottomContentEnabled(enabled: Boolean) {
@@ -127,44 +123,21 @@ class AboutMeActivity : AppCompatActivity() {
         binding.aboutBottomContent.aboutBottomRelativePlayStore.isEnabled = enabled
     }
 
-    private fun openLink(link: String) = try {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
-    } catch (e: ActivityNotFoundException) {
-        e.printStackTrace()
-        Toast.makeText(this@AboutMeActivity, getString(R.string.no_browser_app_installed), Toast.LENGTH_SHORT).show()
-    }
-
     private fun setupOnClickListeners() {
-        binding.aboutHeaderGithub.setOnClickListener { openLink(getString(R.string.my_github)) }
-        binding.aboutHeaderPlayStore.setOnClickListener { openLink(getString(R.string.playstore_developer_page_link)) }
-        binding.aboutHeaderWebsite.setOnClickListener { openLink(getString(R.string.my_website)) }
-        binding.aboutHeaderInsta.setOnClickListener { openLink(getString(R.string.my_insta)) }
-        binding.aboutHeaderTiktok.setOnClickListener { openLink(getString(R.string.rick_roll_troll_link)) }
+        binding.aboutHeaderGithub.setOnClickListener { openURL(getString(de.lemke.commonutils.R.string.my_github)) }
+        binding.aboutHeaderPlayStore.setOnClickListener { openURL(getString(de.lemke.commonutils.R.string.playstore_developer_page_link)) }
+        binding.aboutHeaderWebsite.setOnClickListener { openURL(getString(de.lemke.commonutils.R.string.my_website)) }
+        binding.aboutHeaderInsta.setOnClickListener { openURL(getString(de.lemke.commonutils.R.string.my_insta)) }
+        binding.aboutHeaderTiktok.setOnClickListener { openURL(getString(de.lemke.commonutils.R.string.rick_roll_troll_link)) }
         with(binding.aboutBottomContent) {
-            aboutBottomRelativePlayStore.setOnClickListener { openLink(getString(R.string.playstore_developer_page_link)) }
-            aboutBottomRelativeWebsite.setOnClickListener { openLink(getString(R.string.my_website)) }
-            aboutBottomRelativeTiktok.setOnClickListener { openLink(getString(R.string.rick_roll_troll_link)) }
+            aboutBottomRelativePlayStore.setOnClickListener { openURL(getString(de.lemke.commonutils.R.string.playstore_developer_page_link)) }
+            aboutBottomRelativeWebsite.setOnClickListener { openURL(getString(de.lemke.commonutils.R.string.my_website)) }
+            aboutBottomRelativeTiktok.setOnClickListener { openURL(getString(de.lemke.commonutils.R.string.rick_roll_troll_link)) }
             aboutBottomRateApp.setOnClickListener { openApp(packageName, false) }
             aboutBottomShareApp.setOnClickListener {
-                startActivity(Intent.createChooser(Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, getString(R.string.playstore_link) + packageName)
-                }, null))
+                shareApp()
             }
-            aboutBottomWriteEmail.setOnClickListener {
-                val intent = Intent(Intent.ACTION_SENDTO)
-                intent.data = Uri.parse("mailto:") // only email apps should handle this
-                intent.putExtra(Intent.EXTRA_EMAIL, arrayOf(getString(R.string.email)))
-                intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name))
-                intent.putExtra(Intent.EXTRA_TEXT, "This is the best app I’ve ever seen in my life!")
-                try {
-                    startActivity(intent)
-                } catch (e: ActivityNotFoundException) {
-                    e.printStackTrace()
-                    Toast.makeText(this@AboutMeActivity, getString(R.string.no_email_app_installed), Toast.LENGTH_SHORT).show()
-                }
-            }
+            aboutBottomWriteEmail.setOnClickListener { sendEmailAboutMe(getString(R.string.email), getString(R.string.app_name)) }
         }
     }
 

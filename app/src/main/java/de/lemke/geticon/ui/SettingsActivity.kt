@@ -1,17 +1,11 @@
 package de.lemke.geticon.ui
 
 import android.annotation.SuppressLint
-import android.app.ActivityManager
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.DialogInterface
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -23,17 +17,19 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
-import com.google.android.play.core.appupdate.AppUpdateInfo
-import com.google.android.play.core.appupdate.AppUpdateManagerFactory
-import com.google.android.play.core.install.model.UpdateAvailability
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.deleteAppDataAndExit
+import de.lemke.commonutils.openApp
+import de.lemke.commonutils.openAppLocaleSettings
+import de.lemke.commonutils.openURL
+import de.lemke.commonutils.sendEmailBugReport
+import de.lemke.commonutils.setCustomBackPressAnimation
+import de.lemke.commonutils.shareApp
 import de.lemke.geticon.R
 import de.lemke.geticon.data.SaveLocation
 import de.lemke.geticon.databinding.ActivitySettingsBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
-import de.lemke.geticon.domain.OpenAppUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import de.lemke.geticon.domain.setCustomBackPressAnimation
 import dev.oneuiproject.oneui.preference.HorizontalRadioPreference
 import dev.oneuiproject.oneui.preference.internal.PreferenceRelatedCard
 import dev.oneuiproject.oneui.utils.PreferenceUtils.createRelatedCard
@@ -48,8 +44,6 @@ class SettingsActivity : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setCustomBackPressAnimation(binding.root)
-        binding.toolbarLayout.setNavigationButtonTooltip(getString(R.string.sesl_navigate_up))
-        binding.toolbarLayout.setNavigationButtonOnClickListener { finishAfterTransition() }
         if (savedInstanceState == null) supportFragmentManager.beginTransaction().replace(R.id.settings, SettingsFragment()).commit()
     }
 
@@ -60,9 +54,6 @@ class SettingsActivity : AppCompatActivity() {
         private lateinit var autoDarkModePref: SwitchPreferenceCompat
         private lateinit var saveLocationPref: DropDownPreference
         private var relatedCard: PreferenceRelatedCard? = null
-
-        @Inject
-        lateinit var openApp: OpenAppUseCase
 
         @Inject
         lateinit var getUserSettings: GetUserSettingsUseCase
@@ -99,15 +90,7 @@ class SettingsActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 findPreference<PreferenceScreen>("language_pref")!!.isVisible = true
                 findPreference<PreferenceScreen>("language_pref")!!.onPreferenceClickListener = OnPreferenceClickListener {
-                    val intent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.parse("package:${settingsActivity.packageName}"))
-                    try {
-                        startActivity(intent)
-                    } catch (e: ActivityNotFoundException) {
-                        e.printStackTrace()
-                        Toast.makeText(settingsActivity, getString(R.string.change_language_not_supported_by_device), Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                    true
+                    openAppLocaleSettings()
                 }
             }
 
@@ -127,56 +110,23 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             findPreference<PreferenceScreen>("privacy_pref")!!.onPreferenceClickListener = OnPreferenceClickListener {
-                try {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_website))))
-                } catch (e: ActivityNotFoundException) {
-                    e.printStackTrace()
-                    Toast.makeText(settingsActivity, getString(R.string.no_browser_app_installed), Toast.LENGTH_SHORT).show()
-                }
+                openURL(getString(R.string.privacy_website))
                 true
             }
 
             findPreference<PreferenceScreen>("tos_pref")!!.onPreferenceClickListener = OnPreferenceClickListener {
                 AlertDialog.Builder(requireContext())
-                    .setTitle(getString(R.string.tos))
+                    .setTitle(getString(de.lemke.commonutils.R.string.tos))
                     .setMessage(getString(R.string.tos_content))
-                    .setPositiveButton(R.string.ok) { dialog: DialogInterface, _: Int -> dialog.dismiss() }
+                    .setPositiveButton(de.lemke.commonutils.R.string.ok) { dialog: DialogInterface, _: Int -> dialog.dismiss() }
                     .show()
                 true
             }
             findPreference<PreferenceScreen>("report_bug_pref")!!.onPreferenceClickListener = OnPreferenceClickListener {
-                val intent = Intent(Intent.ACTION_SENDTO)
-                intent.data = Uri.parse("mailto:") // only email apps should handle this
-                intent.putExtra(Intent.EXTRA_EMAIL, arrayOf(getString(R.string.email)))
-                intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name))
-                intent.putExtra(
-                    Intent.EXTRA_TEXT,
-                    "I can’t imagine a better app than this — it’s perfect and doesn’t need any improvements. But here’s a bug report anyway: "
-                )
-                try {
-                    startActivity(intent)
-                } catch (e: ActivityNotFoundException) {
-                    e.printStackTrace()
-                    Toast.makeText(requireContext(), getString(R.string.no_email_app_installed), Toast.LENGTH_SHORT).show()
-                }
+                sendEmailBugReport(getString(R.string.email), getString(R.string.app_name))
                 true
             }
-
-            AppUpdateManagerFactory.create(requireContext()).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
-                findPreference<Preference>("about_app_pref")?.widgetLayoutResource =
-                    if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) R.layout.sesl_preference_badge else 0
-            }
-            findPreference<PreferenceScreen>("delete_app_data_pref")?.setOnPreferenceClickListener {
-                AlertDialog.Builder(settingsActivity)
-                    .setTitle(R.string.delete_appdata_and_exit)
-                    .setMessage(R.string.delete_appdata_and_exit_warning)
-                    .setNegativeButton(R.string.sesl_cancel, null)
-                    .setPositiveButton(R.string.ok) { _: DialogInterface, _: Int ->
-                        (settingsActivity.getSystemService(ACTIVITY_SERVICE) as ActivityManager).clearApplicationUserData()
-                    }
-                    .show()
-                true
-            }
+            findPreference<PreferenceScreen>("delete_app_data_pref")?.setOnPreferenceClickListener { deleteAppDataAndExit() }
         }
 
         override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -237,14 +187,10 @@ class SettingsActivity : AppCompatActivity() {
             if (relatedCard == null) {
                 relatedCard = createRelatedCard(settingsActivity)
                 relatedCard?.setTitleText(getString(dev.oneuiproject.oneui.design.R.string.oui_relative_description))
-                    ?.addButton(getString(R.string.share_app)) {
-                        startActivity(Intent.createChooser(Intent().apply {
-                            action = Intent.ACTION_SEND
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, getString(R.string.playstore_link) + requireContext().packageName)
-                        }, null))
+                    ?.addButton(getString(de.lemke.commonutils.R.string.share_app)) { requireContext().shareApp() }
+                    ?.addButton(getString(de.lemke.commonutils.R.string.rate_app)) {
+                        requireContext().openApp(settingsActivity.packageName, false)
                     }
-                    ?.addButton(getString(R.string.rate_app)) { openApp(settingsActivity.packageName, false) }
                     ?.show(this)
             }
         }

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary_text_icon_color">#fffafafa</color>
-    <color name="secondary_text_icon_color">#ff999999</color>
-    <color name="secondary_text_icon_color_themed">@color/sesl_list_subheader_text_color_dark</color>
-    <color name="transparent_window_bg_color">#47333333</color>
+    <color name="primary_text_icon_color">@color/commonutils_primary_text_icon_color</color>
+    <color name="secondary_text_icon_color">@color/commonutils_secondary_text_icon_color</color>
+    <color name="secondary_text_icon_color_themed">@color/commonutils_secondary_text_icon_color_themed</color>
 </resources>

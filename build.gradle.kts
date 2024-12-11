@@ -64,6 +64,12 @@ allprojects {
                 password = githubAccessToken
             }
         }
+        maven("https://maven.pkg.github.com/lemkinator/common-utils") {
+            credentials {
+                username = githubUsername
+                password = githubAccessToken
+            }
+        }
     }
 }
 

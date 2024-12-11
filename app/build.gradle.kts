@@ -84,15 +84,17 @@ dependencies {
     //SESL6(OneUI 6) Android Jetpack
     implementation("sesl.androidx.core:core:1.15.0+1.0.11-sesl6+rev0")
     implementation("sesl.androidx.core:core-ktx:1.15.0+1.0.0-sesl6+rev0")
-    implementation("sesl.androidx.appcompat:appcompat:1.7.0+1.0.34-sesl6+rev6")
+    implementation("sesl.androidx.appcompat:appcompat:1.7.0+1.0.34-sesl6+rev7")
     implementation("sesl.androidx.preference:preference:1.2.1+1.0.4-sesl6+rev3")
     //SESL6(OneUI 6) Samsung
     implementation("sesl.androidx.picker:picker-color:1.0.6+1.0.6-sesl6+rev3")
     implementation("sesl.androidx.apppickerview:apppickerview:1.0.1+1.0.1-sesl6+rev3")
     //SESL6(OneUI 6) Material Components + Design Lib + Icons
     implementation("sesl.com.google.android.material:material:1.12.0+1.0.23-sesl6+rev2")
-    implementation("io.github.tribalfs:oneui-design:0.3.0+oneui6")
+    implementation("io.github.tribalfs:oneui-design:0.3.2+oneui6")
     implementation("io.github.oneuiproject:icons:1.1.0")
+
+    implementation("io.github.lemkinator:common-utils:0.1.3")
 
     implementation("com.airbnb.android:lottie:6.6.1")
     implementation("com.google.android.play:review-ktx:2.0.2")

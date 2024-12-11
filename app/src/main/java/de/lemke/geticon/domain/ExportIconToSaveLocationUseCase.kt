@@ -5,17 +5,15 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Environment
 import android.util.Log
-import android.widget.Toast
 import dagger.hilt.android.qualifiers.ActivityContext
+import de.lemke.commonutils.toSafeFileName
+import de.lemke.commonutils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.SaveLocation
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import java.nio.file.Files
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import javax.inject.Inject
 
 class ExportIconToSaveLocationUseCase @Inject constructor(
@@ -29,18 +27,13 @@ class ExportIconToSaveLocationUseCase @Inject constructor(
                 SaveLocation.DCIM -> Environment.DIRECTORY_DCIM
                 SaveLocation.CUSTOM -> Environment.DIRECTORY_PICTURES // should never happen
             }
-            val fileName = "${name}_${SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.GERMANY).format(Date())}"
-                .replace("https://", "")
-                .replace("[^a-zA-Z0-9]+".toRegex(), "_")
-                .replace("_+".toRegex(), "_")
-                .replace("^_".toRegex(), "") +
-                    ".png"
+            val fileName = name.toSafeFileName(".png")
             val os: OutputStream = Files.newOutputStream(File(Environment.getExternalStoragePublicDirectory(dir), fileName).toPath())
             qrCode.compress(Bitmap.CompressFormat.PNG, 100, os)
             os.close()
-            Toast.makeText(context, context.getString(R.string.icon_saved) + ": ${saveLocation.toLocalizedString(context)}", Toast.LENGTH_SHORT).show()
+            context.toast(context.getString(R.string.icon_saved) + ": ${saveLocation.toLocalizedString(context)}")
         } catch (e: IOException) {
-            Toast.makeText(context, context.getString(R.string.error_creating_file), Toast.LENGTH_SHORT).show()
+            context.toast(R.string.error_creating_file)
             Log.e("ExportIconToSaveLocationUseCase", e.message.toString())
             e.printStackTrace()
         }

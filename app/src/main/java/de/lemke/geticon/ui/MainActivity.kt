@@ -18,7 +18,6 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -37,6 +36,7 @@ import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.install.model.UpdateAvailability
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.databinding.ActivityMainBinding
@@ -369,7 +369,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(this@MainActivity, R.string.error_app_not_found, Toast.LENGTH_SHORT).show()
+                    toast(R.string.error_app_not_found)
                 }
             }
         }
@@ -389,7 +389,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             }.map { it.packageName }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this@MainActivity, R.string.error_loading_apps, Toast.LENGTH_LONG).show()
+            toast(R.string.error_loading_apps)
             emptyList()
         }
     }
@@ -426,12 +426,12 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private fun processApk(uri: Uri?) {
         try {
             if (uri == null) {
-                Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                toast(R.string.error_no_valid_file_selected)
                 return
             }
             /*val importFile = DocumentFile.fromSingleUri(this, uri)
             if (importFile == null || !importFile.exists() || !importFile.canRead()) {
-                Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                toast(R.string.error_no_valid_file_selected)
                 return
             }
             Log.d("MainActivity", "importFile: uri: $uri, name: ${importFile.name}, type: ${importFile.type}")*/
@@ -459,7 +459,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 }
 
                 else -> {
-                    Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                    toast(R.string.error_no_valid_file_selected)
                     return
                 }
             }*/
@@ -468,7 +468,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             val applicationInfo = packageInfo?.applicationInfo
             Log.d("MainActivity", "extract from apk: uri: $uri, path: $path, applicationInfo: $applicationInfo")
             if (applicationInfo == null) {
-                Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+                toast(R.string.error_no_valid_file_selected)
                 return
             }
             applicationInfo.sourceDir = path
@@ -479,7 +479,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             )
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this@MainActivity, R.string.error_no_valid_file_selected, Toast.LENGTH_SHORT).show()
+            toast(R.string.error_no_valid_file_selected)
         }
     }
 }

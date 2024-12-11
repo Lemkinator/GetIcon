@@ -21,7 +21,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.inputmethod.InputMethodManager
 import android.widget.CompoundButton
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +33,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
 import androidx.reflect.app.SeslApplicationPackageManagerReflector
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.setWindowTransparent
+import de.lemke.commonutils.setCustomAnimatedOnBackPressedLogic
+import de.lemke.commonutils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.SaveLocation
 import de.lemke.geticon.databinding.ActivityIconBinding
@@ -42,8 +44,6 @@ import de.lemke.geticon.domain.ExportIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import de.lemke.geticon.domain.setCustomAnimatedOnBackPressedLogic
-import de.lemke.geticon.domain.setWindowTransparent
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -116,7 +116,6 @@ class IconActivity : AppCompatActivity() {
         setContentView(binding.root)
         setWindowTransparent(true)
         binding.root.setNavigationButtonOnClickListener { lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) } }
-        binding.root.tooltipText = getString(R.string.sesl_navigate_up)
         try {
             val nullableApplicationInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(KEY_APPLICATION_INFO, ApplicationInfo::class.java)
@@ -124,7 +123,7 @@ class IconActivity : AppCompatActivity() {
                 intent.getParcelableExtra(KEY_APPLICATION_INFO)
             }
             if (nullableApplicationInfo == null) {
-                Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()
+                toast(R.string.error_app_not_found)
                 finishAfterTransition()
                 return
             } else {
@@ -133,7 +132,7 @@ class IconActivity : AppCompatActivity() {
             binding.root.setTitle(applicationInfo.loadLabel(packageManager))
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, getString(R.string.error_app_not_found), Toast.LENGTH_SHORT).show()
+            toast(R.string.error_app_not_found)
             finishAfterTransition()
             return
         }
@@ -332,6 +331,6 @@ class IconActivity : AppCompatActivity() {
         val uri = FileProvider.getUriForFile(this, "de.lemke.geticon.fileprovider", cacheFile)
         val clip = ClipData.newUri(contentResolver, "icon", uri)
         (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
-        Toast.makeText(this, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+        toast(de.lemke.commonutils.R.string.copied_to_clipboard)
     }
 }
