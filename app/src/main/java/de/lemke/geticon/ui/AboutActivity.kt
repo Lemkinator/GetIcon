@@ -4,6 +4,8 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
@@ -21,6 +23,7 @@ import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.openApp
+import de.lemke.commonutils.openApplicationSettings
 import de.lemke.commonutils.setCustomBackPressAnimation
 import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
@@ -117,6 +120,19 @@ class AboutActivity : AppCompatActivity() {
                     startUpdateFlow()
                 }
             }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(de.lemke.commonutils.R.menu.menu_about, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == de.lemke.commonutils.R.id.menu_app_info) {
+            openApplicationSettings()
+            return true
+        }
+        return false
     }
 
     private fun checkUpdate() {

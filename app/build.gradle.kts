@@ -94,7 +94,7 @@ dependencies {
     implementation("io.github.tribalfs:oneui-design:0.3.2+oneui6")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
-    implementation("io.github.lemkinator:common-utils:0.1.3")
+    implementation("io.github.lemkinator:common-utils:0.1.6")
 
     implementation("com.airbnb.android:lottie:6.6.1")
     implementation("com.google.android.play:review-ktx:2.0.2")
