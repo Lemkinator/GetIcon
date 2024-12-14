@@ -5,7 +5,7 @@
     <AppMetaData
         Name="GetIcon"
         TargetApi="21"
-        TargetPackageName="de.lemke.geticon.debug"
+        TargetPackageName="de.lemke.geticon"
         VersionCode="1"
         VersionName="">
         <Include RefName="SESL" />
