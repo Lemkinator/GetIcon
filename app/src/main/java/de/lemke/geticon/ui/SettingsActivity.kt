@@ -186,8 +186,7 @@ class SettingsActivity : AppCompatActivity() {
         private fun setRelatedCardView() {
             if (relatedCard == null) {
                 relatedCard = createRelatedCard(settingsActivity)
-                relatedCard?.setTitleText(getString(dev.oneuiproject.oneui.design.R.string.oui_relative_description))
-                    ?.addButton(getString(de.lemke.commonutils.R.string.share_app)) { requireContext().shareApp() }
+                relatedCard?.addButton(getString(de.lemke.commonutils.R.string.share_app)) { requireContext().shareApp() }
                     ?.addButton(getString(de.lemke.commonutils.R.string.rate_app)) {
                         requireContext().openApp(settingsActivity.packageName, false)
                     }

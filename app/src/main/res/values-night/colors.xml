@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="primary_text_icon_color">@color/commonutils_primary_text_icon_color</color>
-    <color name="secondary_text_icon_color">@color/commonutils_secondary_text_icon_color</color>
-    <color name="secondary_text_icon_color_themed">@color/commonutils_secondary_text_icon_color_themed</color>
-</resources>

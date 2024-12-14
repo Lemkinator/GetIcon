@@ -2,11 +2,4 @@
 <resources>
     <color name="primary_color">#F48FB1</color>
     <color name="primary_color_themed">@color/primary_color</color>
-    <color name="primary_dark_color">#E57373</color>
-    <color name="primary_dark_color_themed">@color/primary_dark_color</color>
-
-    <color name="primary_text_icon_color">@color/commonutils_primary_text_icon_color</color>
-    <color name="secondary_text_icon_color">@color/commonutils_secondary_text_icon_color</color>
-    <color name="primary_text_icon_color_themed">@color/commonutils_primary_text_icon_color_themed</color>
-    <color name="secondary_text_icon_color_themed">@color/commonutils_secondary_text_icon_color_themed</color>
 </resources>

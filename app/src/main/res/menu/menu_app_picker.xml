@@ -5,12 +5,14 @@
     <item
         android:id="@+id/menu_item_search"
         android:icon="@drawable/ic_oui_search"
-        app:showAsAction="always"
         android:title="@string/search"
+        app:iconTint="?actionMenuTextColor"
+        app:showAsAction="always"
         tools:ignore="AlwaysShowAction,AppCompatResource" />
     <item
         android:id="@+id/menu_apppicker_system"
         android:title="@string/show_system_apps"
+        app:iconTint="?actionMenuTextColor"
         app:showAsAction="never"
         tools:ignore="AppCompatResource" />
 </menu>

@@ -1,10 +1,7 @@
 package de.lemke.geticon.ui
 
 import android.annotation.SuppressLint
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.ComponentName
-import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
@@ -26,15 +23,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SeslSeekBar
-import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.toColor
 import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
 import androidx.reflect.app.SeslApplicationPackageManagerReflector
 import dagger.hilt.android.AndroidEntryPoint
-import de.lemke.commonutils.setWindowTransparent
+import de.lemke.commonutils.copyToClipboard
 import de.lemke.commonutils.setCustomAnimatedOnBackPressedLogic
+import de.lemke.commonutils.setWindowTransparent
+import de.lemke.commonutils.shareBitmap
 import de.lemke.commonutils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.SaveLocation
@@ -171,15 +169,7 @@ class IconActivity : AppCompatActivity() {
             }
 
             R.id.menu_item_icon_share -> {
-                val cacheFile = File(cacheDir, "icon.png")
-                icon.compress(Bitmap.CompressFormat.PNG, 100, cacheFile.outputStream())
-                val uri = FileProvider.getUriForFile(this, "de.lemke.geticon.fileprovider", cacheFile)
-                val sendIntent = Intent().apply {
-                    action = Intent.ACTION_SEND
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    type = "image/png"
-                }
-                startActivity(Intent.createChooser(sendIntent, null))
+                shareBitmap(icon, "icon.png")
                 return true
             }
         }
@@ -189,7 +179,7 @@ class IconActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun initViews() {
         generateIcon()
-        binding.icon.setOnClickListener { copyIconToClipboard() }
+        binding.icon.setOnClickListener { icon.copyToClipboard(this, "icon", "icon.png") }
         binding.maskedCheckbox.isChecked = maskEnabled && hasMaskedAppIcon
         binding.maskedCheckbox.isEnabled = hasMaskedAppIcon
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
@@ -287,11 +277,11 @@ class IconActivity : AppCompatActivity() {
             binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(foregroundColor)
         } else {
             binding.colorButtonBackground.isEnabled = false
-            binding.colorButtonBackground.setTextColor(getColor(R.color.secondary_text_icon_color))
+            binding.colorButtonBackground.setTextColor(getColor(de.lemke.commonutils.R.color.commonutils_secondary_text_icon_color))
             binding.colorButtonBackground.backgroundTintList =
                 ColorStateList.valueOf(getColor(androidx.appcompat.R.color.sesl_show_button_shapes_color_disabled))
             binding.colorButtonForeground.isEnabled = false
-            binding.colorButtonForeground.setTextColor(getColor(R.color.secondary_text_icon_color))
+            binding.colorButtonForeground.setTextColor(getColor(de.lemke.commonutils.R.color.commonutils_secondary_text_icon_color))
             binding.colorButtonForeground.backgroundTintList =
                 ColorStateList.valueOf(getColor(androidx.appcompat.R.color.sesl_show_button_shapes_color_disabled))
         }
@@ -323,14 +313,5 @@ class IconActivity : AppCompatActivity() {
             else drawable.toBitmap(size, size)
         }
         binding.icon.setImageBitmap(icon)
-    }
-
-    private fun copyIconToClipboard() {
-        val cacheFile = File(cacheDir, "icon.png")
-        icon.compress(Bitmap.CompressFormat.PNG, 100, cacheFile.outputStream())
-        val uri = FileProvider.getUriForFile(this, "de.lemke.geticon.fileprovider", cacheFile)
-        val clip = ClipData.newUri(contentResolver, "icon", uri)
-        (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
-        toast(de.lemke.commonutils.R.string.copied_to_clipboard)
     }
 }

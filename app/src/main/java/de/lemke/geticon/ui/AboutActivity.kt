@@ -4,8 +4,6 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
@@ -23,19 +21,14 @@ import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.openApp
-import de.lemke.commonutils.openApplicationSettings
 import de.lemke.commonutils.setCustomBackPressAnimation
 import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityAboutBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import dev.oneuiproject.oneui.layout.AppInfoLayout.LOADING
-import dev.oneuiproject.oneui.layout.AppInfoLayout.NOT_UPDATEABLE
-import dev.oneuiproject.oneui.layout.AppInfoLayout.NO_CONNECTION
-import dev.oneuiproject.oneui.layout.AppInfoLayout.NO_UPDATE
 import dev.oneuiproject.oneui.layout.AppInfoLayout.OnClickListener
-import dev.oneuiproject.oneui.layout.AppInfoLayout.UPDATE_AVAILABLE
+import dev.oneuiproject.oneui.layout.AppInfoLayout.Status
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -61,20 +54,20 @@ class AboutActivity : AppCompatActivity() {
         setCustomBackPressAnimation(binding.root)
         appUpdateManager = AppUpdateManagerFactory.create(this)
         binding.appInfoLayout.addOptionalText(getString(R.string.about_page_optional_text))
-        binding.appInfoLayout.status = LOADING
+        binding.appInfoLayout.updateStatus = Status.Loading
         //status: LOADING NO_UPDATE UPDATE_AVAILABLE NOT_UPDATEABLE NO_CONNECTION
         binding.appInfoLayout.setMainButtonClickListener(object : OnClickListener {
-            override fun onUpdateClicked(v: View?) {
+            override fun onUpdateClicked(v: View) {
                 startUpdateFlow()
             }
 
-            override fun onRetryClicked(v: View?) {
-                binding.appInfoLayout.status = LOADING
+            override fun onRetryClicked(v: View) {
+                binding.appInfoLayout.updateStatus = Status.Loading
                 checkUpdate()
             }
         })
         val version: TextView = binding.appInfoLayout.findViewById(dev.oneuiproject.oneui.design.R.id.app_info_version)
-        lifecycleScope. launch { setVersionTextView(version, getUserSettings().devModeEnabled) }
+        lifecycleScope.launch { setVersionTextView(version, getUserSettings().devModeEnabled) }
         version.setOnClickListener {
             clicks++
             if (clicks > 5) {
@@ -122,24 +115,11 @@ class AboutActivity : AppCompatActivity() {
             }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(de.lemke.commonutils.R.menu.menu_about, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == de.lemke.commonutils.R.id.menu_app_info) {
-            openApplicationSettings()
-            return true
-        }
-        return false
-    }
-
     private fun checkUpdate() {
         val connectivityManager = getSystemService(ConnectivityManager::class.java)
         val caps = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
         if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
-            binding.appInfoLayout.status = NO_CONNECTION
+            binding.appInfoLayout.updateStatus = Status.NoConnection
             return
         }
 
@@ -150,15 +130,15 @@ class AboutActivity : AppCompatActivity() {
             .addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
                 this.appUpdateInfo = appUpdateInfo
                 if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
-                    binding.appInfoLayout.status = UPDATE_AVAILABLE
+                    binding.appInfoLayout.updateStatus = Status.UpdateAvailable
                 }
                 if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_NOT_AVAILABLE) {
-                    binding.appInfoLayout.status = NO_UPDATE
+                    binding.appInfoLayout.updateStatus = Status.NoUpdate
                 }
             }
             .addOnFailureListener { appUpdateInfo: Exception ->
                 Log.w("AboutActivity", appUpdateInfo.message.toString())
-                binding.appInfoLayout.status = NOT_UPDATEABLE
+                binding.appInfoLayout.updateStatus = Status.NotUpdatable
             }
     }
 
@@ -170,7 +150,7 @@ class AboutActivity : AppCompatActivity() {
                 AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build()
             )
         } catch (e: Exception) {
-            binding.appInfoLayout.status = NOT_UPDATEABLE
+            binding.appInfoLayout.updateStatus = Status.NotUpdatable
             e.printStackTrace()
         }
     }
