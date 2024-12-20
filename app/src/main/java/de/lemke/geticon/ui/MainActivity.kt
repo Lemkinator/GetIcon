@@ -36,6 +36,8 @@ import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.install.model.UpdateAvailability
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.restoreSearchAndActionMode
+import de.lemke.commonutils.saveSearchAndActionMode
 import de.lemke.commonutils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings
@@ -130,8 +132,8 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         lifecycleScope.launch {
             when (checkAppStart()) {
                 AppStart.FIRST_TIME -> openOOBE()
-                AppStart.NORMAL -> checkTOS(getUserSettings())
-                AppStart.FIRST_TIME_VERSION -> checkTOS(getUserSettings())
+                AppStart.NORMAL -> checkTOS(getUserSettings(), savedInstanceState)
+                AppStart.FIRST_TIME_VERSION -> checkTOS(getUserSettings(), savedInstanceState)
             }
         }
         pickApkActivityResultLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { processApk(it) }
@@ -148,12 +150,12 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         finishAfterTransition()
     }
 
-    private suspend fun checkTOS(userSettings: UserSettings) {
+    private suspend fun checkTOS(userSettings: UserSettings, savedInstanceState: Bundle?) {
         if (!userSettings.tosAccepted) openOOBE()
-        else openMain()
+        else openMain(savedInstanceState)
     }
 
-    private fun openMain() {
+    private fun openMain(savedInstanceState: Bundle?) {
         lifecycleScope.launch {
             initDrawer()
             showSystemApps = getUserSettings().showSystemApps
@@ -165,6 +167,12 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
             isUIReady = true
         }
+        savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.saveSearchAndActionMode(isSearchMode = binding.drawerLayout.isSearchMode)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -189,7 +197,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_item_search -> {
-                binding.drawerLayout.startSearchMode(SearchModeListener(), DISMISS)
+                startSearch()
                 return true
             }
 
@@ -202,6 +210,10 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             }
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    private fun startSearch() {
+        binding.drawerLayout.startSearchMode(SearchModeListener(), DISMISS)
     }
 
     private fun updateSearch(query: String?): Boolean {
