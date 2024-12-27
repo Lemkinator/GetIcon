@@ -255,10 +255,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     @SuppressLint("RestrictedApi")
     private fun initDrawer() {
-        val pickIconFromApkOption = findViewById<LinearLayout>(R.id.drawerItemExtractIconFromApk)
-        val aboutAppOption = findViewById<LinearLayout>(R.id.drawerItemAboutApp)
-        val aboutMeOption = findViewById<LinearLayout>(R.id.drawerItemAboutMe)
-        val settingsOption = findViewById<LinearLayout>(R.id.drawerItemSettings)
         drawerListView = findViewById(R.id.drawerListView)
         drawerItemTitles.apply {
             clear()
@@ -267,20 +263,20 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             add(findViewById(R.id.drawerItemAboutMeTitle))
             add(findViewById(R.id.drawerItemSettingsTitle))
         }
-        pickIconFromApkOption.setOnClickListener {
+        findViewById<LinearLayout>(R.id.drawerItemExtractIconFromApk).setOnClickListener {
             pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
             //pickApkActivityResultLauncher.launch("*/*")
             closeDrawerAfterDelay()
         }
-        aboutAppOption.setOnClickListener {
+        findViewById<LinearLayout>(R.id.drawerItemAboutApp).setOnClickListener {
             startActivity(Intent(this@MainActivity, AboutActivity::class.java))
             closeDrawerAfterDelay()
         }
-        aboutMeOption.setOnClickListener {
+        findViewById<LinearLayout>(R.id.drawerItemAboutMe).setOnClickListener {
             startActivity(Intent(this@MainActivity, AboutMeActivity::class.java))
             closeDrawerAfterDelay()
         }
-        settingsOption.setOnClickListener {
+        findViewById<LinearLayout>(R.id.drawerItemSettings).setOnClickListener {
             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
             closeDrawerAfterDelay()
         }
@@ -295,6 +291,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             setNavRailContentMinSideMargin(14)
             lockNavRailOnActionMode = true
             lockNavRailOnSearchMode = true
+            closeNavRailOnBack = true
         }
         AppUpdateManagerFactory.create(this).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE)
