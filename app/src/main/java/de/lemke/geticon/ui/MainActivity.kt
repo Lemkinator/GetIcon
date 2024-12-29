@@ -50,6 +50,7 @@ import de.lemke.geticon.ui.IconActivity.Companion.KEY_APPLICATION_INFO
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.dpToPx
+import dev.oneuiproject.oneui.ktx.onSingleClick
 import dev.oneuiproject.oneui.layout.Badge
 import dev.oneuiproject.oneui.layout.DrawerLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout
@@ -171,17 +172,16 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.saveSearchAndActionMode(isSearchMode = binding.drawerLayout.isSearchMode)
         super.onSaveInstanceState(outState)
+        if (!this::binding.isInitialized) return
+        outState.saveSearchAndActionMode(isSearchMode = binding.drawerLayout.isSearchMode)
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        setIntent(intent)
-        if (intent?.action == Intent.ACTION_SEARCH) binding.drawerLayout.searchView.setQuery(
-            intent.getStringExtra(SearchManager.QUERY),
-            true
-        )
+        if (intent?.action == Intent.ACTION_SEARCH) {
+            binding.drawerLayout.setSearchQueryFromIntent(intent)
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -263,20 +263,20 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             add(findViewById(R.id.drawerItemAboutMeTitle))
             add(findViewById(R.id.drawerItemSettingsTitle))
         }
-        findViewById<LinearLayout>(R.id.drawerItemExtractIconFromApk).setOnClickListener {
+        findViewById<LinearLayout>(R.id.drawerItemExtractIconFromApk).onSingleClick {
             pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
             //pickApkActivityResultLauncher.launch("*/*")
             closeDrawerAfterDelay()
         }
-        findViewById<LinearLayout>(R.id.drawerItemAboutApp).setOnClickListener {
+        findViewById<LinearLayout>(R.id.drawerItemAboutApp).onSingleClick {
             startActivity(Intent(this@MainActivity, AboutActivity::class.java))
             closeDrawerAfterDelay()
         }
-        findViewById<LinearLayout>(R.id.drawerItemAboutMe).setOnClickListener {
+        findViewById<LinearLayout>(R.id.drawerItemAboutMe).onSingleClick {
             startActivity(Intent(this@MainActivity, AboutMeActivity::class.java))
             closeDrawerAfterDelay()
         }
-        findViewById<LinearLayout>(R.id.drawerItemSettings).setOnClickListener {
+        findViewById<LinearLayout>(R.id.drawerItemSettings).onSingleClick {
             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
             closeDrawerAfterDelay()
         }
@@ -364,8 +364,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
         binding.apppickerList.setAppPickerView(AppPickerView.TYPE_GRID, getApps(null), AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
         binding.apppickerList.setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
-            holder.item.setOnClickListener {
+            holder.item.onSingleClick {
                 try {
+                    binding.drawerLayout.searchView.clearFocus()
                     startActivity(
                         Intent(this@MainActivity, IconActivity::class.java)
                             .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(packageName, 0)),

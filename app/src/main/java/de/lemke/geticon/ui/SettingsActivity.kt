@@ -9,6 +9,7 @@ import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.DropDownPreference
 import androidx.preference.Preference
@@ -29,10 +30,12 @@ import de.lemke.geticon.R
 import de.lemke.geticon.data.SaveLocation
 import de.lemke.geticon.databinding.ActivitySettingsBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
+import de.lemke.geticon.domain.ObserveUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import dev.oneuiproject.oneui.ktx.addRelativeLinksCard
 import dev.oneuiproject.oneui.preference.HorizontalRadioPreference
-import dev.oneuiproject.oneui.preference.internal.PreferenceRelatedCard
-import dev.oneuiproject.oneui.utils.PreferenceUtils.createRelatedCard
+import dev.oneuiproject.oneui.widget.RelativeLink
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -53,7 +56,9 @@ class SettingsActivity : AppCompatActivity() {
         private lateinit var darkModePref: HorizontalRadioPreference
         private lateinit var autoDarkModePref: SwitchPreferenceCompat
         private lateinit var saveLocationPref: DropDownPreference
-        private var relatedCard: PreferenceRelatedCard? = null
+
+        @Inject
+        lateinit var observeUserSettings: ObserveUserSettingsUseCase
 
         @Inject
         lateinit var getUserSettings: GetUserSettingsUseCase
@@ -76,17 +81,14 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun initPreferences() {
-            AppCompatDelegate.getDefaultNightMode()
             darkModePref = findPreference("dark_mode_pref")!!
             autoDarkModePref = findPreference("dark_mode_auto_pref")!!
             saveLocationPref = findPreference("save_location_pref")!!
-
             autoDarkModePref.onPreferenceChangeListener = this
             saveLocationPref.onPreferenceChangeListener = this
             darkModePref.onPreferenceChangeListener = this
             darkModePref.setDividerEnabled(false)
             darkModePref.setTouchEffectEnabled(false)
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 findPreference<PreferenceScreen>("language_pref")!!.isVisible = true
                 findPreference<PreferenceScreen>("language_pref")!!.onPreferenceClickListener = OnPreferenceClickListener {
@@ -95,17 +97,19 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             lifecycleScope.launch {
-                val userSettings = getUserSettings()
-                autoDarkModePref.isChecked = userSettings.autoDarkMode
-                darkModePref.isEnabled = !autoDarkModePref.isChecked
-                darkModePref.value = if (userSettings.darkMode) "1" else "0"
-                saveLocationPref.entries = SaveLocation.entries.map { it.toLocalizedString(requireContext()) }.toTypedArray()
-                saveLocationPref.entryValues = SaveLocation.entries.map { it.name }.toTypedArray()
-                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-                    saveLocationPref.value = SaveLocation.CUSTOM.name
-                    saveLocationPref.isEnabled = false
-                } else {
-                    saveLocationPref.value = userSettings.saveLocation.name
+                observeUserSettings().flowWithLifecycle(lifecycle).collectLatest { userSettings ->
+                    autoDarkModePref.isChecked = userSettings.autoDarkMode
+                    darkModePref.isEnabled = !autoDarkModePref.isChecked
+                    darkModePref.value = if (userSettings.darkMode) "1" else "0"
+                    findPreference<PreferenceCategory>("dev_options")?.isVisible = userSettings.devModeEnabled
+                    saveLocationPref.entries = SaveLocation.entries.map { it.toLocalizedString(requireContext()) }.toTypedArray()
+                    saveLocationPref.entryValues = SaveLocation.entries.map { it.name }.toTypedArray()
+                    if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+                        saveLocationPref.value = SaveLocation.CUSTOM.name
+                        saveLocationPref.isEnabled = false
+                    } else {
+                        saveLocationPref.value = userSettings.saveLocation.name
+                    }
                 }
             }
 
@@ -134,14 +138,10 @@ class SettingsActivity : AppCompatActivity() {
             requireView().setBackgroundColor(
                 resources.getColor(dev.oneuiproject.oneui.design.R.color.oui_background_color, settingsActivity.theme)
             )
-        }
-
-        override fun onStart() {
-            super.onStart()
-            lifecycleScope.launch {
-                findPreference<PreferenceCategory>("dev_options")?.isVisible = getUserSettings().devModeEnabled
-            }
-            setRelatedCardView()
+            addRelativeLinksCard(
+                RelativeLink(getString(de.lemke.commonutils.R.string.share_app)) { shareApp() },
+                RelativeLink(getString(de.lemke.commonutils.R.string.rate_app)) { openApp(settingsActivity.packageName, false) }
+            )
         }
 
         @SuppressLint("WrongConstant", "RestrictedApi")
@@ -181,17 +181,6 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
             return false
-        }
-
-        private fun setRelatedCardView() {
-            if (relatedCard == null) {
-                relatedCard = createRelatedCard(settingsActivity)
-                relatedCard?.addButton(getString(de.lemke.commonutils.R.string.share_app)) { requireContext().shareApp() }
-                    ?.addButton(getString(de.lemke.commonutils.R.string.rate_app)) {
-                        requireContext().openApp(settingsActivity.packageName, false)
-                    }
-                    ?.show(this)
-            }
         }
     }
 }

@@ -3,6 +3,7 @@ package de.lemke.geticon.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -14,6 +15,9 @@ class UserSettingsRepository @Inject constructor(
 
     /** Returns the current user settings. */
     suspend fun getSettings(): UserSettings = dataStore.data.map(::settingsFromPreferences).first()
+
+    /** Emits the current user settings. */
+    fun observeSettings(): Flow<UserSettings> = dataStore.data.map(::settingsFromPreferences)
 
     /**
      * Updates the current user settings and returns the new settings.
