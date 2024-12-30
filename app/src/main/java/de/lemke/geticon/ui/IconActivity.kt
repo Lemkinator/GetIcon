@@ -52,6 +52,7 @@ class IconActivity : AppCompatActivity() {
     companion object {
         const val KEY_APPLICATION_INFO = "applicationInfo"
     }
+
     private lateinit var binding: ActivityIconBinding
     private lateinit var icon: Bitmap
     private lateinit var applicationInfo: ApplicationInfo
@@ -159,13 +160,17 @@ class IconActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.menu_item_icon_save_as_image -> {
+            R.id.menu_item_icon_save_as_image -> try {
                 if (saveLocation == SaveLocation.CUSTOM || Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
                     pickExportFolderActivityResultLauncher.launch(Uri.fromFile(File(Environment.getExternalStorageDirectory().absolutePath)))
                 } else {
                     lifecycleScope.launch { exportIconToSaveLocation(saveLocation, icon, fileName) }
                 }
                 return true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                toast(R.string.error_creating_file)
+                return false
             }
 
             R.id.menu_item_icon_share -> {
