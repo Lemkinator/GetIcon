@@ -91,7 +91,7 @@ dependencies {
     implementation("sesl.androidx.apppickerview:apppickerview:1.0.1+1.0.1-sesl6+rev3")
     //SESL6(OneUI 6) Material Components + Design Lib + Icons
     implementation("sesl.com.google.android.material:material:1.12.0+1.0.23-sesl6+rev2")
-    implementation("io.github.tribalfs:oneui-design:0.3.8+oneui6")
+    implementation("io.github.tribalfs:oneui-design:0.4.0+oneui6")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
     implementation("io.github.lemkinator:common-utils:0.6.1")
