@@ -2,7 +2,6 @@ package de.lemke.geticon.ui
 
 import android.annotation.SuppressLint
 import android.app.ActivityOptions
-import android.app.SearchManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -74,6 +73,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private lateinit var pickApkActivityResultLauncher: ActivityResultLauncher<String>
     private lateinit var drawerListView: LinearLayout
     private val drawerItemTitles: MutableList<TextView> = mutableListOf()
+    private var searchView: SearchView? = null
     private var showSystemApps = false
     private var search: String? = null
     private var time: Long = 0
@@ -161,9 +161,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             initDrawer()
             showSystemApps = getUserSettings().showSystemApps
             initAppPicker()
-            binding.drawerLayout.searchView.setSearchableInfo(
-                (getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName)
-            )
             //manually waiting for the animation to finish :/
             delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
             isUIReady = true
@@ -228,6 +225,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         override fun onQueryTextSubmit(query: String?): Boolean = updateSearch(query)
         override fun onQueryTextChange(query: String?): Boolean = updateSearch(query)
         override fun onSearchModeToggle(searchView: SearchView, visible: Boolean) {
+            this@MainActivity.searchView = searchView
             lifecycleScope.launch {
                 if (visible) {
                     search = getUserSettings().search
@@ -287,7 +285,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 startActivity(Intent().setClass(this@MainActivity, AboutActivity::class.java))
                 closeDrawerAfterDelay()
             }
-            searchView.setSearchableInfo((getSystemService(SEARCH_SERVICE) as SearchManager).getSearchableInfo(componentName))
             setNavRailContentMinSideMargin(14)
             lockNavRailOnActionMode = true
             lockNavRailOnSearchMode = true
@@ -366,7 +363,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         binding.apppickerList.setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
             holder.item.onSingleClick {
                 try {
-                    binding.drawerLayout.searchView.clearFocus()
+                    searchView?.clearFocus()
                     startActivity(
                         Intent(this@MainActivity, IconActivity::class.java)
                             .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(packageName, 0)),
