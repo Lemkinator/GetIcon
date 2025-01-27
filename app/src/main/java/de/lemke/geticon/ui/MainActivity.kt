@@ -49,6 +49,8 @@ import de.lemke.geticon.ui.IconActivity.Companion.KEY_APPLICATION_INFO
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.dpToPx
+import dev.oneuiproject.oneui.ktx.hideSoftInput
+import dev.oneuiproject.oneui.ktx.hideSoftInputOnScroll
 import dev.oneuiproject.oneui.ktx.onSingleClick
 import dev.oneuiproject.oneui.layout.Badge
 import dev.oneuiproject.oneui.layout.DrawerLayout
@@ -73,7 +75,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private lateinit var pickApkActivityResultLauncher: ActivityResultLauncher<String>
     private lateinit var drawerListView: LinearLayout
     private val drawerItemTitles: MutableList<TextView> = mutableListOf()
-    private var searchView: SearchView? = null
     private var showSystemApps = false
     private var search: String? = null
     private var time: Long = 0
@@ -222,10 +223,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     inner class SearchModeListener : ToolbarLayout.SearchModeListener {
-        override fun onQueryTextSubmit(query: String?): Boolean = updateSearch(query)
+        override fun onQueryTextSubmit(query: String?): Boolean = updateSearch(query).also { hideSoftInput() }
         override fun onQueryTextChange(query: String?): Boolean = updateSearch(query)
         override fun onSearchModeToggle(searchView: SearchView, visible: Boolean) {
-            this@MainActivity.searchView = searchView
             lifecycleScope.launch {
                 if (visible) {
                     search = getUserSettings().search
@@ -289,6 +289,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             lockNavRailOnActionMode = true
             lockNavRailOnSearchMode = true
             closeNavRailOnBack = true
+            isImmersiveScroll = true
         }
         AppUpdateManagerFactory.create(this).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE)
@@ -363,16 +364,11 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         binding.apppickerList.setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
             holder.item.onSingleClick {
                 try {
-                    searchView?.clearFocus()
+                    hideSoftInput()
                     startActivity(
-                        Intent(this@MainActivity, IconActivity::class.java)
+                        Intent(this, IconActivity::class.java)
                             .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(packageName, 0)),
-                        ActivityOptions
-                            .makeSceneTransitionAnimation(
-                                this@MainActivity,
-                                Pair.create(holder.appIcon, "icon"),
-                            )
-                            .toBundle()
+                        ActivityOptions.makeSceneTransitionAnimation(this, Pair.create(holder.appIcon, "icon")).toBundle()
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -382,6 +378,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
         binding.apppickerList.itemAnimator = null
         binding.apppickerList.seslSetSmoothScrollEnabled(true)
+        binding.apppickerList.hideSoftInputOnScroll()
     }
 
     private suspend fun getApps(search: String?): List<String> = withContext(Dispatchers.Default) {

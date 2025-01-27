@@ -1,8 +1,8 @@
 package de.lemke.geticon.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
+import de.lemke.commonutils.SaveLocation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -117,26 +117,3 @@ data class UserSettings(
     /** last time in app review was requested */
     val lastInAppReviewRequest: Long,
 )
-
-enum class SaveLocation {
-    CUSTOM,
-    DOWNLOADS,
-    PICTURES,
-    DCIM,
-    ;
-
-    companion object {
-        val default = CUSTOM
-
-        fun fromStringOrDefault(string: String?): SaveLocation = SaveLocation.entries.firstOrNull { it.toString() == string } ?: default
-    }
-
-    fun toLocalizedString(context: Context): String {
-        return when (this) {
-            CUSTOM -> context.getString(de.lemke.commonutils.R.string.custom)
-            DOWNLOADS -> "Downloads"
-            PICTURES -> "Pictures"
-            DCIM -> "DCIM"
-        }
-    }
-}

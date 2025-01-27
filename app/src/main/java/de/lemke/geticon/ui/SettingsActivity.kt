@@ -19,6 +19,7 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.SaveLocation
 import de.lemke.commonutils.deleteAppDataAndExit
 import de.lemke.commonutils.openApp
 import de.lemke.commonutils.openAppLocaleSettings
@@ -27,7 +28,6 @@ import de.lemke.commonutils.sendEmailBugReport
 import de.lemke.commonutils.setCustomBackPressAnimation
 import de.lemke.commonutils.shareApp
 import de.lemke.geticon.R
-import de.lemke.geticon.data.SaveLocation
 import de.lemke.geticon.databinding.ActivitySettingsBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ObserveUserSettingsUseCase

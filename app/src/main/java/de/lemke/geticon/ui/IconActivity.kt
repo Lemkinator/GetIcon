@@ -2,6 +2,7 @@ package de.lemke.geticon.ui
 
 import android.annotation.SuppressLint
 import android.content.ComponentName
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
@@ -9,17 +10,16 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.view.inputmethod.InputMethodManager
 import android.widget.CompoundButton
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SeslSeekBar
@@ -29,21 +29,21 @@ import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
 import androidx.reflect.app.SeslApplicationPackageManagerReflector
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.SaveLocation
 import de.lemke.commonutils.copyToClipboard
+import de.lemke.commonutils.exportBitmap
+import de.lemke.commonutils.saveBitmapToUri
 import de.lemke.commonutils.setCustomAnimatedOnBackPressedLogic
 import de.lemke.commonutils.setWindowTransparent
 import de.lemke.commonutils.shareBitmap
 import de.lemke.commonutils.toast
 import de.lemke.geticon.R
-import de.lemke.geticon.data.SaveLocation
 import de.lemke.geticon.databinding.ActivityIconBinding
-import de.lemke.geticon.domain.ExportIconToSaveLocationUseCase
-import de.lemke.geticon.domain.ExportIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import dev.oneuiproject.oneui.ktx.hideSoftInput
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 
@@ -57,7 +57,6 @@ class IconActivity : AppCompatActivity() {
     private lateinit var icon: Bitmap
     private lateinit var applicationInfo: ApplicationInfo
     private lateinit var saveLocation: SaveLocation
-    private lateinit var pickExportFolderActivityResultLauncher: ActivityResultLauncher<Uri?>
     private var size: Int = 0
     private var maskEnabled: Boolean = true
     private var colorEnabled: Boolean = false
@@ -65,18 +64,18 @@ class IconActivity : AppCompatActivity() {
     private var backgroundColor: Int = 0
     private val minSize = 16
     private val maxSize = 1024
+    private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> = registerForActivityResult(
+        StartActivityForResult(),
+        ActivityResultCallback<ActivityResult> { result ->
+            if (result.resultCode == RESULT_OK) saveBitmapToUri(result.data?.data, icon)
+        }
+    )
 
     @Inject
     lateinit var getUserSettings: GetUserSettingsUseCase
 
     @Inject
     lateinit var updateUserSettings: UpdateUserSettingsUseCase
-
-    @Inject
-    lateinit var exportIcon: ExportIconUseCase
-
-    @Inject
-    lateinit var exportIconToSaveLocation: ExportIconToSaveLocationUseCase
 
     @Inject
     lateinit var showInAppReviewOrFinish: ShowInAppReviewOrFinishUseCase
@@ -148,9 +147,6 @@ class IconActivity : AppCompatActivity() {
                 lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) }
             }
         }
-        pickExportFolderActivityResultLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
-            lifecycleScope.launch { exportIcon(uri, icon, fileName) }
-        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -158,27 +154,10 @@ class IconActivity : AppCompatActivity() {
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.menu_item_icon_save_as_image -> try {
-                if (saveLocation == SaveLocation.CUSTOM || Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-                    pickExportFolderActivityResultLauncher.launch(Uri.fromFile(File(Environment.getExternalStorageDirectory().absolutePath)))
-                } else {
-                    lifecycleScope.launch { exportIconToSaveLocation(saveLocation, icon, fileName) }
-                }
-                return true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                toast(R.string.error_creating_file)
-                return false
-            }
-
-            R.id.menu_item_icon_share -> {
-                shareBitmap(icon, "icon.png")
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        R.id.menu_item_icon_save_as_image -> exportBitmap(saveLocation, icon, fileName, exportBitmapResultLauncher)
+        R.id.menu_item_icon_share -> shareBitmap(icon, "icon.png")
+        else -> super.onOptionsItemSelected(item)
     }
 
     @SuppressLint("SetTextI18n")
@@ -204,11 +183,7 @@ class IconActivity : AppCompatActivity() {
                 generateIcon()
                 lifecycleScope.launch { updateUserSettings { it.copy(iconSize = size) } }
             }
-            (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(
-                textView.windowToken,
-                InputMethodManager.HIDE_NOT_ALWAYS
-            )
-            textView.clearFocus()
+            hideSoftInput()
             true
         }
         binding.sizeSeekbar.min = minSize
