@@ -15,6 +15,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.MarginLayoutParams
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
@@ -35,9 +36,11 @@ import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.install.model.UpdateAvailability
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
 import de.lemke.commonutils.toast
+import de.lemke.commonutils.transformToActivity
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.databinding.ActivityMainBinding
@@ -93,6 +96,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         time = System.currentTimeMillis()
+        prepareActivityTransformationFrom()
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 34) {
             overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, android.R.anim.fade_in, android.R.anim.fade_out)
@@ -264,23 +268,30 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             //pickApkActivityResultLauncher.launch("*/*")
             closeDrawerAfterDelay()
         }
-        findViewById<LinearLayout>(R.id.drawerItemAboutApp).onSingleClick {
-            startActivity(Intent(this@MainActivity, AboutActivity::class.java))
-            closeDrawerAfterDelay()
+        findViewById<LinearLayout>(R.id.drawerItemAboutApp).apply {
+            onSingleClick {
+                transformToActivity(Intent(this@MainActivity, AboutActivity::class.java))
+                closeDrawerAfterDelay()
+            }
         }
-        findViewById<LinearLayout>(R.id.drawerItemAboutMe).onSingleClick {
-            startActivity(Intent(this@MainActivity, AboutMeActivity::class.java))
-            closeDrawerAfterDelay()
+        findViewById<LinearLayout>(R.id.drawerItemAboutMe).apply {
+            onSingleClick {
+                transformToActivity(Intent(this@MainActivity, AboutMeActivity::class.java))
+                closeDrawerAfterDelay()
+            }
         }
-        findViewById<LinearLayout>(R.id.drawerItemSettings).onSingleClick {
-            startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
-            closeDrawerAfterDelay()
+        findViewById<LinearLayout>(R.id.drawerItemSettings).apply {
+            onSingleClick {
+                transformToActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                closeDrawerAfterDelay()
+            }
         }
         binding.drawerLayout.apply {
             setHeaderButtonIcon(AppCompatResources.getDrawable(this@MainActivity, dev.oneuiproject.oneui.R.drawable.ic_oui_info_outline))
             setHeaderButtonTooltip(getString(R.string.about_app))
             setHeaderButtonOnClickListener {
-                startActivity(Intent().setClass(this@MainActivity, AboutActivity::class.java))
+                findViewById<ImageButton>(dev.oneuiproject.oneui.design.R.id.drawer_header_button)
+                    .transformToActivity(Intent(this@MainActivity, AboutActivity::class.java))
                 closeDrawerAfterDelay()
             }
             setNavRailContentMinSideMargin(14)
@@ -288,40 +299,38 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             lockNavRailOnSearchMode = true
             closeNavRailOnBack = true
             isImmersiveScroll = true
+
+            //setupNavRailFadeEffect
+            if (isLargeScreenMode) {
+                setDrawerStateListener {
+                    when (it) {
+                        DrawerLayout.DrawerState.OPEN -> {
+                            offsetUpdaterJob?.cancel()
+                            updateOffset(1f)
+                        }
+
+                        DrawerLayout.DrawerState.CLOSE -> {
+                            offsetUpdaterJob?.cancel()
+                            updateOffset(0f)
+                        }
+
+                        DrawerLayout.DrawerState.CLOSING,
+                        DrawerLayout.DrawerState.OPENING -> {
+                            startOffsetUpdater()
+                        }
+                    }
+                }
+                //Set initial offset
+                post {
+                    updateOffset(binding.drawerLayout.drawerOffset)
+                }
+            }
         }
         AppUpdateManagerFactory.create(this).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE)
                 binding.drawerLayout.setButtonBadges(Badge.DOT, Badge.DOT)
         }
         binding.iconNoEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
-
-        //setupNavRailFadeEffect
-        binding.drawerLayout.apply {
-            if (!isLargeScreenMode) return
-            setDrawerStateListener {
-                when (it) {
-                    DrawerLayout.DrawerState.OPEN -> {
-                        offsetUpdaterJob?.cancel()
-                        updateOffset(1f)
-                    }
-
-                    DrawerLayout.DrawerState.CLOSE -> {
-                        offsetUpdaterJob?.cancel()
-                        updateOffset(0f)
-                    }
-
-                    DrawerLayout.DrawerState.CLOSING,
-                    DrawerLayout.DrawerState.OPENING -> {
-                        startOffsetUpdater()
-                    }
-                }
-            }
-        }
-
-        //Set initial offset
-        binding.drawerLayout.post {
-            updateOffset(binding.drawerLayout.drawerOffset)
-        }
     }
 
     private var offsetUpdaterJob: Job? = null
