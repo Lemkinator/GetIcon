@@ -157,16 +157,14 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         else openMain(savedInstanceState)
     }
 
-    private fun openMain(savedInstanceState: Bundle?) {
-        lifecycleScope.launch {
-            initDrawer()
-            showSystemApps = getUserSettings().showSystemApps
-            initAppPicker()
-            //manually waiting for the animation to finish :/
-            delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
-            isUIReady = true
-        }
+    private suspend fun openMain(savedInstanceState: Bundle?) {
+        initDrawer()
+        showSystemApps = getUserSettings().showSystemApps
+        initAppPicker()
         savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
+        //manually waiting for the animation to finish :/
+        delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
+        isUIReady = true
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
