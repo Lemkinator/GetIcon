@@ -19,8 +19,8 @@ android {
         applicationId = "de.lemke.geticon"
         minSdk = 26
         targetSdk = 35
-        versionCode = 21
-        versionName = "1.2.3"
+        versionCode = 22
+        versionName = "1.2.4"
     }
 
     @Suppress("UnstableApiUsage")
@@ -97,7 +97,7 @@ dependencies {
     implementation("io.github.tribalfs:oneui-design:0.5.3+oneui6")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
-    implementation("io.github.lemkinator:common-utils:0.6.8")
+    implementation("io.github.lemkinator:common-utils:0.7.0")
 
     implementation("com.airbnb.android:lottie:6.6.2")
     implementation("com.google.android.play:review-ktx:2.0.2")
