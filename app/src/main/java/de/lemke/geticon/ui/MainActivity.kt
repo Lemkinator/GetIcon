@@ -41,6 +41,7 @@ import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
 import de.lemke.commonutils.toast
 import de.lemke.commonutils.transformToActivity
+import dev.oneuiproject.oneui.design.R as designR
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.databinding.ActivityMainBinding
@@ -194,27 +195,20 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.menu_item_search -> {
-                startSearch()
-                return true
-            }
-
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+            R.id.menu_item_search -> startSearch().let { true }
             R.id.menu_apppicker_system -> {
                 showSystemApps = !showSystemApps
                 lifecycleScope.launch { updateUserSettings { it.copy(showSystemApps = showSystemApps) } }
                 item.title = getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
                 refreshApps()
-                return true
+                true
             }
-        }
-        return super.onOptionsItemSelected(item)
-    }
 
-    private fun startSearch() {
-        binding.drawerLayout.startSearchMode(SearchModeListener(), DISMISS)
-    }
+            else -> super.onOptionsItemSelected(item)
+        }
+
+    private fun startSearch() = binding.drawerLayout.startSearchMode(SearchModeListener(), DISMISS)
 
     private fun updateSearch(query: String?): Boolean {
         if (search == null) return false
@@ -245,14 +239,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
     }
 
-    fun closeDrawerAfterDelay() {
-        if (binding.drawerLayout.isLargeScreenMode) return
-        lifecycleScope.launch {
-            delay(500) //delay, so closing the drawer is not visible for the user
-            binding.drawerLayout.setDrawerOpen(false, false)
-        }
-    }
-
     @SuppressLint("RestrictedApi")
     private fun initDrawer() {
         drawerListView = findViewById(R.id.drawerListView)
@@ -266,33 +252,15 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         findViewById<LinearLayout>(R.id.drawerItemExtractIconFromApk).onSingleClick {
             pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
             //pickApkActivityResultLauncher.launch("*/*")
-            closeDrawerAfterDelay()
         }
-        findViewById<LinearLayout>(R.id.drawerItemAboutApp).apply {
-            onSingleClick {
-                transformToActivity(Intent(this@MainActivity, AboutActivity::class.java))
-                closeDrawerAfterDelay()
-            }
-        }
-        findViewById<LinearLayout>(R.id.drawerItemAboutMe).apply {
-            onSingleClick {
-                transformToActivity(Intent(this@MainActivity, AboutMeActivity::class.java))
-                closeDrawerAfterDelay()
-            }
-        }
-        findViewById<LinearLayout>(R.id.drawerItemSettings).apply {
-            onSingleClick {
-                transformToActivity(Intent(this@MainActivity, SettingsActivity::class.java))
-                closeDrawerAfterDelay()
-            }
-        }
+        findViewById<LinearLayout>(R.id.drawerItemAboutApp).apply { onSingleClick { transformToActivity(AboutActivity::class.java) } }
+        findViewById<LinearLayout>(R.id.drawerItemAboutMe).apply { onSingleClick { transformToActivity(AboutMeActivity::class.java) } }
+        findViewById<LinearLayout>(R.id.drawerItemSettings).apply { onSingleClick { transformToActivity(SettingsActivity::class.java) } }
         binding.drawerLayout.apply {
             setHeaderButtonIcon(AppCompatResources.getDrawable(this@MainActivity, dev.oneuiproject.oneui.R.drawable.ic_oui_info_outline))
             setHeaderButtonTooltip(getString(R.string.about_app))
             setHeaderButtonOnClickListener {
-                findViewById<ImageButton>(dev.oneuiproject.oneui.design.R.id.drawer_header_button)
-                    .transformToActivity(Intent(this@MainActivity, AboutActivity::class.java))
-                closeDrawerAfterDelay()
+                findViewById<ImageButton>(designR.id.drawer_header_button).transformToActivity(AboutActivity::class.java)
             }
             setNavRailContentMinSideMargin(14)
             lockNavRailOnActionMode = true
@@ -304,26 +272,13 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             if (isLargeScreenMode) {
                 setDrawerStateListener {
                     when (it) {
-                        DrawerLayout.DrawerState.OPEN -> {
-                            offsetUpdaterJob?.cancel()
-                            updateOffset(1f)
-                        }
-
-                        DrawerLayout.DrawerState.CLOSE -> {
-                            offsetUpdaterJob?.cancel()
-                            updateOffset(0f)
-                        }
-
-                        DrawerLayout.DrawerState.CLOSING,
-                        DrawerLayout.DrawerState.OPENING -> {
-                            startOffsetUpdater()
-                        }
+                        DrawerLayout.DrawerState.OPEN -> offsetUpdaterJob?.cancel().also { updateOffset(1f) }
+                        DrawerLayout.DrawerState.CLOSE -> offsetUpdaterJob?.cancel().also { updateOffset(0f) }
+                        DrawerLayout.DrawerState.CLOSING, DrawerLayout.DrawerState.OPENING -> startOffsetUpdater()
                     }
                 }
                 //Set initial offset
-                post {
-                    updateOffset(binding.drawerLayout.drawerOffset)
-                }
+                post { updateOffset(binding.drawerLayout.drawerOffset) }
             }
         }
         AppUpdateManagerFactory.create(this).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
@@ -346,16 +301,14 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     fun updateOffset(offset: Float) {
         drawerItemTitles.forEach { it.alpha = offset }
         drawerListView.children.forEach {
-            if (offset == 0f) {
-                it.post {
+            it.post {
+                if (offset == 0f) {
                     it.updateLayoutParams<MarginLayoutParams> {
                         width = if (it is LinearLayout) 52f.dpToPx(it.context.resources)
                         else 25f.dpToPx(it.context.resources)
                     }
-                }
-            } else {
-                it.updateLayoutParams<MarginLayoutParams> {
-                    width = MATCH_PARENT
+                } else if (it.width != MATCH_PARENT) {
+                    it.updateLayoutParams<MarginLayoutParams> { width = MATCH_PARENT }
                 }
             }
         }
