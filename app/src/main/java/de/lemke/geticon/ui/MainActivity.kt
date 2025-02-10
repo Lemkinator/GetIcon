@@ -178,13 +178,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         outState.saveSearchAndActionMode(isSearchMode = binding.drawerLayout.isSearchMode)
     }
 
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-        if (intent?.action == Intent.ACTION_SEARCH) {
-            binding.drawerLayout.setSearchQueryFromIntent(intent)
-        }
-    }
-
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_app_picker, menu)
         lifecycleScope.launch {
@@ -196,17 +189,17 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-            R.id.menu_item_search -> startSearch().let { true }
-            R.id.menu_apppicker_system -> {
-                showSystemApps = !showSystemApps
-                lifecycleScope.launch { updateUserSettings { it.copy(showSystemApps = showSystemApps) } }
-                item.title = getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
-                refreshApps()
-                true
-            }
-
-            else -> super.onOptionsItemSelected(item)
+        R.id.menu_item_search -> startSearch().let { true }
+        R.id.menu_apppicker_system -> {
+            showSystemApps = !showSystemApps
+            lifecycleScope.launch { updateUserSettings { it.copy(showSystemApps = showSystemApps) } }
+            item.title = getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
+            refreshApps()
+            true
         }
+
+        else -> super.onOptionsItemSelected(item)
+    }
 
     private fun startSearch() = binding.drawerLayout.startSearchMode(SearchModeListener(), DISMISS)
 
@@ -437,10 +430,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             }
             applicationInfo.sourceDir = path
             applicationInfo.publicSourceDir = path
-            startActivity(
-                Intent(this@MainActivity, IconActivity::class.java)
-                    .putExtra(KEY_APPLICATION_INFO, applicationInfo)
-            )
+            startActivity(Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, applicationInfo))
         } catch (e: Exception) {
             e.printStackTrace()
             toast(R.string.error_no_valid_file_selected)
