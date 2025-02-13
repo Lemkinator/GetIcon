@@ -1,12 +1,14 @@
 package de.lemke.geticon.ui
 
+import android.R.anim.fade_in
+import android.R.anim.fade_out
 import android.annotation.SuppressLint
 import android.app.ActivityOptions
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
+import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import android.util.Log
 import android.util.Pair
@@ -41,7 +43,6 @@ import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
 import de.lemke.commonutils.toast
 import de.lemke.commonutils.transformToActivity
-import dev.oneuiproject.oneui.design.R as designR
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.databinding.ActivityMainBinding
@@ -71,6 +72,7 @@ import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
 import kotlin.sequences.forEach
+import dev.oneuiproject.oneui.design.R as designR
 
 
 @AndroidEntryPoint
@@ -99,9 +101,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         time = System.currentTimeMillis()
         prepareActivityTransformationFrom()
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= 34) {
-            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, android.R.anim.fade_in, android.R.anim.fade_out)
-        }
+        if (SDK_INT >= 34) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         splashScreen.setKeepOnScreenCondition { !isUIReady }
@@ -150,9 +150,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         //manually waiting for the animation to finish :/
         delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
         startActivity(Intent(applicationContext, OOBEActivity::class.java))
-        if (Build.VERSION.SDK_INT < 34) {
+        if (SDK_INT < 34) {
             @Suppress("DEPRECATION")
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+            overridePendingTransition(fade_in, fade_out)
         }
         finishAfterTransition()
     }
