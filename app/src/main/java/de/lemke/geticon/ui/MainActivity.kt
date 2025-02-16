@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import android.util.Log
@@ -53,6 +54,7 @@ import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.ui.IconActivity.Companion.KEY_APPLICATION_INFO
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
+import dev.oneuiproject.oneui.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.ktx.dpToPx
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.hideSoftInputOnScroll
@@ -261,8 +263,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 findViewById<ImageButton>(designR.id.drawer_header_button).transformToActivity(AboutActivity::class.java)
             }
             setNavRailContentMinSideMargin(14)
-            lockNavRailOnActionMode = true
-            lockNavRailOnSearchMode = true
             closeNavRailOnBack = true
             isImmersiveScroll = true
 
@@ -312,21 +312,21 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
     }
 
-    private suspend fun initAppPicker() {
-        if (binding.apppickerList.itemDecorationCount > 0) {
-            for (i in 0 until binding.apppickerList.itemDecorationCount) {
-                binding.apppickerList.removeItemDecorationAt(i)
+    private suspend fun initAppPicker() = binding.apppickerList.apply {
+        if (itemDecorationCount > 0) {
+            for (i in 0 until itemDecorationCount) {
+                removeItemDecorationAt(i)
             }
         }
-        binding.apppickerList.setAppPickerView(AppPickerView.TYPE_GRID, getApps(null), AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
-        binding.apppickerList.setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
+        setAppPickerView(AppPickerView.TYPE_GRID, getApps(null), AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
+        setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
             holder.item.onSingleClick {
                 try {
                     hideSoftInput()
                     startActivity(
-                        Intent(this, IconActivity::class.java)
+                        Intent(this@MainActivity, IconActivity::class.java)
                             .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(packageName, 0)),
-                        ActivityOptions.makeSceneTransitionAnimation(this, Pair.create(holder.appIcon, "icon")).toBundle()
+                        ActivityOptions.makeSceneTransitionAnimation(this@MainActivity, Pair.create(holder.appIcon, "icon")).toBundle()
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -334,9 +334,10 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 }
             }
         }
-        binding.apppickerList.itemAnimator = null
-        binding.apppickerList.seslSetSmoothScrollEnabled(true)
-        binding.apppickerList.hideSoftInputOnScroll()
+        itemAnimator = null
+        seslSetSmoothScrollEnabled(true)
+        hideSoftInputOnScroll()
+        if (SDK_INT >= Build.VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
     }
 
     private suspend fun getApps(search: String?): List<String> = withContext(Dispatchers.Default) {
