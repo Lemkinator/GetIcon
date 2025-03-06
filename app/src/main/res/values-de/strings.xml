@@ -20,11 +20,8 @@
 
     <string name="save_as_image">Als Bild speichern</string>
     <string name="error_app_not_found">App nicht gefunden</string>
-    <string name="error_no_folder_selected">Kein Ordner ausgewählt</string>
     <string name="error_no_valid_file_selected">Keine gültige Datei ausgewählt</string>
-    <string name="error_creating_file">Fehler beim Erstellen der Datei</string>
     <string name="error_loading_apps">Fehler beim Laden der Apps</string>
-    <string name="icon_saved">Icon gespeichert</string>
     <string name="background">Hintergrund</string>
     <string name="foreground">Vordergrund</string>
     <string name="masked">Maskiert</string>
