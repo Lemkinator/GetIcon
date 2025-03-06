@@ -189,7 +189,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         menuInflater.inflate(R.menu.menu_app_picker, menu)
         lifecycleScope.launch {
             showSystemApps = getUserSettings().showSystemApps
-            menu.findItem(R.id.menu_apppicker_system).title =
+            menu.findItem(R.id.menu_app_picker_system).title =
                 getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
         }
         return true
@@ -197,7 +197,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
         R.id.menu_item_search -> startSearch().let { true }
-        R.id.menu_apppicker_system -> {
+        R.id.menu_app_picker_system -> {
             showSystemApps = !showSystemApps
             lifecycleScope.launch { updateUserSettings { it.copy(showSystemApps = showSystemApps) } }
             item.title = getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
@@ -312,7 +312,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
     }
 
-    private suspend fun initAppPicker() = binding.apppickerList.apply {
+    private suspend fun initAppPicker() = binding.appPickerList.apply {
         if (itemDecorationCount > 0) {
             for (i in 0 until itemDecorationCount) {
                 removeItemDecorationAt(i)
@@ -359,14 +359,14 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     private fun refreshApps() {
         binding.iconNoEntryScrollView.visibility = View.GONE
-        binding.apppickerList.visibility = View.GONE
+        binding.appPickerList.visibility = View.GONE
         binding.apppickerProgress.visibility = View.VISIBLE
         refreshAppsJob?.cancel()
         if (!this@MainActivity::binding.isInitialized) return
         refreshAppsJob = lifecycleScope.launch {
             val apps = getApps(search)
             if (apps.isEmpty() || search?.isBlank() == true) {
-                binding.apppickerList.visibility = View.GONE
+                binding.appPickerList.visibility = View.GONE
                 binding.apppickerProgress.visibility = View.GONE
                 binding.iconListLottie.cancelAnimation()
                 binding.iconListLottie.progress = 0f
@@ -378,10 +378,10 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 )
                 binding.iconListLottie.postDelayed({ binding.iconListLottie.playAnimation() }, 400)
             } else {
-                binding.apppickerList.resetPackages(apps)
+                binding.appPickerList.resetPackages(apps)
                 binding.iconNoEntryScrollView.visibility = View.GONE
                 binding.apppickerProgress.visibility = View.GONE
-                binding.apppickerList.visibility = View.VISIBLE
+                binding.appPickerList.visibility = View.VISIBLE
             }
         }
     }

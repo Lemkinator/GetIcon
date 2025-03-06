@@ -10,7 +10,7 @@
         app:showAsAction="always"
         tools:ignore="AlwaysShowAction,AppCompatResource" />
     <item
-        android:id="@+id/menu_apppicker_system"
+        android:id="@+id/menu_app_picker_system"
         android:title="@string/show_system_apps"
         app:iconTint="?actionMenuTextColor"
         app:showAsAction="never"

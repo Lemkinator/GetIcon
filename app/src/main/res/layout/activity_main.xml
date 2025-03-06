@@ -16,7 +16,7 @@
         app:layout_location="main_content">
 
         <androidx.apppickerview.widget.AppPickerView
-            android:id="@+id/apppicker_list"
+            android:id="@+id/app_picker_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/oui_background_color" />

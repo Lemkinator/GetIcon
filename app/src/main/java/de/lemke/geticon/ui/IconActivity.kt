@@ -98,7 +98,7 @@ class IconActivity : AppCompatActivity() {
 
     @Suppress("unused")
     @SuppressLint("RestrictedApi")
-    private fun getMaskedAactivityIcon(activityName: String?): Drawable? = if (activityName.isNullOrBlank()) maskedAppIcon
+    private fun getMaskedActivityIcon(activityName: String?): Drawable? = if (activityName.isNullOrBlank()) maskedAppIcon
     else {
         val componentName = ComponentName(applicationInfo.packageName, activityName)
         SeslApplicationPackageManagerReflector.semGetActivityIconForIconTray(packageManager, componentName, 1)
