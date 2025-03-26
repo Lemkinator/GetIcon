@@ -13,12 +13,12 @@ val releaseKeyPassword: String? by rootProject
 
 android {
     namespace = "de.lemke.geticon"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "de.lemke.geticon"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 24
         versionName = "1.2.6"
     }
