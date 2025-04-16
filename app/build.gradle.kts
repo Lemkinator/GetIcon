@@ -97,11 +97,10 @@ dependencies {
     implementation("io.github.tribalfs:oneui-design:0.5.12+oneui6")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
-    implementation("io.github.lemkinator:common-utils:0.7.5")
+    implementation("io.github.lemkinator:common-utils:0.8.1")
 
     implementation("com.airbnb.android:lottie:6.6.6")
     implementation("com.google.android.play:review-ktx:2.0.2")
-    implementation("com.google.android.play:app-update-ktx:2.1.0")
     implementation("com.google.android.gms:play-services-oss-licenses:17.1.0")
 
     implementation("androidx.core:core-splashscreen:1.2.0-beta01")

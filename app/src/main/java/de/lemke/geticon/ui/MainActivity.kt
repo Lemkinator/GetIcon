@@ -16,34 +16,29 @@ import android.util.Pair
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.view.ViewGroup.MarginLayoutParams
-import android.widget.ImageButton
 import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SearchView
 import androidx.apppickerview.widget.AppPickerView
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.view.children
-import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.SimpleColorFilter
 import com.airbnb.lottie.model.KeyPath
 import com.airbnb.lottie.value.LottieValueCallback
-import com.google.android.play.core.appupdate.AppUpdateInfo
-import com.google.android.play.core.appupdate.AppUpdateManagerFactory
-import com.google.android.play.core.install.model.UpdateAvailability
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.AboutActivity
+import de.lemke.commonutils.AboutMeActivity
 import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
+import de.lemke.commonutils.setup
+import de.lemke.commonutils.setupCommonActivities
 import de.lemke.commonutils.toast
 import de.lemke.commonutils.transformToActivity
+import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.databinding.ActivityMainBinding
@@ -55,34 +50,25 @@ import de.lemke.geticon.ui.IconActivity.Companion.KEY_APPLICATION_INFO
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.configureImmBottomPadding
-import dev.oneuiproject.oneui.ktx.dpToPx
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.hideSoftInputOnScroll
 import dev.oneuiproject.oneui.ktx.onSingleClick
-import dev.oneuiproject.oneui.layout.Badge
-import dev.oneuiproject.oneui.layout.DrawerLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISMISS
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
-import kotlin.sequences.forEach
-import dev.oneuiproject.oneui.design.R as designR
 
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var pickApkActivityResultLauncher: ActivityResultLauncher<String>
-    private lateinit var drawerListView: LinearLayout
-    private val drawerItemTitles: MutableList<TextView> = mutableListOf()
     private var showSystemApps = false
     private var search: String? = null
     private var time: Long = 0
@@ -165,8 +151,8 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     private suspend fun openMain(savedInstanceState: Bundle?) {
+        setupCommonUtilsActivities()
         initDrawer()
-        showSystemApps = getUserSettings().showSystemApps
         initAppPicker()
         savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
         //manually waiting for the animation to finish :/
@@ -239,16 +225,21 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
     }
 
+    private fun setupCommonUtilsActivities() {
+        lifecycleScope.launch {
+            setupCommonActivities(
+                appName = getString(R.string.app_name),
+                appVersion = BuildConfig.VERSION_NAME,
+                optionalText = getString(R.string.app_description),
+                email = getString(R.string.email),
+                devModeEnabled = getUserSettings().devModeEnabled,
+                onDevModeChanged = { newDevModeEnabled: Boolean -> updateUserSettings { it.copy(devModeEnabled = newDevModeEnabled) } }
+            )
+        }
+    }
+
     @SuppressLint("RestrictedApi")
     private fun initDrawer() {
-        drawerListView = findViewById(R.id.drawerListView)
-        drawerItemTitles.apply {
-            clear()
-            add(findViewById(R.id.drawerItemExtractIconFromApkTitle))
-            add(findViewById(R.id.drawerItemAboutAppTitle))
-            add(findViewById(R.id.drawerItemAboutMeTitle))
-            add(findViewById(R.id.drawerItemSettingsTitle))
-        }
         findViewById<LinearLayout>(R.id.drawerItemExtractIconFromApk).onSingleClick {
             pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
             //pickApkActivityResultLauncher.launch("*/*")
@@ -256,63 +247,22 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         findViewById<LinearLayout>(R.id.drawerItemAboutApp).apply { onSingleClick { transformToActivity(AboutActivity::class.java) } }
         findViewById<LinearLayout>(R.id.drawerItemAboutMe).apply { onSingleClick { transformToActivity(AboutMeActivity::class.java) } }
         findViewById<LinearLayout>(R.id.drawerItemSettings).apply { onSingleClick { transformToActivity(SettingsActivity::class.java) } }
-        binding.drawerLayout.apply {
-            setHeaderButtonIcon(AppCompatResources.getDrawable(this@MainActivity, dev.oneuiproject.oneui.R.drawable.ic_oui_info_outline))
-            setHeaderButtonTooltip(getString(R.string.about_app))
-            setHeaderButtonOnClickListener {
-                findViewById<ImageButton>(designR.id.drawer_header_button).transformToActivity(AboutActivity::class.java)
-            }
-            setNavRailContentMinSideMargin(14)
-            closeNavRailOnBack = true
-            isImmersiveScroll = true
-
-            //setupNavRailFadeEffect
-            if (isLargeScreenMode) {
-                setDrawerStateListener {
-                    when (it) {
-                        DrawerLayout.DrawerState.OPEN -> offsetUpdaterJob?.cancel().also { updateOffset(1f) }
-                        DrawerLayout.DrawerState.CLOSE -> offsetUpdaterJob?.cancel().also { updateOffset(0f) }
-                        DrawerLayout.DrawerState.CLOSING, DrawerLayout.DrawerState.OPENING -> startOffsetUpdater()
-                    }
-                }
-                //Set initial offset
-                post { updateOffset(binding.drawerLayout.drawerOffset) }
-            }
-        }
-        AppUpdateManagerFactory.create(this).appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE)
-                binding.drawerLayout.setButtonBadges(Badge.DOT, Badge.DOT)
-        }
+        binding.drawerLayout.setup(
+            getString(R.string.about_app),
+            mutableListOf(
+                findViewById(R.id.drawerItemExtractIconFromApkTitle),
+                findViewById(R.id.drawerItemAboutAppTitle),
+                findViewById(R.id.drawerItemAboutMeTitle),
+                findViewById(R.id.drawerItemSettingsTitle)
+            ),
+            findViewById(R.id.drawerListView)
+        )
+        binding.drawerLayout.isImmersiveScroll = true
         binding.iconNoEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
-    private var offsetUpdaterJob: Job? = null
-    private fun startOffsetUpdater() {
-        offsetUpdaterJob = CoroutineScope(Dispatchers.Main).launch {
-            while (isActive) {
-                updateOffset(binding.drawerLayout.drawerOffset)
-                delay(50)
-            }
-        }
-    }
-
-    fun updateOffset(offset: Float) {
-        drawerItemTitles.forEach { it.alpha = offset }
-        drawerListView.children.forEach {
-            it.post {
-                if (offset == 0f) {
-                    it.updateLayoutParams<MarginLayoutParams> {
-                        width = if (it is LinearLayout) 52f.dpToPx(it.context.resources)
-                        else 25f.dpToPx(it.context.resources)
-                    }
-                } else if (it.width != MATCH_PARENT) {
-                    it.updateLayoutParams<MarginLayoutParams> { width = MATCH_PARENT }
-                }
-            }
-        }
-    }
-
     private suspend fun initAppPicker() = binding.appPickerList.apply {
+        showSystemApps = getUserSettings().showSystemApps
         if (itemDecorationCount > 0) {
             for (i in 0 until itemDecorationCount) {
                 removeItemDecorationAt(i)

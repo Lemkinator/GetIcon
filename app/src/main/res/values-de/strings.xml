@@ -1,5 +1,5 @@
 <resources>
-    <string name="about_page_optional_text">Eine App zum extrahieren und speichern von App-Icons.</string>
+    <string name="app_description">Eine App zum extrahieren und speichern von App-Icons.</string>
     <string name="about_app">Über GetIcon</string>
 
     <!--Settings-->

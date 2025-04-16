@@ -2,7 +2,7 @@
     <string name="app_name" translatable="false">Get Icon</string>
     <string name="email" translatable="false">geticon@leonard-lemke.com</string>
     <string name="privacy_website" translatable="false">https://www.leonard-lemke.com/apps/geticon/privacy-policy</string>
-    <string name="about_page_optional_text">An app to extract and save app icons.</string>
+    <string name="app_description">An app to extract and save app icons.</string>
     <string name="about_app">About GetIcon</string>
 
     <!--Settings-->
