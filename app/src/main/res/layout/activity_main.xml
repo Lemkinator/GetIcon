@@ -19,7 +19,7 @@
             android:id="@+id/app_picker_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/oui_background_color" />
+            android:background="?android:colorBackground" />
 
         <dev.oneuiproject.oneui.widget.RoundedFrameLayout
             android:id="@+id/apppicker_progress"

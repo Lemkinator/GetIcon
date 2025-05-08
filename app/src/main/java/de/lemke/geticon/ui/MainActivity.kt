@@ -5,8 +5,10 @@ import android.R.anim.fade_out
 import android.annotation.SuppressLint
 import android.app.ActivityOptions
 import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
+import android.content.pm.ApplicationInfo.FLAG_SYSTEM
+import android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP
+import android.content.pm.PackageManager.GET_META_DATA
+import android.graphics.ColorFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Build.VERSION.SDK_INT
@@ -15,16 +17,18 @@ import android.util.Log
 import android.util.Pair
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.widget.LinearLayout
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.apppickerview.widget.AppPickerView
+import androidx.apppickerview.widget.AppPickerView.ORDER_ASCENDING_IGNORE_CASE
+import androidx.apppickerview.widget.AppPickerView.TYPE_GRID
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import com.airbnb.lottie.LottieProperty
+import com.airbnb.lottie.LottieProperty.COLOR_FILTER
 import com.airbnb.lottie.SimpleColorFilter
 import com.airbnb.lottie.model.KeyPath
 import com.airbnb.lottie.value.LottieValueCallback
@@ -138,10 +142,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         //manually waiting for the animation to finish :/
         delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
         startActivity(Intent(applicationContext, OOBEActivity::class.java))
-        if (SDK_INT < 34) {
-            @Suppress("DEPRECATION")
-            overridePendingTransition(fade_in, fade_out)
-        }
+        @Suppress("DEPRECATION") if (SDK_INT < 34) overridePendingTransition(fade_in, fade_out)
         finishAfterTransition()
     }
 
@@ -268,7 +269,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 removeItemDecorationAt(i)
             }
         }
-        setAppPickerView(AppPickerView.TYPE_GRID, getApps(null), AppPickerView.ORDER_ASCENDING_IGNORE_CASE)
+        setAppPickerView(TYPE_GRID, getApps(null), ORDER_ASCENDING_IGNORE_CASE)
         setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
             holder.item.onSingleClick {
                 try {
@@ -292,9 +293,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     private suspend fun getApps(search: String?): List<String> = withContext(Dispatchers.Default) {
         try {
-            val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+            val apps = packageManager.getInstalledApplications(GET_META_DATA)
             val filteredApps = if (showSystemApps) apps
-            else apps.filter { it.flags and (ApplicationInfo.FLAG_UPDATED_SYSTEM_APP or ApplicationInfo.FLAG_SYSTEM) == 0 }
+            else apps.filter { it.flags and (FLAG_UPDATED_SYSTEM_APP or FLAG_SYSTEM) == 0 }
             return@withContext if (search.isNullOrBlank()) filteredApps.map { it.packageName }
             else filteredApps.filter {
                 packageManager.getApplicationLabel(it).toString().contains(search, ignoreCase = true) ||
@@ -308,30 +309,27 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     private fun refreshApps() {
-        binding.iconNoEntryScrollView.visibility = View.GONE
-        binding.appPickerList.visibility = View.GONE
-        binding.apppickerProgress.visibility = View.VISIBLE
+        binding.iconNoEntryScrollView.isVisible = false
+        binding.appPickerList.isVisible = false
+        binding.apppickerProgress.isVisible = true
         refreshAppsJob?.cancel()
         if (!this@MainActivity::binding.isInitialized) return
         refreshAppsJob = lifecycleScope.launch {
             val apps = getApps(search)
             if (apps.isEmpty() || search?.isBlank() == true) {
-                binding.appPickerList.visibility = View.GONE
-                binding.apppickerProgress.visibility = View.GONE
+                binding.appPickerList.isVisible = false
+                binding.apppickerProgress.isVisible = false
                 binding.iconListLottie.cancelAnimation()
                 binding.iconListLottie.progress = 0f
-                binding.iconNoEntryScrollView.visibility = View.VISIBLE
-                binding.iconListLottie.addValueCallback(
-                    KeyPath("**"),
-                    LottieProperty.COLOR_FILTER,
-                    LottieValueCallback(SimpleColorFilter(getColor(R.color.primary_color_themed)))
-                )
+                binding.iconNoEntryScrollView.isVisible = true
+                val callback = LottieValueCallback<ColorFilter>(SimpleColorFilter(getColor(R.color.primary_color_themed)))
+                binding.iconListLottie.addValueCallback(KeyPath("**"), COLOR_FILTER, callback)
                 binding.iconListLottie.postDelayed({ binding.iconListLottie.playAnimation() }, 400)
             } else {
                 binding.appPickerList.resetPackages(apps)
-                binding.iconNoEntryScrollView.visibility = View.GONE
-                binding.apppickerProgress.visibility = View.GONE
-                binding.appPickerList.visibility = View.VISIBLE
+                binding.iconNoEntryScrollView.isVisible = false
+                binding.apppickerProgress.isVisible = false
+                binding.appPickerList.isVisible = true
             }
         }
     }
