@@ -260,6 +260,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         )
         binding.drawerLayout.isImmersiveScroll = true
         binding.iconNoEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
+        binding.apppickerProgress.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
     private suspend fun initAppPicker() = binding.appPickerList.apply {

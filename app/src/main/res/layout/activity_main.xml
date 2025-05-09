@@ -8,33 +8,29 @@
     app:expanded="false"
     app:title="@string/app_name">
 
-    <LinearLayout
+    <dev.oneuiproject.oneui.widget.RoundedFrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:orientation="vertical"
-        app:layout_location="main_content">
+        app:edgeInsetLeft="10dp"
+        app:edgeInsetRight="10dp"
+        app:roundedCorners="top_right|top_left">
 
         <androidx.apppickerview.widget.AppPickerView
             android:id="@+id/app_picker_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="?android:colorBackground" />
+            android:background="?android:colorBackground"
+            android:clipToPadding="false"
+            android:paddingHorizontal="10dp"
+            android:scrollbarStyle="outsideOverlay" />
 
-        <dev.oneuiproject.oneui.widget.RoundedFrameLayout
+        <androidx.appcompat.widget.SeslProgressBar
             android:id="@+id/apppicker_progress"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:visibility="gone">
-
-            <androidx.appcompat.widget.SeslProgressBar
-                style="@style/Widget.AppCompat.ProgressBar.Large"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center" />
-
-        </dev.oneuiproject.oneui.widget.RoundedFrameLayout>
+            style="@style/Widget.AppCompat.ProgressBar.Large"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
 
         <androidx.core.widget.NestedScrollView
             android:id="@+id/icon_no_entry_scroll_view"
@@ -86,7 +82,7 @@
 
         </androidx.core.widget.NestedScrollView>
 
-    </LinearLayout>
+    </dev.oneuiproject.oneui.widget.RoundedFrameLayout>
 
     <include layout="@layout/content_drawer" />
 

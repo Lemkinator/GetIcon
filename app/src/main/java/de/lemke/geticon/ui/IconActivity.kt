@@ -42,13 +42,15 @@ import de.lemke.geticon.databinding.ActivityIconBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
+import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
 @AndroidEntryPoint
-class IconActivity : AppCompatActivity() {
+class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
     companion object {
         const val KEY_APPLICATION_INFO = "applicationInfo"
     }
@@ -146,6 +148,7 @@ class IconActivity : AppCompatActivity() {
             setCustomAnimatedOnBackPressedLogic(binding.root, showInAppReviewOrFinish.canShowInAppReview()) {
                 lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) }
             }
+            binding.icon.translateYWithAppBar(binding.root.appBarLayout, this@IconActivity)
         }
     }
 
