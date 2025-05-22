@@ -33,14 +33,13 @@ import de.lemke.commonutils.SaveLocation
 import de.lemke.commonutils.copyToClipboard
 import de.lemke.commonutils.exportBitmap
 import de.lemke.commonutils.saveBitmapToUri
-import de.lemke.commonutils.setCustomAnimatedOnBackPressedLogic
+import de.lemke.commonutils.setCustomBackAnimation
 import de.lemke.commonutils.setWindowTransparent
 import de.lemke.commonutils.shareBitmap
 import de.lemke.commonutils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityIconBinding
 import de.lemke.geticon.domain.GetUserSettingsUseCase
-import de.lemke.geticon.domain.ShowInAppReviewOrFinishUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
@@ -79,9 +78,6 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     @Inject
     lateinit var updateUserSettings: UpdateUserSettingsUseCase
 
-    @Inject
-    lateinit var showInAppReviewOrFinish: ShowInAppReviewOrFinishUseCase
-
     private val appIcon: Drawable
         get() = try {
             applicationInfo.loadIcon(packageManager)
@@ -115,7 +111,6 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         binding = ActivityIconBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setWindowTransparent(true)
-        binding.root.setNavigationButtonOnClickListener { lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) } }
         try {
             val nullableApplicationInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(KEY_APPLICATION_INFO, ApplicationInfo::class.java)
@@ -145,9 +140,7 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             backgroundColor = userSettings.recentBackgroundColors.first()
             saveLocation = userSettings.saveLocation
             initViews()
-            setCustomAnimatedOnBackPressedLogic(binding.root, showInAppReviewOrFinish.canShowInAppReview()) {
-                lifecycleScope.launch { showInAppReviewOrFinish(this@IconActivity) }
-            }
+            setCustomBackAnimation(binding.root, showInAppReviewIfPossible = true)
             binding.icon.translateYWithAppBar(binding.root.appBarLayout, this@IconActivity)
         }
     }

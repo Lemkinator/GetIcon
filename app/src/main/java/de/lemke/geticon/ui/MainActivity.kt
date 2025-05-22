@@ -259,8 +259,8 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             findViewById(R.id.drawerListView)
         )
         binding.drawerLayout.isImmersiveScroll = true
-        binding.iconNoEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
-        binding.apppickerProgress.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
+        binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
+        binding.appPickerProgress.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
     private suspend fun initAppPicker() = binding.appPickerList.apply {
@@ -310,26 +310,26 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     private fun refreshApps() {
-        binding.iconNoEntryScrollView.isVisible = false
+        binding.noEntryScrollView.isVisible = false
         binding.appPickerList.isVisible = false
-        binding.apppickerProgress.isVisible = true
+        binding.appPickerProgress.isVisible = true
         refreshAppsJob?.cancel()
         if (!this@MainActivity::binding.isInitialized) return
         refreshAppsJob = lifecycleScope.launch {
             val apps = getApps(search)
             if (apps.isEmpty() || search?.isBlank() == true) {
                 binding.appPickerList.isVisible = false
-                binding.apppickerProgress.isVisible = false
-                binding.iconListLottie.cancelAnimation()
-                binding.iconListLottie.progress = 0f
-                binding.iconNoEntryScrollView.isVisible = true
+                binding.appPickerProgress.isVisible = false
+                binding.noEntryLottie.cancelAnimation()
+                binding.noEntryLottie.progress = 0f
+                binding.noEntryScrollView.isVisible = true
                 val callback = LottieValueCallback<ColorFilter>(SimpleColorFilter(getColor(R.color.primary_color_themed)))
-                binding.iconListLottie.addValueCallback(KeyPath("**"), COLOR_FILTER, callback)
-                binding.iconListLottie.postDelayed({ binding.iconListLottie.playAnimation() }, 400)
+                binding.noEntryLottie.addValueCallback(KeyPath("**"), COLOR_FILTER, callback)
+                binding.noEntryLottie.postDelayed({ binding.noEntryLottie.playAnimation() }, 400)
             } else {
                 binding.appPickerList.resetPackages(apps)
-                binding.iconNoEntryScrollView.isVisible = false
-                binding.apppickerProgress.isVisible = false
+                binding.noEntryScrollView.isVisible = false
+                binding.appPickerProgress.isVisible = false
                 binding.appPickerList.isVisible = true
             }
         }

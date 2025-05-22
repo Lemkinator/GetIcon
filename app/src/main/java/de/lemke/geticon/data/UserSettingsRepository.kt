@@ -40,7 +40,6 @@ class UserSettingsRepository @Inject constructor(
             it[KEY_RECENT_BACKGROUND_COLORS] = newSettings.recentBackgroundColors.joinToString(",")
             it[KEY_RECENT_FOREGROUND_COLORS] = newSettings.recentForegroundColors.joinToString(",")
             it[KEY_SAVE_LOCATION] = newSettings.saveLocation.ordinal
-            it[KEY_LAST_IN_APP_REVIEW_REQUEST] = newSettings.lastInAppReviewRequest
         }
         return settingsFromPreferences(prefs)
     }
@@ -61,7 +60,6 @@ class UserSettingsRepository @Inject constructor(
         recentBackgroundColors = prefs[KEY_RECENT_BACKGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-16547330),
         recentForegroundColors = prefs[KEY_RECENT_FOREGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-1),
         saveLocation = SaveLocation.entries[prefs[KEY_SAVE_LOCATION] ?: SaveLocation.default.ordinal],
-        lastInAppReviewRequest = prefs[KEY_LAST_IN_APP_REVIEW_REQUEST] ?: System.currentTimeMillis(),
     )
 
 
@@ -80,7 +78,6 @@ class UserSettingsRepository @Inject constructor(
         private val KEY_RECENT_BACKGROUND_COLORS = stringPreferencesKey("recentBackgroundColors")
         private val KEY_RECENT_FOREGROUND_COLORS = stringPreferencesKey("recentForegroundColors")
         private val KEY_SAVE_LOCATION = intPreferencesKey("saveLocation")
-        private val KEY_LAST_IN_APP_REVIEW_REQUEST = longPreferencesKey("lastInAppReviewRequest")
     }
 }
 
@@ -114,6 +111,4 @@ data class UserSettings(
     val recentForegroundColors: List<Int>,
     /** save location */
     val saveLocation: SaveLocation,
-    /** last time in app review was requested */
-    val lastInAppReviewRequest: Long,
 )
