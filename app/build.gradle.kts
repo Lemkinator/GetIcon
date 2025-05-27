@@ -19,12 +19,14 @@ android {
         applicationId = "de.lemke.geticon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 24
-        versionName = "1.3.0"
+        versionCode = 25
+        versionName = "1.3.1"
     }
 
     @Suppress("UnstableApiUsage")
     androidResources.localeFilters += listOf("en", "de")
+
+    ndkVersion = "28.1.13356709"
 
     signingConfigs {
         create("release") {
@@ -96,14 +98,13 @@ dependencies {
     implementation("io.github.tribalfs:oneui-design:0.5.16+oneui7")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
-    implementation("io.github.lemkinator:common-utils:0.8.7")
+    implementation("io.github.lemkinator:common-utils:0.8.11")
 
     implementation("com.airbnb.android:lottie:6.6.6")
     implementation("com.google.android.gms:play-services-oss-licenses:17.1.0")
 
     implementation("androidx.core:core-splashscreen:1.2.0-beta02")
-    //noinspection GradleDependency until https://issuetracker.google.com/u/0/issues/342671895 is fixed
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
     val roomVersion = "2.7.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
