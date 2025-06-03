@@ -19,7 +19,7 @@ android {
         applicationId = "de.lemke.geticon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 25
+        versionCode = 24
         versionName = "1.3.1"
     }
 

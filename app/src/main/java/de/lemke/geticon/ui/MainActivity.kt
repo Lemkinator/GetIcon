@@ -208,9 +208,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     inner class SearchModeListener : ToolbarLayout.SearchModeListener {
         override fun onQueryTextSubmit(query: String?): Boolean = updateSearch(query).also { hideSoftInput() }
         override fun onQueryTextChange(query: String?): Boolean = updateSearch(query)
-        override fun onSearchModeToggle(searchView: SearchView, visible: Boolean) {
+        override fun onSearchModeToggle(searchView: SearchView, isActive: Boolean) {
             lifecycleScope.launch {
-                if (visible) {
+                if (isActive) {
                     search = getUserSettings().search
                     searchView.setQuery(search, false)
                     val autoCompleteTextView = searchView.seslGetAutoCompleteView()
