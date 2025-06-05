@@ -1,6 +1,35 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:base"
+  ],
+  "packageRules": [
+    {
+      "groupName": "Kotlin and KSP",
+      "groupSlug": "kotlin",
+      "matchPackagePrefixes": [
+        "com.google.devtools.ksp"
+      ],
+      "matchPackagePatterns": [
+        "org.jetbrains.kotlin.*"
+      ]
+    },
+    {
+      "description": "Automatically merge minor and patch-level updates",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "matchDatasources": ["maven"],
+      "matchPackagePrefixes": ["io.github.lemkinator"],
+      "registryUrls": ["https://maven.pkg.github.com/lemkinator/*"]
+    },
+    {
+      "matchDatasources": ["maven"],
+      "matchPackagePrefixes": ["io.github.tribalfs", "sesl."],
+      "registryUrls": ["https://maven.pkg.github.com/tribalfs/*"]
+    }
   ]
 }
