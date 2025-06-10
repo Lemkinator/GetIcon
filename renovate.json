@@ -1,25 +1,37 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base",
+    "config:recommended",
     ":disableDependencyDashboard",
     ":renovatePrefix",
     ":configMigration",
     ":automergeMinor",
     ":automergePatch",
     ":automergeDigest"
-
   ],
   "packageRules": [
     {
-      "matchDatasources": ["maven"],
-      "matchPackagePrefixes": ["io.github.lemkinator"],
-      "registryUrls": ["https://maven.pkg.github.com/lemkinator/*"]
+      "matchDatasources": [
+        "maven"
+      ],
+      "registryUrls": [
+        "https://maven.pkg.github.com/lemkinator/*"
+      ],
+      "matchPackageNames": [
+        "io.github.lemkinator{/,}**"
+      ]
     },
     {
-      "matchDatasources": ["maven"],
-      "matchPackagePrefixes": ["io.github.tribalfs", "sesl."],
-      "registryUrls": ["https://maven.pkg.github.com/tribalfs/*"]
+      "matchDatasources": [
+        "maven"
+      ],
+      "registryUrls": [
+        "https://maven.pkg.github.com/tribalfs/*"
+      ],
+      "matchPackageNames": [
+        "io.github.tribalfs{/,}**",
+        "sesl.{/,}**"
+      ]
     }
   ]
 }
