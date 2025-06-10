@@ -7,33 +7,6 @@
     ":configMigration",
     ":automergeMinor",
     ":automergePatch",
-    ":automergeDigest",
-    ":skipStatusChecks"
-
-  ],
-  "packageRules": [
-    {
-      "matchDatasources": [
-        "maven"
-      ],
-      "registryUrls": [
-        "https://maven.pkg.github.com/lemkinator/*"
-      ],
-      "matchPackageNames": [
-        "io.github.lemkinator{/,}**"
-      ]
-    },
-    {
-      "matchDatasources": [
-        "maven"
-      ],
-      "registryUrls": [
-        "https://maven.pkg.github.com/tribalfs/*"
-      ],
-      "matchPackageNames": [
-        "io.github.tribalfs{/,}**",
-        "sesl.{/,}**"
-      ]
-    }
+    ":automergeDigest"
   ]
 }
