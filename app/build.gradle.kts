@@ -17,8 +17,8 @@ android {
         applicationId = "de.lemke.geticon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "1.3.1"
+        versionCode = 28
+        versionName = "1.3.2"
     }
 
     @Suppress("UnstableApiUsage")
