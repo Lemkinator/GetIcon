@@ -31,7 +31,8 @@
     <string name="masked">Masked</string>
     <string name="color">Color</string>
     <string name="size">Size</string>
-
+    <string name="tap_icon_to_copy_to_clipboard">Tap icon to copy to clipboard</string>
+    <string name="copy_icon">Copy icon</string>
     <string name="extract_icon_from_apk">Extract icon from APK</string>
 
 </resources>

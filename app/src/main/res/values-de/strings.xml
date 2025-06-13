@@ -27,7 +27,8 @@
     <string name="masked">Maskiert</string>
     <string name="color">Farbe</string>
     <string name="size">Größe</string>
-
+    <string name="tap_icon_to_copy_to_clipboard">Tippe auf das Icon, um es in die Zwischenablage zu kopieren</string>
+    <string name="copy_icon">Icon kopieren</string>
     <string name="extract_icon_from_apk">Icon aus APK extrahieren</string>
 
 </resources>

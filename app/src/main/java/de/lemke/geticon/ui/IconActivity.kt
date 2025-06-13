@@ -4,13 +4,15 @@ import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.ApplicationInfo
-import android.content.res.ColorStateList
+import android.content.res.ColorStateList.valueOf
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
+import android.graphics.Color.BLACK
+import android.graphics.Color.WHITE
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
-import android.os.Build
+import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES.TIRAMISU
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -27,7 +29,11 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.toColor
 import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
-import androidx.reflect.app.SeslApplicationPackageManagerReflector
+import androidx.reflect.app.SeslApplicationPackageManagerReflector.semGetActivityIconForIconTray
+import androidx.reflect.app.SeslApplicationPackageManagerReflector.semGetApplicationIconForIconTray
+import com.google.android.material.appbar.model.ButtonModel
+import com.google.android.material.appbar.model.SuggestAppBarModel
+import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.SaveLocation
 import de.lemke.commonutils.copyToClipboard
@@ -46,6 +52,8 @@ import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.appcompat.R as appcompatR
+import de.lemke.commonutils.R as commonutilsR
 
 
 @AndroidEntryPoint
@@ -67,9 +75,7 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private val maxSize = 1024
     private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> = registerForActivityResult(
         StartActivityForResult(),
-        ActivityResultCallback<ActivityResult> { result ->
-            if (result.resultCode == RESULT_OK) saveBitmapToUri(result.data?.data, icon)
-        }
+        ActivityResultCallback<ActivityResult> { result -> if (result.resultCode == RESULT_OK) saveBitmapToUri(result.data?.data, icon) }
     )
 
     @Inject
@@ -90,7 +96,7 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     private val maskedAppIcon: Drawable?
         @SuppressLint("RestrictedApi")
-        get() = SeslApplicationPackageManagerReflector.semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
+        get() = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
 
     private val hasMaskedAppIcon get() = isAdaptiveIcon || maskedAppIcon != null
 
@@ -99,7 +105,7 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private fun getMaskedActivityIcon(activityName: String?): Drawable? = if (activityName.isNullOrBlank()) maskedAppIcon
     else {
         val componentName = ComponentName(applicationInfo.packageName, activityName)
-        SeslApplicationPackageManagerReflector.semGetActivityIconForIconTray(packageManager, componentName, 1)
+        semGetActivityIconForIconTray(packageManager, componentName, 1)
     }
 
     private val fileName: String
@@ -112,17 +118,14 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         setContentView(binding.root)
         setWindowTransparent(true)
         try {
-            val nullableApplicationInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(KEY_APPLICATION_INFO, ApplicationInfo::class.java)
-            } else {
-                intent.getParcelableExtra(KEY_APPLICATION_INFO)
-            }
-            if (nullableApplicationInfo == null) {
+            val nullableApplicationInfo =
+                if (SDK_INT >= TIRAMISU) intent.getParcelableExtra(KEY_APPLICATION_INFO, ApplicationInfo::class.java)
+                else intent.getParcelableExtra(KEY_APPLICATION_INFO)
+            if (nullableApplicationInfo != null) applicationInfo = nullableApplicationInfo
+            else {
                 toast(R.string.error_app_not_found)
                 finishAfterTransition()
                 return
-            } else {
-                applicationInfo = nullableApplicationInfo
             }
             binding.root.setTitle(applicationInfo.loadLabel(packageManager))
         } catch (e: Exception) {
@@ -145,10 +148,7 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_icon, menu)
-        return true
-    }
+    override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
         R.id.menu_item_icon_save_as_image -> exportBitmap(saveLocation, icon, fileName, exportBitmapResultLauncher)
@@ -186,80 +186,94 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         binding.sizeSeekbar.max = maxSize
         binding.sizeSeekbar.progress = size
         binding.sizeSeekbar.setOnSeekBarChangeListener(object : SeslSeekBar.OnSeekBarChangeListener {
+            override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
+            override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
             override fun onProgressChanged(seekBar: SeslSeekBar, progress: Int, fromUser: Boolean) {
                 size = progress
                 binding.sizeEdittext.setText(size.toString())
                 generateIcon()
                 lifecycleScope.launch { updateUserSettings { it.copy(iconSize = size) } }
             }
-
-            override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
-            override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
         })
-        if (isAdaptiveIcon) {
-            binding.colorCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                colorEnabled = isChecked
-                setButtonColors()
-                generateIcon()
-                lifecycleScope.launch { updateUserSettings { it.copy(colorEnabled = isChecked) } }
+        if (isAdaptiveIcon) setupAdaptiveIconOptions()
+        binding.root.setAppBarSuggestView(createSuggestAppBarModel())
+    }
+
+    private fun setupAdaptiveIconOptions() {
+        binding.colorCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            colorEnabled = isChecked
+            setButtonColors()
+            generateIcon()
+            lifecycleScope.launch { updateUserSettings { it.copy(colorEnabled = isChecked) } }
+        }
+        binding.colorButtonBackground.setOnClickListener {
+            lifecycleScope.launch {
+                val userSettings = getUserSettings()
+                val dialog = SeslColorPickerDialog(
+                    this@IconActivity,
+                    { color: Int ->
+                        backgroundColor = color
+                        generateIcon()
+                        setButtonColors()
+                        val recentColors = (listOf(color) + userSettings.recentBackgroundColors).distinct().take(6)
+                        lifecycleScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
+                    },
+                    userSettings.recentBackgroundColors.first(), userSettings.recentBackgroundColors.toIntArray(), true
+                )
+                dialog.setTransparencyControlEnabled(true)
+                dialog.show()
             }
-            binding.colorButtonBackground.setOnClickListener {
-                lifecycleScope.launch {
-                    val userSettings = getUserSettings()
-                    val dialog = SeslColorPickerDialog(
-                        this@IconActivity,
-                        { color: Int ->
-                            backgroundColor = color
-                            generateIcon()
-                            setButtonColors()
-                            val recentColors = (listOf(color) + userSettings.recentBackgroundColors).distinct().take(6)
-                            lifecycleScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
-                        },
-                        userSettings.recentBackgroundColors.first(), userSettings.recentBackgroundColors.toIntArray(), true
-                    )
-                    dialog.setTransparencyControlEnabled(true)
-                    dialog.show()
-                }
-            }
-            binding.colorButtonForeground.setOnClickListener {
-                lifecycleScope.launch {
-                    val userSettings = getUserSettings()
-                    val dialog = SeslColorPickerDialog(
-                        this@IconActivity,
-                        { color: Int ->
-                            foregroundColor = color
-                            generateIcon()
-                            setButtonColors()
-                            val recentColors = (listOf(color) + userSettings.recentForegroundColors).distinct().take(6)
-                            lifecycleScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
-                        },
-                        userSettings.recentForegroundColors.first(), userSettings.recentForegroundColors.toIntArray(), true
-                    )
-                    dialog.setTransparencyControlEnabled(true)
-                    dialog.show()
-                }
+        }
+        binding.colorButtonForeground.setOnClickListener {
+            lifecycleScope.launch {
+                val userSettings = getUserSettings()
+                val dialog = SeslColorPickerDialog(
+                    this@IconActivity,
+                    { color: Int ->
+                        foregroundColor = color
+                        generateIcon()
+                        setButtonColors()
+                        val recentColors = (listOf(color) + userSettings.recentForegroundColors).distinct().take(6)
+                        lifecycleScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
+                    },
+                    userSettings.recentForegroundColors.first(), userSettings.recentForegroundColors.toIntArray(), true
+                )
+                dialog.setTransparencyControlEnabled(true)
+                dialog.show()
             }
         }
     }
+
+    private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> =
+        SuggestAppBarModel.Builder(this).apply {
+            setTitle(getString(R.string.tap_icon_to_copy_to_clipboard))
+            setCloseClickListener { _, _ -> binding.root.setAppBarSuggestView(null) }
+            setButtons(
+                arrayListOf(
+                    ButtonModel(
+                        text = getString(R.string.copy_icon),
+                        clickListener = { _, _ -> icon.copyToClipboard(this@IconActivity, "icon", "icon.png") },
+                    )
+                )
+            )
+        }.build()
 
     @SuppressLint("PrivateResource")
     private fun setButtonColors() {
         if (isAdaptiveIcon && colorEnabled) {
             binding.colorButtonBackground.isEnabled = true
-            binding.colorButtonBackground.setTextColor(if (backgroundColor.toColor().luminance() >= 0.5) Color.BLACK else Color.WHITE)
-            binding.colorButtonBackground.backgroundTintList = ColorStateList.valueOf(backgroundColor)
+            binding.colorButtonBackground.setTextColor(if (backgroundColor.toColor().luminance() >= 0.5) BLACK else WHITE)
+            binding.colorButtonBackground.backgroundTintList = valueOf(backgroundColor)
             binding.colorButtonForeground.isEnabled = true
-            binding.colorButtonForeground.setTextColor(if (foregroundColor.toColor().luminance() >= 0.5) Color.BLACK else Color.WHITE)
-            binding.colorButtonForeground.backgroundTintList = ColorStateList.valueOf(foregroundColor)
+            binding.colorButtonForeground.setTextColor(if (foregroundColor.toColor().luminance() >= 0.5) BLACK else WHITE)
+            binding.colorButtonForeground.backgroundTintList = valueOf(foregroundColor)
         } else {
             binding.colorButtonBackground.isEnabled = false
-            binding.colorButtonBackground.setTextColor(getColor(de.lemke.commonutils.R.color.commonutils_secondary_text_icon_color))
-            binding.colorButtonBackground.backgroundTintList =
-                ColorStateList.valueOf(getColor(androidx.appcompat.R.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonBackground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
+            binding.colorButtonBackground.backgroundTintList = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
             binding.colorButtonForeground.isEnabled = false
-            binding.colorButtonForeground.setTextColor(getColor(de.lemke.commonutils.R.color.commonutils_secondary_text_icon_color))
-            binding.colorButtonForeground.backgroundTintList =
-                ColorStateList.valueOf(getColor(androidx.appcompat.R.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonForeground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
+            binding.colorButtonForeground.backgroundTintList = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
         }
     }
 
@@ -272,7 +286,7 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             val background = drawable.background.mutate()
             var foreground = drawable.foreground.mutate()
             if (colorEnabled) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (SDK_INT >= TIRAMISU) {
                     val monochrome = drawable.monochrome
                     if (monochrome != null) foreground = monochrome.mutate()
                 }
