@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import de.lemke.commonutils.SaveLocation
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -22,6 +23,9 @@ class UserSettingsRepository @Inject constructor(
 
     /** Emits the current user settings. */
     fun observeSettings(): Flow<UserSettings> = dataStore.data.map(::settingsFromPreferences)
+
+    /** Emits the current showSystemApps setting. */
+    fun observeShowSystemApps(): Flow<Boolean> = dataStore.data.map { it[KEY_SHOW_SYSTEM_APPS] == true }.distinctUntilChanged()
 
     /**
      * Updates the current user settings and returns the new settings.

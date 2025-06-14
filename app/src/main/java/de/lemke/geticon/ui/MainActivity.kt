@@ -3,15 +3,13 @@ package de.lemke.geticon.ui
 import android.R.anim.fade_in
 import android.R.anim.fade_out
 import android.annotation.SuppressLint
-import android.app.ActivityOptions
+import android.app.ActivityOptions.makeSceneTransitionAnimation
 import android.content.Intent
-import android.content.pm.ApplicationInfo.FLAG_SYSTEM
-import android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP
-import android.content.pm.PackageManager.GET_META_DATA
+import android.content.Intent.ACTION_SEARCH
 import android.graphics.ColorFilter
 import android.net.Uri
-import android.os.Build
 import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES
 import android.os.Bundle
 import android.util.Log
 import android.util.Pair
@@ -27,6 +25,7 @@ import androidx.apppickerview.widget.AppPickerView.ORDER_ASCENDING_IGNORE_CASE
 import androidx.apppickerview.widget.AppPickerView.TYPE_GRID
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.isVisible
+import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieProperty.COLOR_FILTER
 import com.airbnb.lottie.SimpleColorFilter
@@ -46,9 +45,12 @@ import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.databinding.ActivityMainBinding
-import de.lemke.geticon.domain.AppStart
+import de.lemke.geticon.domain.AppStart.FIRST_TIME
+import de.lemke.geticon.domain.AppStart.FIRST_TIME_VERSION
+import de.lemke.geticon.domain.AppStart.NORMAL
 import de.lemke.geticon.domain.CheckAppStartUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
+import de.lemke.geticon.domain.ObserveAppsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.ui.IconActivity.Companion.KEY_APPLICATION_INFO
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
@@ -59,11 +61,10 @@ import dev.oneuiproject.oneui.ktx.hideSoftInputOnScroll
 import dev.oneuiproject.oneui.ktx.onSingleClick
 import dev.oneuiproject.oneui.layout.ToolbarLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISMISS
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
@@ -73,10 +74,8 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var pickApkActivityResultLauncher: ActivityResultLauncher<String>
-    private var showSystemApps = false
-    private var search: String? = null
+    private var search: MutableStateFlow<String?> = MutableStateFlow(null)
     private var time: Long = 0
-    private var refreshAppsJob: Job? = null
     private var isUIReady = false
 
     @Inject
@@ -87,6 +86,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     @Inject
     lateinit var checkAppStart: CheckAppStartUseCase
+
+    @Inject
+    lateinit var observeApps: ObserveAppsUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -130,9 +132,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
         lifecycleScope.launch {
             when (checkAppStart()) {
-                AppStart.FIRST_TIME -> openOOBE()
-                AppStart.NORMAL -> checkTOS(getUserSettings(), savedInstanceState)
-                AppStart.FIRST_TIME_VERSION -> checkTOS(getUserSettings(), savedInstanceState)
+                FIRST_TIME -> openOOBE()
+                NORMAL -> checkTOS(getUserSettings(), savedInstanceState)
+                FIRST_TIME_VERSION -> checkTOS(getUserSettings(), savedInstanceState)
             }
         }
         pickApkActivityResultLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { processApk(it) }
@@ -151,14 +153,19 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         else openMain(savedInstanceState)
     }
 
-    private suspend fun openMain(savedInstanceState: Bundle?) {
+    private fun openMain(savedInstanceState: Bundle?) {
         setupCommonUtilsActivities()
         initDrawer()
         initAppPicker()
         savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
-        //manually waiting for the animation to finish :/
-        delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
-        isUIReady = true
+        lifecycleScope.launch {
+            observeApps(search).flowWithLifecycle(lifecycle).collectLatest {
+                updateAppPicker(it)
+                //manually waiting for the splash animation to finish :/
+                if (!isUIReady) delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
+                isUIReady = true
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -169,15 +176,14 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        if (intent?.action == Intent.ACTION_SEARCH) binding.drawerLayout.setSearchQueryFromIntent(intent)
+        if (intent?.action == ACTION_SEARCH) binding.drawerLayout.setSearchQueryFromIntent(intent)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_app_picker, menu)
         lifecycleScope.launch {
-            showSystemApps = getUserSettings().showSystemApps
             menu.findItem(R.id.menu_app_picker_system).title =
-                getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
+                getString(if (getUserSettings().showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
         }
         return true
     }
@@ -185,44 +191,37 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
         R.id.menu_item_search -> startSearch().let { true }
         R.id.menu_app_picker_system -> {
-            showSystemApps = !showSystemApps
-            lifecycleScope.launch { updateUserSettings { it.copy(showSystemApps = showSystemApps) } }
-            item.title = getString(if (showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
-            refreshApps()
+            lifecycleScope.launch {
+                item.title =
+                    getString(
+                        if (updateUserSettings { it.copy(showSystemApps = !it.showSystemApps) }.showSystemApps) R.string.hide_system_apps
+                        else R.string.show_system_apps
+                    )
+            }
             true
         }
 
         else -> super.onOptionsItemSelected(item)
     }
 
-    private fun startSearch() = binding.drawerLayout.startSearchMode(SearchModeListener(), DISMISS)
+    private fun startSearch() = binding.drawerLayout.startSearchMode(searchModeListener, DISMISS)
 
-    private fun updateSearch(query: String?): Boolean {
-        if (search == null) return false
-        search = query ?: ""
-        refreshApps()
-        lifecycleScope.launch { updateUserSettings { it.copy(search = query ?: "") } }
-        return true
-    }
+    val searchModeListener = object : ToolbarLayout.SearchModeListener {
+        override fun onQueryTextSubmit(query: String?): Boolean = setSearch(query).also { hideSoftInput() }
+        override fun onQueryTextChange(query: String?): Boolean = setSearch(query)
+        private fun setSearch(query: String?): Boolean {
+            if (search.value == null) return false
+            search.value = query ?: ""
+            lifecycleScope.launch { updateUserSettings { it.copy(search = query ?: "") } }
+            return true
+        }
 
-    inner class SearchModeListener : ToolbarLayout.SearchModeListener {
-        override fun onQueryTextSubmit(query: String?): Boolean = updateSearch(query).also { hideSoftInput() }
-        override fun onQueryTextChange(query: String?): Boolean = updateSearch(query)
         override fun onSearchModeToggle(searchView: SearchView, isActive: Boolean) {
-            lifecycleScope.launch {
-                if (isActive) {
-                    search = getUserSettings().search
-                    searchView.setQuery(search, false)
-                    val autoCompleteTextView = searchView.seslGetAutoCompleteView()
-                    autoCompleteTextView.setText(search)
-                    autoCompleteTextView.setSelection(autoCompleteTextView.text.length)
-                    searchView.queryHint = getString(R.string.search_apps)
-                    refreshApps()
-                } else {
-                    search = null
-                    refreshApps()
-                }
-            }
+            if (isActive) lifecycleScope.launch {
+                search.value = getUserSettings().search
+                searchView.queryHint = getString(R.string.search_apps)
+                searchView.setQuery(search.value, false)
+            } else search.value = null
         }
     }
 
@@ -263,14 +262,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         binding.appPickerProgress.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
-    private suspend fun initAppPicker() = binding.appPickerList.apply {
-        showSystemApps = getUserSettings().showSystemApps
-        if (itemDecorationCount > 0) {
-            for (i in 0 until itemDecorationCount) {
-                removeItemDecorationAt(i)
-            }
-        }
-        setAppPickerView(TYPE_GRID, getApps(null), ORDER_ASCENDING_IGNORE_CASE)
+    private fun initAppPicker() = binding.appPickerList.apply {
+        if (itemDecorationCount > 0) for (i in 0 until itemDecorationCount) removeItemDecorationAt(i)
+        setAppPickerView(TYPE_GRID, emptyList(), ORDER_ASCENDING_IGNORE_CASE)
         setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
             holder.item.onSingleClick {
                 try {
@@ -278,7 +272,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                     startActivity(
                         Intent(this@MainActivity, IconActivity::class.java)
                             .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(packageName, 0)),
-                        ActivityOptions.makeSceneTransitionAnimation(this@MainActivity, Pair.create(holder.appIcon, "icon")).toBundle()
+                        makeSceneTransitionAnimation(this@MainActivity, Pair.create(holder.appIcon, "icon")).toBundle()
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -289,49 +283,28 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         itemAnimator = null
         seslSetSmoothScrollEnabled(true)
         hideSoftInputOnScroll()
-        if (SDK_INT >= Build.VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
+        if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
     }
 
-    private suspend fun getApps(search: String?): List<String> = withContext(Dispatchers.Default) {
-        try {
-            val apps = packageManager.getInstalledApplications(GET_META_DATA)
-            val filteredApps = if (showSystemApps) apps
-            else apps.filter { it.flags and (FLAG_UPDATED_SYSTEM_APP or FLAG_SYSTEM) == 0 }
-            return@withContext if (search.isNullOrBlank()) filteredApps.map { it.packageName }
-            else filteredApps.filter {
-                packageManager.getApplicationLabel(it).toString().contains(search, ignoreCase = true) ||
-                        it.packageName.toString().contains(search, ignoreCase = true)
-            }.map { it.packageName }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            toast(R.string.error_loading_apps)
-            emptyList()
-        }
-    }
-
-    private fun refreshApps() {
+    private fun updateAppPicker(apps: List<String>) {
         binding.noEntryScrollView.isVisible = false
         binding.appPickerList.isVisible = false
         binding.appPickerProgress.isVisible = true
-        refreshAppsJob?.cancel()
         if (!this@MainActivity::binding.isInitialized) return
-        refreshAppsJob = lifecycleScope.launch {
-            val apps = getApps(search)
-            if (apps.isEmpty() || search?.isBlank() == true) {
-                binding.appPickerList.isVisible = false
-                binding.appPickerProgress.isVisible = false
-                binding.noEntryLottie.cancelAnimation()
-                binding.noEntryLottie.progress = 0f
-                binding.noEntryScrollView.isVisible = true
-                val callback = LottieValueCallback<ColorFilter>(SimpleColorFilter(getColor(R.color.primary_color_themed)))
-                binding.noEntryLottie.addValueCallback(KeyPath("**"), COLOR_FILTER, callback)
-                binding.noEntryLottie.postDelayed({ binding.noEntryLottie.playAnimation() }, 400)
-            } else {
-                binding.appPickerList.resetPackages(apps)
-                binding.noEntryScrollView.isVisible = false
-                binding.appPickerProgress.isVisible = false
-                binding.appPickerList.isVisible = true
-            }
+        if (apps.isEmpty()) {
+            binding.appPickerList.isVisible = false
+            binding.appPickerProgress.isVisible = false
+            binding.noEntryLottie.cancelAnimation()
+            binding.noEntryLottie.progress = 0f
+            binding.noEntryScrollView.isVisible = true
+            val callback = LottieValueCallback<ColorFilter>(SimpleColorFilter(getColor(R.color.primary_color_themed)))
+            binding.noEntryLottie.addValueCallback(KeyPath("**"), COLOR_FILTER, callback)
+            binding.noEntryLottie.postDelayed({ binding.noEntryLottie.playAnimation() }, 400)
+        } else {
+            binding.appPickerList.resetPackages(apps)
+            binding.noEntryScrollView.isVisible = false
+            binding.appPickerProgress.isVisible = false
+            binding.appPickerList.isVisible = true
         }
     }
 
