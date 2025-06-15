@@ -2,7 +2,6 @@ package de.lemke.geticon.ui
 
 import android.R.anim.fade_in
 import android.R.anim.fade_out
-import android.annotation.SuppressLint
 import android.app.ActivityOptions.makeSceneTransitionAnimation
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
@@ -15,7 +14,7 @@ import android.util.Log
 import android.util.Pair
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.LinearLayout
+import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -34,11 +33,12 @@ import com.airbnb.lottie.value.LottieValueCallback
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.AboutActivity
 import de.lemke.commonutils.AboutMeActivity
+import de.lemke.commonutils.onNavigationSingleClick
 import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
-import de.lemke.commonutils.setup
 import de.lemke.commonutils.setupCommonActivities
+import de.lemke.commonutils.setupHeaderAndNavRail
 import de.lemke.commonutils.toast
 import de.lemke.commonutils.transformToActivity
 import de.lemke.geticon.BuildConfig
@@ -238,25 +238,19 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         }
     }
 
-    @SuppressLint("RestrictedApi")
     private fun initDrawer() {
-        findViewById<LinearLayout>(R.id.drawerItemExtractIconFromApk).onSingleClick {
-            pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
-            //pickApkActivityResultLauncher.launch("*/*")
+        binding.navigationView.onNavigationSingleClick { item ->
+            when (item.itemId) {
+                //pickApkActivityResultLauncher.launch("*/*")
+                R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
+                R.id.about_app_dest -> findViewById<View>(R.id.about_app_dest).transformToActivity(AboutActivity::class.java)
+                R.id.about_me_dest -> findViewById<View>(R.id.about_me_dest).transformToActivity(AboutMeActivity::class.java)
+                R.id.settings_dest -> findViewById<View>(R.id.settings_dest).transformToActivity(SettingsActivity::class.java)
+                else -> return@onNavigationSingleClick false
+            }
+            true
         }
-        findViewById<LinearLayout>(R.id.drawerItemAboutApp).apply { onSingleClick { transformToActivity(AboutActivity::class.java) } }
-        findViewById<LinearLayout>(R.id.drawerItemAboutMe).apply { onSingleClick { transformToActivity(AboutMeActivity::class.java) } }
-        findViewById<LinearLayout>(R.id.drawerItemSettings).apply { onSingleClick { transformToActivity(SettingsActivity::class.java) } }
-        binding.drawerLayout.setup(
-            getString(R.string.about_app),
-            mutableListOf(
-                findViewById(R.id.drawerItemExtractIconFromApkTitle),
-                findViewById(R.id.drawerItemAboutAppTitle),
-                findViewById(R.id.drawerItemAboutMeTitle),
-                findViewById(R.id.drawerItemSettingsTitle)
-            ),
-            findViewById(R.id.drawerListView)
-        )
+        binding.drawerLayout.setupHeaderAndNavRail(getString(R.string.about_app))
         binding.drawerLayout.isImmersiveScroll = true
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
         binding.appPickerProgress.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
