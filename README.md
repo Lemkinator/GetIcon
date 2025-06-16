@@ -16,6 +16,7 @@ src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web
 [![](https://img.shields.io/github/contributors/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon/graphs/contributors)
 [![](https://img.shields.io/github/repo-size/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon)
 [![](https://sloc.xyz/github/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon)
+[![CodeFactor](https://www.codefactor.io/repository/github/lemkinator/geticon/badge)](https://www.codefactor.io/repository/github/lemkinator/geticon)
 
 # Get Icon
 
