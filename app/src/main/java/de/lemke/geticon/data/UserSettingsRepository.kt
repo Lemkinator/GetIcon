@@ -61,7 +61,7 @@ class UserSettingsRepository @Inject constructor(
         tosAccepted = prefs[KEY_TOS_ACCEPTED] == true,
         devModeEnabled = prefs[KEY_DEV_MODE_ENABLED] == true,
         search = prefs[KEY_SEARCH] ?: "",
-        showSystemApps = prefs[KEY_SHOW_SYSTEM_APPS] == true,
+        showSystemApps = prefs[KEY_SHOW_SYSTEM_APPS] != false,
         iconSize = prefs[KEY_ICON_SIZE] ?: 512,
         maskEnabled = prefs[KEY_MASK_ENABLED] != false,
         colorEnabled = prefs[KEY_COLOR_ENABLED] == true,
