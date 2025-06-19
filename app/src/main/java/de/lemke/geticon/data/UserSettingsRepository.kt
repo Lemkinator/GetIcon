@@ -25,7 +25,7 @@ class UserSettingsRepository @Inject constructor(
     fun observeSettings(): Flow<UserSettings> = dataStore.data.map(::settingsFromPreferences)
 
     /** Emits the current showSystemApps setting. */
-    fun observeShowSystemApps(): Flow<Boolean> = dataStore.data.map { it[KEY_SHOW_SYSTEM_APPS] == true }.distinctUntilChanged()
+    fun observeShowSystemApps(): Flow<Boolean> = dataStore.data.map { it[KEY_SHOW_SYSTEM_APPS] != false }.distinctUntilChanged()
 
     /**
      * Updates the current user settings and returns the new settings.
