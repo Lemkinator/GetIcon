@@ -180,9 +180,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_app_picker, menu)
+        menuInflater.inflate(R.menu.menu_main, menu)
         lifecycleScope.launch {
-            menu.findItem(R.id.menu_app_picker_system).title =
+            menu.findItem(R.id.menu_item_show_system_apps).title =
                 getString(if (getUserSettings().showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
         }
         return true
@@ -190,7 +190,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
         R.id.menu_item_search -> startSearch().let { true }
-        R.id.menu_app_picker_system -> {
+        R.id.menu_item_show_system_apps -> {
             lifecycleScope.launch {
                 item.title =
                     getString(
