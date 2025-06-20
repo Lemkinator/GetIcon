@@ -35,8 +35,8 @@ import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
-import de.lemke.commonutils.SaveLocation
 import de.lemke.commonutils.copyToClipboard
+import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.exportBitmap
 import de.lemke.commonutils.saveBitmapToUri
 import de.lemke.commonutils.setCustomBackAnimation
@@ -65,7 +65,6 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private lateinit var binding: ActivityIconBinding
     private lateinit var icon: Bitmap
     private lateinit var applicationInfo: ApplicationInfo
-    private lateinit var saveLocation: SaveLocation
     private var size: Int = 0
     private var maskEnabled: Boolean = true
     private var colorEnabled: Boolean = false
@@ -123,14 +122,14 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 else intent.getParcelableExtra(KEY_APPLICATION_INFO)
             if (nullableApplicationInfo != null) applicationInfo = nullableApplicationInfo
             else {
-                toast(R.string.error_app_not_found)
+                toast(commonutilsR.string.commonutils_error_app_not_found)
                 finishAfterTransition()
                 return
             }
             binding.root.setTitle(applicationInfo.loadLabel(packageManager))
         } catch (e: Exception) {
             e.printStackTrace()
-            toast(R.string.error_app_not_found)
+            toast(commonutilsR.string.commonutils_error_app_not_found)
             finishAfterTransition()
             return
         }
@@ -141,7 +140,6 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             colorEnabled = userSettings.colorEnabled
             foregroundColor = userSettings.recentForegroundColors.first()
             backgroundColor = userSettings.recentBackgroundColors.first()
-            saveLocation = userSettings.saveLocation
             initViews()
             setCustomBackAnimation(binding.root, showInAppReviewIfPossible = true)
             binding.icon.translateYWithAppBar(binding.root.appBarLayout, this@IconActivity)
@@ -151,7 +149,7 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-        R.id.menu_item_icon_save_as_image -> exportBitmap(saveLocation, icon, fileName, exportBitmapResultLauncher)
+        R.id.menu_item_icon_save_as_image -> exportBitmap(commonUtilsSettings.imageSaveLocation, icon, fileName, exportBitmapResultLauncher)
         R.id.menu_item_icon_share -> shareBitmap(icon, "icon.png")
         else -> super.onOptionsItemSelected(item)
     }

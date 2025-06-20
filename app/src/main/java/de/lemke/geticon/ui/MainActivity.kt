@@ -31,24 +31,24 @@ import com.airbnb.lottie.SimpleColorFilter
 import com.airbnb.lottie.model.KeyPath
 import com.airbnb.lottie.value.LottieValueCallback
 import dagger.hilt.android.AndroidEntryPoint
-import de.lemke.commonutils.AboutActivity
-import de.lemke.commonutils.AboutMeActivity
+import de.lemke.commonutils.AppStart
+import de.lemke.commonutils.checkAppStart
+import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.onNavigationSingleClick
 import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
-import de.lemke.commonutils.setupCommonActivities
+import de.lemke.commonutils.setupCommonUtilsAboutActivity
+import de.lemke.commonutils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.setupHeaderAndNavRail
 import de.lemke.commonutils.toast
 import de.lemke.commonutils.transformToActivity
+import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
+import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
+import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
-import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.databinding.ActivityMainBinding
-import de.lemke.geticon.domain.AppStart.FIRST_TIME
-import de.lemke.geticon.domain.AppStart.FIRST_TIME_VERSION
-import de.lemke.geticon.domain.AppStart.NORMAL
-import de.lemke.geticon.domain.CheckAppStartUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.ObserveAppsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
@@ -68,6 +68,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
+import de.lemke.commonutils.R as commonutilsR
 
 
 @AndroidEntryPoint
@@ -83,9 +84,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     @Inject
     lateinit var updateUserSettings: UpdateUserSettingsUseCase
-
-    @Inject
-    lateinit var checkAppStart: CheckAppStartUseCase
 
     @Inject
     lateinit var observeApps: ObserveAppsUseCase
@@ -130,31 +128,37 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             }
         }*/
 
-        lifecycleScope.launch {
-            when (checkAppStart()) {
-                FIRST_TIME -> openOOBE()
-                NORMAL -> checkTOS(getUserSettings(), savedInstanceState)
-                FIRST_TIME_VERSION -> checkTOS(getUserSettings(), savedInstanceState)
-            }
+        when (checkAppStart(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME)) {
+            AppStart.FIRST_TIME -> openOOBE()
+            else -> checkTOS(savedInstanceState)
         }
+
         pickApkActivityResultLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { processApk(it) }
     }
 
-    private suspend fun openOOBE() {
-        //manually waiting for the animation to finish :/
-        delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
-        startActivity(Intent(applicationContext, OOBEActivity::class.java))
-        @Suppress("DEPRECATION") if (SDK_INT < 34) overridePendingTransition(fade_in, fade_out)
-        finishAfterTransition()
+    private fun openOOBE() {
+        lifecycleScope.launch {
+            //manually waiting for the animation to finish :/
+            delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
+            startActivity(Intent(applicationContext, OOBEActivity::class.java))
+            @Suppress("DEPRECATION") if (SDK_INT < 34) overridePendingTransition(fade_in, fade_out)
+            finishAfterTransition()
+        }
     }
 
-    private suspend fun checkTOS(userSettings: UserSettings, savedInstanceState: Bundle?) {
-        if (!userSettings.tosAccepted) openOOBE()
+    private fun checkTOS(savedInstanceState: Bundle?) {
+        if (!commonUtilsSettings.tosAccepted) openOOBE()
         else openMain(savedInstanceState)
     }
 
     private fun openMain(savedInstanceState: Bundle?) {
-        setupCommonUtilsActivities()
+        setupCommonUtilsAboutActivity(appVersion = BuildConfig.VERSION_NAME)
+        setupCommonUtilsSettingsActivity(
+            commonutilsR.xml.preferences_design,
+            commonutilsR.xml.preferences_general_language_and_image_save_location,
+            commonutilsR.xml.preferences_dev_options_delete_app_data,
+            commonutilsR.xml.preferences_more_info
+        )
         initDrawer()
         initAppPicker()
         savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
@@ -182,8 +186,10 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
         lifecycleScope.launch {
-            menu.findItem(R.id.menu_item_show_system_apps).title =
-                getString(if (getUserSettings().showSystemApps) R.string.hide_system_apps else R.string.show_system_apps)
+            menu.findItem(R.id.menu_item_show_system_apps).title = getString(
+                if (getUserSettings().showSystemApps) commonutilsR.string.commonutils_hide_system_apps
+                else commonutilsR.string.commonutils_show_system_apps
+            )
         }
         return true
     }
@@ -192,11 +198,10 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         R.id.menu_item_search -> startSearch().let { true }
         R.id.menu_item_show_system_apps -> {
             lifecycleScope.launch {
-                item.title =
-                    getString(
-                        if (updateUserSettings { it.copy(showSystemApps = !it.showSystemApps) }.showSystemApps) R.string.hide_system_apps
-                        else R.string.show_system_apps
-                    )
+                item.title = getString(
+                    if (updateUserSettings { it.copy(showSystemApps = !it.showSystemApps) }.showSystemApps) commonutilsR.string.commonutils_hide_system_apps
+                    else commonutilsR.string.commonutils_show_system_apps
+                )
             }
             true
         }
@@ -212,29 +217,16 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         private fun setSearch(query: String?): Boolean {
             if (search.value == null) return false
             search.value = query ?: ""
-            lifecycleScope.launch { updateUserSettings { it.copy(search = query ?: "") } }
+            commonUtilsSettings.search = query ?: ""
             return true
         }
 
         override fun onSearchModeToggle(searchView: SearchView, isActive: Boolean) {
             if (isActive) lifecycleScope.launch {
-                search.value = getUserSettings().search
-                searchView.queryHint = getString(R.string.search_apps)
+                search.value = commonUtilsSettings.search
+                searchView.queryHint = getString(commonutilsR.string.commonutils_search_apps)
                 searchView.setQuery(search.value, false)
             } else search.value = null
-        }
-    }
-
-    private fun setupCommonUtilsActivities() {
-        lifecycleScope.launch {
-            setupCommonActivities(
-                appName = getString(R.string.app_name),
-                appVersion = BuildConfig.VERSION_NAME,
-                optionalText = getString(R.string.app_description),
-                email = getString(R.string.email),
-                devModeEnabled = getUserSettings().devModeEnabled,
-                onDevModeChanged = { newDevModeEnabled: Boolean -> updateUserSettings { it.copy(devModeEnabled = newDevModeEnabled) } }
-            )
         }
     }
 
@@ -243,9 +235,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             when (item.itemId) {
                 //pickApkActivityResultLauncher.launch("*/*")
                 R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
-                R.id.about_app_dest -> findViewById<View>(R.id.about_app_dest).transformToActivity(AboutActivity::class.java)
-                R.id.about_me_dest -> findViewById<View>(R.id.about_me_dest).transformToActivity(AboutMeActivity::class.java)
-                R.id.settings_dest -> findViewById<View>(R.id.settings_dest).transformToActivity(SettingsActivity::class.java)
+                R.id.about_app_dest -> findViewById<View>(R.id.about_app_dest).transformToActivity(CommonUtilsAboutActivity::class.java)
+                R.id.about_me_dest -> findViewById<View>(R.id.about_me_dest).transformToActivity(CommonUtilsAboutMeActivity::class.java)
+                R.id.settings_dest -> findViewById<View>(R.id.settings_dest).transformToActivity(CommonUtilsSettingsActivity::class.java)
                 else -> return@onNavigationSingleClick false
             }
             true
@@ -270,7 +262,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    toast(R.string.error_app_not_found)
+                    toast(commonutilsR.string.commonutils_error_app_not_found)
                 }
             }
         }
@@ -305,12 +297,12 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private fun processApk(uri: Uri?) {
         try {
             if (uri == null) {
-                toast(R.string.error_no_valid_file_selected)
+                toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
                 return
             }
             /*val importFile = DocumentFile.fromSingleUri(this, uri)
             if (importFile == null || !importFile.exists() || !importFile.canRead()) {
-                toast(R.string.error_no_valid_file_selected)
+                toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
                 return
             }
             Log.d("MainActivity", "importFile: uri: $uri, name: ${importFile.name}, type: ${importFile.type}")*/
@@ -338,7 +330,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 }
 
                 else -> {
-                    toast(R.string.error_no_valid_file_selected)
+                    toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
                     return
                 }
             }*/
@@ -347,7 +339,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             val applicationInfo = packageInfo?.applicationInfo
             Log.d("MainActivity", "extract from apk: uri: $uri, path: $path, applicationInfo: $applicationInfo")
             if (applicationInfo == null) {
-                toast(R.string.error_no_valid_file_selected)
+                toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
                 return
             }
             applicationInfo.sourceDir = path
@@ -355,7 +347,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             startActivity(Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, applicationInfo))
         } catch (e: Exception) {
             e.printStackTrace()
-            toast(R.string.error_no_valid_file_selected)
+            toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
         }
     }
 }

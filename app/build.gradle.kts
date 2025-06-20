@@ -57,7 +57,7 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "GetIcon (Debug)")
+            resValue("string", "app_name", "Get Icon (Debug)")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -96,7 +96,7 @@ dependencies {
     implementation("io.github.tribalfs:oneui-design:0.6.6+oneui7")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
-    implementation("io.github.lemkinator:common-utils:0.8.16")
+    implementation("io.github.lemkinator:common-utils:0.8.23")
 
     implementation("com.airbnb.android:lottie:6.6.7")
     implementation("com.google.android.gms:play-services-oss-licenses:17.1.0")

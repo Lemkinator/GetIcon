@@ -5,13 +5,13 @@
     <item
         android:id="@+id/menu_item_search"
         android:icon="@drawable/ic_oui_search"
-        android:title="@string/search"
+        android:title="@string/commonutils_search"
         app:iconTint="?actionMenuTextColor"
         app:showAsAction="always"
         tools:ignore="AlwaysShowAction,AppCompatResource" />
     <item
         android:id="@+id/menu_item_show_system_apps"
-        android:title="@string/show_system_apps"
+        android:title="@string/commonutils_show_system_apps"
         app:iconTint="?actionMenuTextColor"
         app:showAsAction="never"
         tools:ignore="AppCompatResource" />

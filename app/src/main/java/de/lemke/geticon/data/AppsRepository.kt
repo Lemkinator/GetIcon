@@ -10,10 +10,10 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.TIRAMISU
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.lemke.commonutils.toast
-import de.lemke.geticon.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import de.lemke.commonutils.R as commonutilsR
 
 class AppsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -41,7 +41,7 @@ class AppsRepository @Inject constructor(
         }
     } catch (e: Exception) {
         e.printStackTrace()
-        withContext(Dispatchers.Main) { context.toast(R.string.error_loading_apps) }
+        withContext(Dispatchers.Main) { context.toast(commonutilsR.string.commonutils_error_loading_apps) }
         emptyList<App>()
     }
 }

@@ -1,12 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en">
     <string name="app_name" translatable="false">Get Icon</string>
-    <string name="email" translatable="false">geticon@leonard-lemke.com</string>
-    <string name="privacy_website" translatable="false">https://www.leonard-lemke.com/apps/geticon/privacy-policy</string>
     <string name="app_description">An app to extract and save app icons.</string>
     <string name="about_app">About GetIcon</string>
 
-    <!--Settings-->
-    <string name="save_location">File storage location</string>
+    <!--Override commonutils strings-->
+    <string name="commonutils_app_name" translatable="false">@string/app_name</string>
+    <string name="commonutils_app_description" translatable="false">@string/app_description</string>
+    <string name="commonutils_email" translatable="false">geticon@leonard-lemke.com</string>
+    <string name="commonutils_privacy_website" translatable="false">https://www.leonard-lemke.com/apps/geticon/privacy-policy</string>
 
     <!--OOBE-->
     <string name="oobe_onboard_msg1_title">Beautiful design</string>.
@@ -16,21 +17,8 @@
     <string name="oobe_onboard_msg1_summary">An app to extract and save app icons.</string>
     <string name="oobe_onboard_msg2_summary">No subscriptions, no in-app purchases, no costs at all.</string>
     <string name="oobe_onboard_msg3_summary">No annoying ads.</string>
-    <string name="tos_content">It is not permitted to use this app contrary to morality or the laws in force. \n\nYou also agree that you will not use this app for any purposes prohibited by United States law, including, without limitation, the development, design, manufacture, or production of missile, chemical or biological weapons. \nHowever, this restriction will not apply in the event of the occurrence (certified by the United States Centers for Disease Control or successor body) of a widespread viral infection transmitted via bites or contact with bodily fluids that causes human corpses to reanimate and seek to consume living human flesh, blood, brain or nerve tissue and is likely to result in the fall of organized civilization. \n\nA special consideration, which may include monetary compensation, will be provided to a limited number of users who read this section of the Terms and Services and contact me at writing-an-email-to-this-address-will-cost-you-10-euro@leonard-lemke.com. This offer may be withdrawn at any time without any notice. \n\nAdditional questions will be answered at this-email-is-way-too-long-and-hopefully-you-cannot-copy-paste@leonard-lemke.com.</string>
 
-    <string name="search_apps">Search Apps</string>
-    <string name="show_system_apps">Show system apps</string>
-    <string name="hide_system_apps">Hide system apps</string>
-
-    <string name="save_as_image">Save as image</string>
-    <string name="error_app_not_found">App not found</string>
-    <string name="error_no_valid_file_selected">No valid file selected</string>
-    <string name="error_loading_apps">Error loading apps</string>
-    <string name="background">Background</string>
-    <string name="foreground">Foreground</string>
-    <string name="masked">Masked</string>
-    <string name="color">Color</string>
-    <string name="size">Size</string>
+    <!--Other-->
     <string name="tap_icon_to_copy_to_clipboard">Tap icon to copy to clipboard</string>
     <string name="copy_icon">Copy icon</string>
     <string name="extract_icon_from_apk">Extract icon from APK</string>
