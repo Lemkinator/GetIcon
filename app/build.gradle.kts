@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -67,9 +69,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    kotlinOptions {
-        jvmTarget = "21"
-    }
+    kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_21) } }
 
     buildFeatures {
         viewBinding = true
@@ -96,7 +96,7 @@ dependencies {
     implementation("io.github.tribalfs:oneui-design:0.6.6+oneui7")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
-    implementation("io.github.lemkinator:common-utils:0.8.23")
+    implementation("io.github.lemkinator:common-utils:0.8.35")
 
     implementation("com.airbnb.android:lottie:6.6.7")
     implementation("com.google.android.gms:play-services-oss-licenses:17.1.0")

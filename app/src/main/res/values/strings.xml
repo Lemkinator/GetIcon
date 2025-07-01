@@ -9,15 +9,6 @@
     <string name="commonutils_email" translatable="false">geticon@leonard-lemke.com</string>
     <string name="commonutils_privacy_website" translatable="false">https://www.leonard-lemke.com/apps/geticon/privacy-policy</string>
 
-    <!--OOBE-->
-    <string name="oobe_onboard_msg1_title">Beautiful design</string>.
-    <string name="oobe_onboard_msg2_title">Free</string>
-    <string name="oobe_onboard_msg3_title">No ads</string>
-
-    <string name="oobe_onboard_msg1_summary">An app to extract and save app icons.</string>
-    <string name="oobe_onboard_msg2_summary">No subscriptions, no in-app purchases, no costs at all.</string>
-    <string name="oobe_onboard_msg3_summary">No annoying ads.</string>
-
     <!--Other-->
     <string name="tap_icon_to_copy_to_clipboard">Tap icon to copy to clipboard</string>
     <string name="copy_icon">Copy icon</string>

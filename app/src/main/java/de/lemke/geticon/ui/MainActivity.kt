@@ -5,7 +5,6 @@ import android.R.anim.fade_out
 import android.app.ActivityOptions.makeSceneTransitionAnimation
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
-import android.graphics.ColorFilter
 import android.net.Uri
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
@@ -15,30 +14,24 @@ import android.util.Pair
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SearchView
 import androidx.apppickerview.widget.AppPickerView
 import androidx.apppickerview.widget.AppPickerView.ORDER_ASCENDING_IGNORE_CASE
 import androidx.apppickerview.widget.AppPickerView.TYPE_GRID
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.view.isVisible
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.airbnb.lottie.LottieProperty.COLOR_FILTER
-import com.airbnb.lottie.SimpleColorFilter
-import com.airbnb.lottie.model.KeyPath
-import com.airbnb.lottie.value.LottieValueCallback
 import dagger.hilt.android.AndroidEntryPoint
-import de.lemke.commonutils.AppStart
-import de.lemke.commonutils.checkAppStart
-import de.lemke.commonutils.data.commonUtilsSettings
+import de.lemke.commonutils.checkAppStartAndHandleOOBE
+import de.lemke.commonutils.configureCommonUtilsSplashScreen
+import de.lemke.commonutils.getCommonUtilsSearchListener
 import de.lemke.commonutils.onNavigationSingleClick
 import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
 import de.lemke.commonutils.setupCommonUtilsAboutActivity
+import de.lemke.commonutils.setupCommonUtilsOOBEActivity
 import de.lemke.commonutils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.setupHeaderAndNavRail
 import de.lemke.commonutils.toast
@@ -59,9 +52,7 @@ import dev.oneuiproject.oneui.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.hideSoftInputOnScroll
 import dev.oneuiproject.oneui.ktx.onSingleClick
-import dev.oneuiproject.oneui.layout.ToolbarLayout
 import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISMISS
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -74,9 +65,8 @@ import de.lemke.commonutils.R as commonutilsR
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
-    private lateinit var pickApkActivityResultLauncher: ActivityResultLauncher<String>
+    private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { processApk(it) }
     private var search: MutableStateFlow<String?> = MutableStateFlow(null)
-    private var time: Long = 0
     private var isUIReady = false
 
     @Inject
@@ -90,65 +80,14 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
-        time = System.currentTimeMillis()
         prepareActivityTransformationFrom()
         super.onCreate(savedInstanceState)
         if (SDK_INT >= 34) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        splashScreen.setKeepOnScreenCondition { !isUIReady }
-        /*
-        there is a bug in the new splash screen api, when using the onExitAnimationListener -> splash icon flickers
-        therefore setting a manual delay in openMain()
-        splashScreen.setOnExitAnimationListener { splash ->
-            val splashAnimator: ObjectAnimator = ObjectAnimator.ofPropertyValuesHolder(
-                splash.view,
-                PropertyValuesHolder.ofFloat(View.ALPHA, 0f),
-                PropertyValuesHolder.ofFloat(View.SCALE_X, 1.2f),
-                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.2f)
-            )
-            splashAnimator.interpolator = AccelerateDecelerateInterpolator()
-            splashAnimator.duration = 400L
-            splashAnimator.doOnEnd { splash.remove() }
-            val contentAnimator: ObjectAnimator = ObjectAnimator.ofPropertyValuesHolder(
-                binding.root,
-                PropertyValuesHolder.ofFloat(View.ALPHA, 0f, 1f),
-                PropertyValuesHolder.ofFloat(View.SCALE_X, 1.2f, 1f),
-                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.2f, 1f)
-            )
-            contentAnimator.interpolator = AccelerateDecelerateInterpolator()
-            contentAnimator.duration = 400L
-
-            val remainingDuration = splash.iconAnimationDurationMillis - (System.currentTimeMillis() - splash.iconAnimationStartMillis)
-                .coerceAtLeast(0L)
-            lifecycleScope.launch {
-                delay(remainingDuration)
-                splashAnimator.start()
-                contentAnimator.start()
-            }
-        }*/
-
-        when (checkAppStart(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME)) {
-            AppStart.FIRST_TIME -> openOOBE()
-            else -> checkTOS(savedInstanceState)
-        }
-
-        pickApkActivityResultLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { processApk(it) }
-    }
-
-    private fun openOOBE() {
-        lifecycleScope.launch {
-            //manually waiting for the animation to finish :/
-            delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
-            startActivity(Intent(applicationContext, OOBEActivity::class.java))
-            @Suppress("DEPRECATION") if (SDK_INT < 34) overridePendingTransition(fade_in, fade_out)
-            finishAfterTransition()
-        }
-    }
-
-    private fun checkTOS(savedInstanceState: Bundle?) {
-        if (!commonUtilsSettings.tosAccepted) openOOBE()
-        else openMain(savedInstanceState)
+        configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
+        setupCommonUtilsOOBEActivity(nextActivity = MainActivity::class.java)
+        if (!checkAppStartAndHandleOOBE(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME)) openMain(savedInstanceState)
     }
 
     private fun openMain(savedInstanceState: Bundle?) {
@@ -165,8 +104,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         lifecycleScope.launch {
             observeApps(search).flowWithLifecycle(lifecycle).collectLatest {
                 updateAppPicker(it)
-                //manually waiting for the splash animation to finish :/
-                if (!isUIReady) delay(700 - (System.currentTimeMillis() - time).coerceAtLeast(0L))
                 isUIReady = true
             }
         }
@@ -209,26 +146,8 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         else -> super.onOptionsItemSelected(item)
     }
 
-    private fun startSearch() = binding.drawerLayout.startSearchMode(searchModeListener, DISMISS)
-
-    val searchModeListener = object : ToolbarLayout.SearchModeListener {
-        override fun onQueryTextSubmit(query: String?): Boolean = setSearch(query).also { hideSoftInput() }
-        override fun onQueryTextChange(query: String?): Boolean = setSearch(query)
-        private fun setSearch(query: String?): Boolean {
-            if (search.value == null) return false
-            search.value = query ?: ""
-            commonUtilsSettings.search = query ?: ""
-            return true
-        }
-
-        override fun onSearchModeToggle(searchView: SearchView, isActive: Boolean) {
-            if (isActive) lifecycleScope.launch {
-                search.value = commonUtilsSettings.search
-                searchView.queryHint = getString(commonutilsR.string.commonutils_search_apps)
-                searchView.setQuery(search.value, false)
-            } else search.value = null
-        }
-    }
+    private fun startSearch() =
+        binding.drawerLayout.startSearchMode(getCommonUtilsSearchListener(search, commonutilsR.string.commonutils_search_apps), DISMISS)
 
     private fun initDrawer() {
         binding.navigationView.onNavigationSingleClick { item ->
@@ -245,7 +164,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         binding.drawerLayout.setupHeaderAndNavRail(getString(R.string.about_app))
         binding.drawerLayout.isImmersiveScroll = true
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
-        binding.appPickerProgress.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
     private fun initAppPicker() = binding.appPickerList.apply {
@@ -273,25 +191,8 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     private fun updateAppPicker(apps: List<String>) {
-        binding.noEntryScrollView.isVisible = false
-        binding.appPickerList.isVisible = false
-        binding.appPickerProgress.isVisible = true
-        if (!this@MainActivity::binding.isInitialized) return
-        if (apps.isEmpty()) {
-            binding.appPickerList.isVisible = false
-            binding.appPickerProgress.isVisible = false
-            binding.noEntryLottie.cancelAnimation()
-            binding.noEntryLottie.progress = 0f
-            binding.noEntryScrollView.isVisible = true
-            val callback = LottieValueCallback<ColorFilter>(SimpleColorFilter(getColor(R.color.primary_color_themed)))
-            binding.noEntryLottie.addValueCallback(KeyPath("**"), COLOR_FILTER, callback)
-            binding.noEntryLottie.postDelayed({ binding.noEntryLottie.playAnimation() }, 400)
-        } else {
-            binding.appPickerList.resetPackages(apps)
-            binding.noEntryScrollView.isVisible = false
-            binding.appPickerProgress.isVisible = false
-            binding.appPickerList.isVisible = true
-        }
+        if (apps.isNotEmpty()) binding.appPickerList.resetPackages(apps)
+        binding.noEntryView.updateVisibilityWith(apps, binding.appPickerList)
     }
 
     private fun processApk(uri: Uri?) {
