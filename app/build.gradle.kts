@@ -101,7 +101,7 @@ dependencies {
     implementation("com.airbnb.android:lottie:6.6.7")
     implementation("com.google.android.gms:play-services-oss-licenses:17.1.0")
 
-    implementation("androidx.core:core-splashscreen:1.2.0-beta02")
+    implementation("androidx.core:core-splashscreen:1.2.0-rc01")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     val roomVersion = "2.7.2"
     implementation("androidx.room:room-runtime:$roomVersion")
