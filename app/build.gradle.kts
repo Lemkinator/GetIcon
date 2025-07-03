@@ -19,8 +19,8 @@ android {
         applicationId = "de.lemke.geticon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 29
-        versionName = "1.3.3"
+        versionCode = 30
+        versionName = "1.4.0"
     }
 
     @Suppress("UnstableApiUsage")
@@ -86,7 +86,7 @@ android {
 dependencies {
     //SESL Android Jetpack
     implementation("sesl.androidx.core:core:1.16.0+1.0.16-sesl7+rev0")
-    implementation("sesl.androidx.core:core-ktx:1.16.0+1.0.0-sesl8+rev0")
+    implementation("sesl.androidx.core:core-ktx:1.16.0+1.0.0-sesl7+rev0")
     implementation("sesl.androidx.appcompat:appcompat:1.7.1+1.0.47000-sesl7+rev0")
     implementation("sesl.androidx.preference:preference:1.2.1+1.0.12-sesl7+rev0")
     implementation("sesl.androidx.picker:picker-color:1.0.19+1.0.19-sesl7+rev0")
@@ -96,7 +96,7 @@ dependencies {
     implementation("io.github.tribalfs:oneui-design:0.7.1+oneui7")
     implementation("io.github.oneuiproject:icons:1.1.0")
 
-    implementation("io.github.lemkinator:common-utils:0.8.35")
+    implementation("io.github.lemkinator:common-utils:0.8.36")
 
     implementation("com.airbnb.android:lottie:6.6.7")
     implementation("com.google.android.gms:play-services-oss-licenses:17.1.0")

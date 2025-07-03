@@ -23,7 +23,7 @@
         app:roundedCorners="top_right|top_left">
 
         <androidx.apppickerview.widget.AppPickerView
-            android:id="@+id/appPickerList"
+            android:id="@+id/appPicker"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="?android:colorBackground"

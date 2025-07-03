@@ -166,7 +166,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
-    private fun initAppPicker() = binding.appPickerList.apply {
+    private fun initAppPicker() = binding.appPicker.apply {
+        seslSetSmoothScrollEnabled(true)
+        hideSoftInputOnScroll()
         if (itemDecorationCount > 0) for (i in 0 until itemDecorationCount) removeItemDecorationAt(i)
         setAppPickerView(TYPE_GRID, emptyList(), ORDER_ASCENDING_IGNORE_CASE)
         setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
@@ -185,14 +187,36 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             }
         }
         itemAnimator = null
-        seslSetSmoothScrollEnabled(true)
-        hideSoftInputOnScroll()
         if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
+        /*
+        appListOrder = ORDER_ASCENDING
+        seslSetFillHorizontalPaddingEnabled(true)
+        seslSetIndexTipEnabled(true)
+        hideSoftInputOnScroll()
+        val appInfoDataHelper = SeslAppInfoDataHelper(context, GridAppDataBuilder::class.java)
+        val appInfoDataList = appInfoDataHelper.getPackages().onEach { it.subLabel = it.packageName }
+        submitList(appInfoDataList)
+        setOnItemClickEventListener { view, appInfo ->
+            try {
+                hideSoftInput()
+                startActivity(
+                    Intent(this@MainActivity, IconActivity::class.java)
+                        .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(packageName, 0)),
+                    makeSceneTransitionAnimation(this@MainActivity, Pair.create(view, "icon")).toBundle()
+                )
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                toast(commonutilsR.string.commonutils_error_app_not_found)
+                false
+            }
+        }
+         */
     }
 
     private fun updateAppPicker(apps: List<String>) {
-        if (apps.isNotEmpty()) binding.appPickerList.resetPackages(apps)
-        binding.noEntryView.updateVisibilityWith(apps, binding.appPickerList)
+        if (apps.isNotEmpty()) binding.appPicker.resetPackages(apps)
+        binding.noEntryView.updateVisibilityWith(apps, binding.appPicker)
     }
 
     private fun processApk(uri: Uri?) {
