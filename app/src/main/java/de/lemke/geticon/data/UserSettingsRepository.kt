@@ -6,8 +6,6 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -20,12 +18,6 @@ class UserSettingsRepository @Inject constructor(
     /** Returns the current user settings. */
     suspend fun getSettings(): UserSettings = dataStore.data.map(::settingsFromPreferences).first()
 
-    /** Emits the current user settings. */
-    fun observeSettings(): Flow<UserSettings> = dataStore.data.map(::settingsFromPreferences)
-
-    /** Emits the current showSystemApps setting. */
-    fun observeShowSystemApps(): Flow<Boolean> = dataStore.data.map { it[KEY_SHOW_SYSTEM_APPS] != false }.distinctUntilChanged()
-
     /**
      * Updates the current user settings and returns the new settings.
      * @param f Invoked with the current settings; The settings returned from this function will replace the current ones.
@@ -33,7 +25,6 @@ class UserSettingsRepository @Inject constructor(
     suspend fun updateSettings(f: (UserSettings) -> UserSettings): UserSettings {
         val prefs = dataStore.edit {
             val newSettings = f(settingsFromPreferences(it))
-            it[KEY_SHOW_SYSTEM_APPS] = newSettings.showSystemApps
             it[KEY_ICON_SIZE] = newSettings.iconSize
             it[KEY_MASK_ENABLED] = newSettings.maskEnabled
             it[KEY_COLOR_ENABLED] = newSettings.colorEnabled
@@ -45,7 +36,6 @@ class UserSettingsRepository @Inject constructor(
 
 
     private fun settingsFromPreferences(prefs: Preferences) = UserSettings(
-        showSystemApps = prefs[KEY_SHOW_SYSTEM_APPS] != false,
         iconSize = prefs[KEY_ICON_SIZE] ?: 512,
         maskEnabled = prefs[KEY_MASK_ENABLED] != false,
         colorEnabled = prefs[KEY_COLOR_ENABLED] == true,
@@ -55,7 +45,6 @@ class UserSettingsRepository @Inject constructor(
 
 
     private companion object {
-        private val KEY_SHOW_SYSTEM_APPS = booleanPreferencesKey("showSystemApps")
         private val KEY_ICON_SIZE = intPreferencesKey("iconSize")
         private val KEY_MASK_ENABLED = booleanPreferencesKey("maskEnabled")
         private val KEY_COLOR_ENABLED = booleanPreferencesKey("colorEnabled")
@@ -66,8 +55,6 @@ class UserSettingsRepository @Inject constructor(
 
 /** Settings associated with the current user. */
 data class UserSettings(
-    /** show system apps*/
-    val showSystemApps: Boolean,
     /** icon Size*/
     val iconSize: Int,
     /** mask enabled*/

@@ -2,7 +2,6 @@ package de.lemke.geticon.ui
 
 import android.R.anim.fade_in
 import android.R.anim.fade_out
-import android.app.ActivityOptions.makeSceneTransitionAnimation
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
 import android.net.Uri
@@ -10,22 +9,21 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
 import android.util.Log
-import android.util.Pair
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.apppickerview.widget.AppPickerView
-import androidx.apppickerview.widget.AppPickerView.ORDER_ASCENDING_IGNORE_CASE
-import androidx.apppickerview.widget.AppPickerView.TYPE_GRID
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.flowWithLifecycle
-import androidx.lifecycle.lifecycleScope
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.picker.helper.SeslAppInfoDataHelper
+import androidx.picker.model.AppData.GridAppDataBuilder
+import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.checkAppStartAndHandleOOBE
 import de.lemke.commonutils.configureCommonUtilsSplashScreen
-import de.lemke.commonutils.getCommonUtilsSearchListener
+import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.onNavigationSingleClick
 import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
@@ -42,23 +40,16 @@ import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityMainBinding
-import de.lemke.geticon.domain.GetUserSettingsUseCase
-import de.lemke.geticon.domain.ObserveAppsUseCase
-import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import de.lemke.geticon.ui.IconActivity.Companion.KEY_APPLICATION_INFO
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.hideSoftInputOnScroll
-import dev.oneuiproject.oneui.ktx.onSingleClick
 import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISMISS
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import dev.oneuiproject.oneui.layout.startSearchMode
 import java.io.File
 import java.io.FileOutputStream
-import javax.inject.Inject
 import de.lemke.commonutils.R as commonutilsR
 
 
@@ -66,17 +57,7 @@ import de.lemke.commonutils.R as commonutilsR
 class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { processApk(it) }
-    private var search: MutableStateFlow<String?> = MutableStateFlow(null)
     private var isUIReady = false
-
-    @Inject
-    lateinit var getUserSettings: GetUserSettingsUseCase
-
-    @Inject
-    lateinit var updateUserSettings: UpdateUserSettingsUseCase
-
-    @Inject
-    lateinit var observeApps: ObserveAppsUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -101,12 +82,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         initDrawer()
         initAppPicker()
         savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
-        lifecycleScope.launch {
-            observeApps(search).flowWithLifecycle(lifecycle).collectLatest {
-                updateAppPicker(it)
-                isUIReady = true
-            }
-        }
+        isUIReady = true
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -120,34 +96,22 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         if (intent?.action == ACTION_SEARCH) binding.drawerLayout.setSearchQueryFromIntent(intent)
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_main, menu)
-        lifecycleScope.launch {
-            menu.findItem(R.id.menu_item_show_system_apps).title = getString(
-                if (getUserSettings().showSystemApps) commonutilsR.string.commonutils_hide_system_apps
-                else commonutilsR.string.commonutils_show_system_apps
-            )
-        }
-        return true
-    }
-
+    override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_main, menu).let { true }
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
         R.id.menu_item_search -> startSearch().let { true }
-        R.id.menu_item_show_system_apps -> {
-            lifecycleScope.launch {
-                item.title = getString(
-                    if (updateUserSettings { it.copy(showSystemApps = !it.showSystemApps) }.showSystemApps) commonutilsR.string.commonutils_hide_system_apps
-                    else commonutilsR.string.commonutils_show_system_apps
-                )
-            }
-            true
-        }
-
         else -> super.onOptionsItemSelected(item)
     }
 
-    private fun startSearch() =
-        binding.drawerLayout.startSearchMode(getCommonUtilsSearchListener(search, commonutilsR.string.commonutils_search_apps), DISMISS)
+    private fun applyFilter(query: String = "") {
+        binding.appPicker.setSearchFilter(query) { binding.noEntryView.updateVisibility(it <= 0, binding.appPicker) }
+    }
+
+    private fun startSearch() = binding.drawerLayout.startSearchMode(
+        onStart = { it.queryHint = getString(commonutilsR.string.commonutils_search_apps); it.setQuery(commonUtilsSettings.search, false) },
+        onQuery = { query, _ -> applyFilter(query); commonUtilsSettings.search = query; true },
+        onEnd = { applyFilter() },
+        onBackBehavior = DISMISS
+    )
 
     private fun initDrawer() {
         binding.navigationView.onNavigationSingleClick { item ->
@@ -167,42 +131,23 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     private fun initAppPicker() = binding.appPicker.apply {
-        seslSetSmoothScrollEnabled(true)
-        hideSoftInputOnScroll()
-        if (itemDecorationCount > 0) for (i in 0 until itemDecorationCount) removeItemDecorationAt(i)
-        setAppPickerView(TYPE_GRID, emptyList(), ORDER_ASCENDING_IGNORE_CASE)
-        setOnBindListener { holder: AppPickerView.ViewHolder, _: Int, packageName: String ->
-            holder.item.onSingleClick {
-                try {
-                    hideSoftInput()
-                    startActivity(
-                        Intent(this@MainActivity, IconActivity::class.java)
-                            .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(packageName, 0)),
-                        makeSceneTransitionAnimation(this@MainActivity, Pair.create(holder.appIcon, "icon")).toBundle()
-                    )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    toast(commonutilsR.string.commonutils_error_app_not_found)
-                }
-            }
-        }
-        itemAnimator = null
-        if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
-        /*
         appListOrder = ORDER_ASCENDING
-        seslSetFillHorizontalPaddingEnabled(true)
-        seslSetIndexTipEnabled(true)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            seslSetIndexTipEnabled(true, bars.top)
+            insets
+        }
         hideSoftInputOnScroll()
+        if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
         val appInfoDataHelper = SeslAppInfoDataHelper(context, GridAppDataBuilder::class.java)
         val appInfoDataList = appInfoDataHelper.getPackages().onEach { it.subLabel = it.packageName }
         submitList(appInfoDataList)
         setOnItemClickEventListener { view, appInfo ->
             try {
                 hideSoftInput()
-                startActivity(
+                view!!.transformToActivity(
                     Intent(this@MainActivity, IconActivity::class.java)
-                        .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(packageName, 0)),
-                    makeSceneTransitionAnimation(this@MainActivity, Pair.create(view, "icon")).toBundle()
+                        .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(appInfo.packageName, 0))
                 )
                 true
             } catch (e: Exception) {
@@ -211,12 +156,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 false
             }
         }
-         */
-    }
-
-    private fun updateAppPicker(apps: List<String>) {
-        if (apps.isNotEmpty()) binding.appPicker.resetPackages(apps)
-        binding.noEntryView.updateVisibilityWith(apps, binding.appPicker)
     }
 
     private fun processApk(uri: Uri?) {

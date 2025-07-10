@@ -36,6 +36,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.copyToClipboard
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.exportBitmap
+import de.lemke.commonutils.prepareActivityTransformationTo
 import de.lemke.commonutils.saveBitmapToUri
 import de.lemke.commonutils.setCustomBackAnimation
 import de.lemke.commonutils.setWindowTransparent
@@ -109,6 +110,7 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
+        prepareActivityTransformationTo()
         super.onCreate(savedInstanceState)
         binding = ActivityIconBinding.inflate(layoutInflater)
         setContentView(binding.root)
