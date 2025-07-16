@@ -28,7 +28,7 @@
     {
       "groupName": "hilt",
       "matchPackageNames": [
-        "com.google.dagger:**"
+        "com.google.dagger**"
       ]
     }
   ]
