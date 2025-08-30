@@ -84,7 +84,7 @@ android {
 }
 
 dependencies {
-    implementation("io.github.lemkinator:common-utils:0.9.0")
+    implementation("io.github.lemkinator:common-utils:0.9.1")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     val roomVersion = "2.7.2"
     implementation("androidx.room:room-runtime:$roomVersion")
