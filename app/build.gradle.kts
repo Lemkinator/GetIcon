@@ -86,7 +86,7 @@ android {
 dependencies {
     implementation("io.github.lemkinator:common-utils:0.9.1")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
-    val roomVersion = "2.8.0"
+    val roomVersion = "2.8.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
