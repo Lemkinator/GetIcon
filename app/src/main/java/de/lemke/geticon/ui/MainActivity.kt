@@ -132,7 +132,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
 
     private fun initAppPicker() = binding.appPicker.apply {
         appListOrder = ORDER_ASCENDING
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(binding.appPicker) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
             seslSetIndexTipEnabled(true, bars.top)
             insets
