@@ -18,6 +18,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.CompoundButton
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.appcompat.app.AppCompatActivity
@@ -71,9 +72,16 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private var backgroundColor: Int = 0
     private val minSize = 16
     private val maxSize = 1024
-    private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> = registerForActivityResult(StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) saveBitmapToUri(result.data?.data, icon)
-    }
+    private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(StartActivityForResult()) { result: ActivityResult? ->
+            try {
+                if (result?.resultCode == RESULT_OK) saveBitmapToUri(result.data?.data, icon)
+                else toast(commonutilsR.string.commonutils_error_saving_image)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                toast(commonutilsR.string.commonutils_error_saving_image)
+            }
+        }
 
     @Inject
     lateinit var getUserSettings: GetUserSettingsUseCase
