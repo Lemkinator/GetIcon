@@ -91,9 +91,9 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         outState.saveSearchAndActionMode(isSearchMode = binding.drawerLayout.isSearchMode)
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent?.action == ACTION_SEARCH) binding.drawerLayout.setSearchQueryFromIntent(intent)
+        if (intent.action == ACTION_SEARCH) binding.drawerLayout.setSearchQueryFromIntent(intent)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_main, menu).let { true }
