@@ -1,0 +1,28 @@
+[versions]
+commonUtils = "0.9.9"
+datastorePreferences = "1.2.0"
+gradle = "9.0.0"
+hilt = "2.59"
+kotlin = "2.3.0"
+ksp = "2.3.5"
+ossLicensesPlugin = "0.10.10"
+room = "2.8.4"
+
+[libraries]
+common-utils = { module = "io.github.lemkinator:common-utils", version.ref = "commonUtils" }
+datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
+gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+oss-licenses-plugin = { module = "com.google.android.gms:oss-licenses-plugin", version.ref = "ossLicensesPlugin" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+
+[plugins]
+hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+
+[bundles]
+room = ["room-ktx", "room-runtime"]

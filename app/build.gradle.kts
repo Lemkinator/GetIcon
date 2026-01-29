@@ -1,4 +1,3 @@
-
 plugins {
     id("com.android.application")
     id("com.google.dagger.hilt.android")
@@ -12,7 +11,6 @@ fun getProperty(key: String): String? = rootProject.findProperty(key)?.toString(
 android {
     namespace = "de.lemke.geticon"
     compileSdk = 36
-
     defaultConfig {
         applicationId = "de.lemke.geticon"
         minSdk = 26
@@ -20,10 +18,8 @@ android {
         versionCode = 32
         versionName = "1.4.2"
     }
-
     @Suppress("UnstableApiUsage")
     androidResources.localeFilters += listOf("en", "de")
-
     signingConfigs {
         create("release") {
             getProperty("releaseStoreFile").apply {
@@ -39,12 +35,8 @@ android {
             }
         }
     }
-
     buildTypes {
-        all {
-            signingConfig = signingConfigs.getByName(if (getProperty("releaseStoreFile").isNullOrEmpty()) "debug" else "release")
-        }
-
+        all { signingConfig = signingConfigs.getByName(if (getProperty("releaseStoreFile").isNullOrEmpty()) "debug" else "release") }
         release {
             isDebuggable = false
             isMinifyEnabled = true
@@ -61,50 +53,17 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
     buildFeatures {
         viewBinding = true
         buildConfig = true
     }
-
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
+    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
-
 dependencies {
-    implementation("io.github.lemkinator:common-utils:0.9.9")
-    implementation("androidx.datastore:datastore-preferences:1.2.0")
-    val roomVersion = "2.8.4"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
-    implementation("com.google.dagger:hilt-android:2.59")
-    ksp("com.google.dagger:hilt-compiler:2.59")
-}
-
-configurations.implementation {
-    //Exclude official android jetpack modules
-    exclude("androidx.core", "core")
-    exclude("androidx.core", "core-ktx")
-    exclude("androidx.customview", "customview")
-    exclude("androidx.coordinatorlayout", "coordinatorlayout")
-    exclude("androidx.drawerlayout", "drawerlayout")
-    exclude("androidx.viewpager2", "viewpager2")
-    exclude("androidx.viewpager", "viewpager")
-    exclude("androidx.appcompat", "appcompat")
-    exclude("androidx.fragment", "fragment")
-    exclude("androidx.preference", "preference")
-    exclude("androidx.recyclerview", "recyclerview")
-    exclude("androidx.slidingpanelayout", "slidingpanelayout")
-    exclude("androidx.swiperefreshlayout", "swiperefreshlayout")
-    //Exclude official material components lib
-    exclude("com.google.android.material", "material")
+    implementation(libs.common.utils)
+    implementation(libs.datastore.preferences)
+    implementation(libs.bundles.room)
+    implementation(libs.hilt.android)
+    ksp(libs.room.compiler)
+    ksp(libs.hilt.compiler)
 }
