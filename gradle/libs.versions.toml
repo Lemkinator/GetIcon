@@ -1,5 +1,5 @@
 [versions]
-commonUtils = "0.9.9"
+commonUtils = "0.9.11"
 datastorePreferences = "1.2.0"
 gradle = "9.0.0"
 hilt = "2.59"
