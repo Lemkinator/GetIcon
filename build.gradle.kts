@@ -1,7 +1,10 @@
 import com.android.build.api.dsl.CommonExtension
 import java.util.Properties
-import kotlin.apply
-import kotlin.jvm.java
+
+plugins {
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+}
 
 /**
  * Converts a camelCase or mixedCase string to ENV_VAR_STYLE (uppercase with underscores).
@@ -27,25 +30,6 @@ fun getProperty(key: String): String =
 
 val githubUsername = getProperty("ghUsername")
 val githubAccessToken = getProperty("ghAccessToken")
-
-plugins {
-    alias(libs.plugins.hilt.android) apply false
-    alias(libs.plugins.kotlin.android) apply false
-    alias(libs.plugins.ksp) apply false
-}
-
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        maven("https://jitpack.io")
-    }
-
-    dependencies {
-        classpath(libs.gradle)
-        classpath(libs.oss.licenses.plugin)
-    }
-}
 
 allprojects {
     repositories {
