@@ -1,6 +1,6 @@
 [versions]
 aboutlibraries = "14.0.0-b02"
-common-utils = "0.9.19"
+common-utils = "0.9.20"
 datastore-preferences = "1.2.0"
 gradle = "9.0.1"
 hilt = "2.59.1"

@@ -43,11 +43,11 @@ import de.lemke.geticon.databinding.ActivityMainBinding
 import de.lemke.geticon.ui.IconActivity.Companion.KEY_APPLICATION_INFO
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
-import dev.oneuiproject.oneui.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.ktx.hideSoftInput
-import dev.oneuiproject.oneui.ktx.hideSoftInputOnScroll
 import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISMISS
 import dev.oneuiproject.oneui.layout.startSearchMode
+import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
+import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
 import java.io.File
 import java.io.FileOutputStream
 import de.lemke.commonutils.R as commonutilsR
