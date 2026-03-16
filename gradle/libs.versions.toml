@@ -4,7 +4,7 @@ common-utils = "0.9.22"
 datastore-preferences = "1.2.1"
 gradle = "9.1.0"
 hilt = "2.59.2"
-kotlin = "2.3.10"
+kotlin = "2.3.20"
 ksp = "2.3.6"
 room = "2.8.4"
 
