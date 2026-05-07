@@ -4,19 +4,21 @@ import android.R.anim.fade_in
 import android.R.anim.fade_out
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
-import android.net.Uri
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
@@ -48,15 +50,15 @@ import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISM
 import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
-import java.io.File
-import java.io.FileOutputStream
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import de.lemke.commonutils.R as commonutilsR
-
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
-    private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { processApk(it) }
+    private val viewModel: MainViewModel by viewModels()
+    private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
     private var isUIReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,8 +83,25 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         )
         initDrawer()
         initAppPicker()
+        collectEvents()
         savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
         isUIReady = true
+    }
+
+    private fun collectEvents() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.receiveAsFlow().collect { event ->
+                    when (event) {
+                        is MainEvent.NavigateToIcon -> startActivity(
+                            Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
+                        )
+
+                        MainEvent.ShowError -> toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
+                    }
+                }
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -116,7 +135,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private fun initDrawer() {
         binding.navigationView.onNavigationSingleClick { item ->
             when (item.itemId) {
-                //pickApkActivityResultLauncher.launch("*/*")
                 R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
                 R.id.about_app_dest -> findViewById<View>(R.id.about_app_dest).transformToActivity(CommonUtilsAboutActivity::class.java)
                 R.id.about_me_dest -> findViewById<View>(R.id.about_me_dest).transformToActivity(CommonUtilsAboutMeActivity::class.java)
@@ -156,63 +174,6 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 toast(commonutilsR.string.commonutils_error_app_not_found)
                 false
             }
-        }
-    }
-
-    private fun processApk(uri: Uri?) {
-        try {
-            if (uri == null) {
-                toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
-                return
-            }
-            /*val importFile = DocumentFile.fromSingleUri(this, uri)
-            if (importFile == null || !importFile.exists() || !importFile.canRead()) {
-                toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
-                return
-            }
-            Log.d("MainActivity", "importFile: uri: $uri, name: ${importFile.name}, type: ${importFile.type}")*/
-            val tempFile = File.createTempFile("extractIcon", ".apk", cacheDir)
-            contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
-            /*when (importFile.type) {
-                "application/vnd.android.package-archive" -> {
-                    contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
-                }
-
-                "application/octet-stream" -> {
-                    val zipInputStream = ZipInputStream(contentResolver.openInputStream(uri)!!)
-                    var zipEntry = zipInputStream.nextEntry
-                    while (zipEntry != null) {
-                        val fileName = zipEntry.name
-                        Log.d("MainActivity", "extract from apks: fileName: $fileName")
-                        if (fileName == "base.apk") {
-                            tempFile.outputStream().use { zipInputStream.copyTo(it) }
-                            break
-                        }
-                        zipEntry = zipInputStream.nextEntry
-                        zipInputStream.closeEntry()
-                    }
-                    zipInputStream.close()
-                }
-
-                else -> {
-                    toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
-                    return
-                }
-            }*/
-            val path = tempFile.absolutePath
-            val packageInfo = packageManager.getPackageArchiveInfo(path, 0)
-            val applicationInfo = packageInfo?.applicationInfo
-            Log.d("MainActivity", "extract from apk: uri: $uri, path: $path, applicationInfo: $applicationInfo")
-            if (applicationInfo == null) {
-                toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
-                return
-            }
-            applicationInfo.sourceDir = path
-            applicationInfo.publicSourceDir = path
-            startActivity(Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, applicationInfo))
-        } catch (e: Exception) {
-            e.printStackTrace()
-            toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
         }
     }
 }
