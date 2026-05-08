@@ -38,8 +38,8 @@ class UserSettingsRepository @Inject constructor(
         iconSize = prefs[KEY_ICON_SIZE] ?: 512,
         maskEnabled = prefs[KEY_MASK_ENABLED] != false,
         colorEnabled = prefs[KEY_COLOR_ENABLED] == true,
-        recentBackgroundColors = prefs[KEY_RECENT_BACKGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
-        recentForegroundColors = prefs[KEY_RECENT_FOREGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-1),
+        recentBackgroundColors = prefs[KEY_RECENT_BACKGROUND_COLORS]?.split(",")?.mapNotNull { it.toIntOrNull() }?.takeIf { it.isNotEmpty() } ?: listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
+        recentForegroundColors = prefs[KEY_RECENT_FOREGROUND_COLORS]?.split(",")?.mapNotNull { it.toIntOrNull() }?.takeIf { it.isNotEmpty() } ?: listOf(-1),
     )
 
     private companion object {
