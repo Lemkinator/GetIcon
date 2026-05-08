@@ -6,6 +6,7 @@ import android.content.res.ColorStateList.valueOf
 import android.graphics.Color.BLACK
 import android.graphics.Color.WHITE
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.CompoundButton
@@ -40,6 +41,7 @@ import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
@@ -65,8 +67,11 @@ class IconActivity :
                 } else {
                     toast(commonutilsR.string.commonutils_error_saving_image)
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } catch (e: IOException) {
+                Log.e("IconActivity", "Failed to save bitmap to URI", e)
+                toast(commonutilsR.string.commonutils_error_saving_image)
+            } catch (e: SecurityException) {
+                Log.e("IconActivity", "Failed to save bitmap to URI", e)
                 toast(commonutilsR.string.commonutils_error_saving_image)
             }
         }

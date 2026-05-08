@@ -3,11 +3,13 @@ package de.lemke.geticon.domain
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.net.Uri
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import javax.inject.Inject
 
 class ProcessApkUseCase @Inject constructor(
@@ -23,8 +25,11 @@ class ProcessApkUseCase @Inject constructor(
                 sourceDir = path
                 publicSourceDir = path
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (e: IOException) {
+            Log.e("ProcessApkUseCase", "Failed to process APK", e)
+            null
+        } catch (e: SecurityException) {
+            Log.e("ProcessApkUseCase", "Failed to process APK", e)
             null
         }
     }

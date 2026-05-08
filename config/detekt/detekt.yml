@@ -27,8 +27,6 @@ style:
     ignoreNumbers: ['-1', '0', '1', '2', '6', '16', '512', '1024', '0.5']
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
-  WildcardImport:
-    active: false
   MaxLineLength:
     maxLineLength: 160
   ForbiddenComment:
@@ -49,10 +47,6 @@ empty-blocks:
   EmptyFunctionBlock:
     active: true
     ignoreOverridden: true
-
-exceptions:
-  TooGenericExceptionCaught:
-    active: false
 
 potential-bugs:
   active: true

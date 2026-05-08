@@ -4,9 +4,11 @@ import android.R.anim.fade_in
 import android.R.anim.fade_out
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
+import android.content.pm.PackageManager.NameNotFoundException
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -178,8 +180,8 @@ class MainActivity :
                         .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(appInfo.packageName, 0)),
                 )
                 true
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } catch (e: NameNotFoundException) {
+                Log.e("MainActivity", "App not found: ${appInfo.packageName}", e)
                 toast(commonutilsR.string.commonutils_error_app_not_found)
                 false
             }
