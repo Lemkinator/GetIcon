@@ -67,10 +67,7 @@ subprojects {
             // Apply AndroidX exclusions ONLY to production configurations.
             // androidTest* and test* configs need genuine AOSP AndroidX modules.
             val productionConfigPredicate: (String) -> Boolean = { name ->
-                !name.startsWith("test") &&
-                !name.startsWith("androidTest") &&
-                !name.contains("UnitTest", ignoreCase = true) &&
-                !name.contains("AndroidTest", ignoreCase = true)
+                !name.contains("test", ignoreCase = true)
             }
 
             configurations.matching { productionConfigPredicate(it.name) }.configureEach {
@@ -96,6 +93,7 @@ subprojects {
 tasks.register("staticAnalysis") {
     group = "verification"
     description = "Runs Spotless check + Detekt across all subprojects."
-    dependsOn(subprojects.map { "${it.path}:spotlessCheck" })
-    dependsOn(subprojects.map { "${it.path}:detekt" })
+    subprojects.forEach { sub ->
+        dependsOn(sub.tasks.matching { it.name in setOf("spotlessCheck", "detekt") })
+    }
 }

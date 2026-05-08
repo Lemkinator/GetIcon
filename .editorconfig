@@ -12,6 +12,7 @@ indent_size = 4
 ij_kotlin_imports_layout = *,java.**,javax.**,kotlin.**,^
 ij_kotlin_allow_trailing_comma = true
 ij_kotlin_allow_trailing_comma_on_call_site = true
+# Disabled: common-utils exports its API via wildcard-friendly packages
 ktlint_standard_no-wildcard-imports = disabled
 ktlint_standard_filename = disabled
 ktlint_standard_max-line-length = disabled

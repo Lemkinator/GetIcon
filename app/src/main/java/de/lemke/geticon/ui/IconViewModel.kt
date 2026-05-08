@@ -152,6 +152,9 @@ class IconViewModel @Inject constructor(
         )
     }
 
-    @Suppress("MaxLineLength")
-    private fun buildFileName(packageName: String, maskEnabled: Boolean, colorEnabled: Boolean): String = "${packageName}_${if (maskEnabled) "mask" else "default"}${if (colorEnabled) "_mono" else ""}"
+    private fun buildFileName(
+        packageName: String,
+        maskEnabled: Boolean,
+        colorEnabled: Boolean,
+    ): String = "${packageName}_${if (maskEnabled) "mask" else "default"}${if (colorEnabled) "_mono" else ""}"
 }
