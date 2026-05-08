@@ -63,6 +63,7 @@ arch-core-testing = { module = "androidx.arch.core:core-testing", version.ref = 
 fragment-testing = { module = "androidx.fragment:fragment-testing", version.ref = "fragment-testing" }
 hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt-test" }
 hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt-test" }
+detekt-rules-ktlint-wrapper = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detekt" }
 
 [plugins]
 aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutlibraries" }

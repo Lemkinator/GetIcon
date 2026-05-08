@@ -129,7 +129,7 @@ dependencies {
 
     debugImplementation(libs.fragment.testing)
 
-    detektPlugins("dev.detekt:detekt-rules-ktlint-wrapper:${libs.versions.detekt.get()}")
+    detektPlugins(libs.detekt.rules.ktlint.wrapper)
 }
 
 spotless {
@@ -185,7 +185,6 @@ kover {
                     "*.di.*",
                     "*Activity",
                 )
-                packages("de.lemke.geticon.databinding")
             }
         }
         verify {

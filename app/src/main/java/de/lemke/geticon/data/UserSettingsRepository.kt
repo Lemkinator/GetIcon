@@ -38,11 +38,12 @@ class UserSettingsRepository @Inject constructor(
         iconSize = prefs[KEY_ICON_SIZE] ?: 512,
         maskEnabled = prefs[KEY_MASK_ENABLED] != false,
         colorEnabled = prefs[KEY_COLOR_ENABLED] == true,
-        recentBackgroundColors = prefs[KEY_RECENT_BACKGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-16547330),
+        recentBackgroundColors = prefs[KEY_RECENT_BACKGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(DEFAULT_BACKGROUND_COLOR),
         recentForegroundColors = prefs[KEY_RECENT_FOREGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-1),
     )
 
-    private companion object {
+    companion object {
+        const val DEFAULT_BACKGROUND_COLOR = -16547330
         private val KEY_ICON_SIZE = intPreferencesKey("iconSize")
         private val KEY_MASK_ENABLED = booleanPreferencesKey("maskEnabled")
         private val KEY_COLOR_ENABLED = booleanPreferencesKey("colorEnabled")

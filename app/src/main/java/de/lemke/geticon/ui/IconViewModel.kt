@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.lemke.geticon.data.UserSettingsRepository.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
@@ -30,7 +31,7 @@ data class IconUiState(
     val hasMaskedAppIcon: Boolean = false,
     val fileName: String = "",
     val recentForegroundColors: List<Int> = listOf(-1),
-    val recentBackgroundColors: List<Int> = listOf(-16547330),
+    val recentBackgroundColors: List<Int> = listOf(DEFAULT_BACKGROUND_COLOR),
     val isLoading: Boolean = true,
 )
 
