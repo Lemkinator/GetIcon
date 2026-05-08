@@ -1,0 +1,65 @@
+config:
+  validation: true
+  warningsAsErrors: false
+
+processors:
+  active: true
+  exclude: []
+
+console-reports:
+  active: true
+
+complexity:
+  active: true
+  LongParameterList:
+    active: true
+    allowedFunctionParameters: 8
+    allowedConstructorParameters: 8
+  TooManyFunctions:
+    active: false
+  ComplexCondition:
+    allowedConditions: 4
+
+style:
+  active: true
+  MagicNumber:
+    active: true
+    ignoreNumbers: ['-1', '0', '1', '2', '6', '16', '512', '1024', '-16547330', '0.5']
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+  WildcardImport:
+    active: false
+  MaxLineLength:
+    maxLineLength: 160
+  ForbiddenComment:
+    active: true
+    comments: ['TODO:', 'FIXME:']
+  UnusedPrivateFunction:
+    active: true
+  UnusedPrivateProperty:
+    active: true
+
+naming:
+  FunctionNaming:
+    functionPattern: '[a-z][A-Za-z0-9]*'
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][_A-Z0-9]*'
+
+empty-blocks:
+  EmptyFunctionBlock:
+    active: true
+    ignoreOverridden: true
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+
+potential-bugs:
+  active: true
+  ImplicitDefaultLocale:
+    active: true
+  UnsafeCallOnNullableType:
+    active: true
+
+ktlint:
+  active: false

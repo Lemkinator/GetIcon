@@ -44,7 +44,9 @@ import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
-class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
+class IconActivity :
+    AppCompatActivity(),
+    ViewYTranslator by AppBarAwareYTranslator() {
     companion object {
         const val KEY_APPLICATION_INFO = "applicationInfo"
     }
@@ -58,8 +60,11 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         registerForActivityResult(StartActivityForResult()) { result: ActivityResult? ->
             val icon = viewModel.state.value.icon ?: return@registerForActivityResult
             try {
-                if (result?.resultCode == RESULT_OK) saveBitmapToUri(result.data?.data, icon)
-                else toast(commonutilsR.string.commonutils_error_saving_image)
+                if (result?.resultCode == RESULT_OK) {
+                    saveBitmapToUri(result.data?.data, icon)
+                } else {
+                    toast(commonutilsR.string.commonutils_error_saving_image)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 toast(commonutilsR.string.commonutils_error_saving_image)
@@ -83,7 +88,8 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         val state = viewModel.state.value
         val icon = state.icon ?: return super.onOptionsItemSelected(item)
         return when (item.itemId) {
-            R.id.menu_item_icon_save_as_image -> exportBitmap(commonUtilsSettings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher).let { true }
+            R.id.menu_item_icon_save_as_image ->
+                exportBitmap(commonUtilsSettings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher).let { true }
             R.id.menu_item_icon_share -> shareBitmap(icon, "icon.png").let { true }
             else -> super.onOptionsItemSelected(item)
         }
@@ -185,26 +191,30 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         val dialog = SeslColorPickerDialog(
             this,
             { color: Int ->
-                if (isBackground) viewModel.onBackgroundColorChanged(color)
-                else viewModel.onForegroundColorChanged(color)
+                if (isBackground) {
+                    viewModel.onBackgroundColorChanged(color)
+                } else {
+                    viewModel.onForegroundColorChanged(color)
+                }
             },
-            currentColor, recentColors.toIntArray(), true
+            currentColor,
+            recentColors.toIntArray(),
+            true,
         )
         dialog.setTransparencyControlEnabled(true)
         dialog.show()
     }
 
-    private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> =
-        SuggestAppBarModel.Builder(this).apply {
-            setTitle(getString(R.string.tap_icon_to_copy_to_clipboard))
-            setCloseClickListener { _, _ -> binding.root.setAppBarSuggestView(null) }
-            setButtons(
-                arrayListOf(
-                    ButtonModel(
-                        text = getString(R.string.copy_icon),
-                        clickListener = { _, _ -> viewModel.state.value.icon?.copyToClipboard(this@IconActivity, "icon", "icon.png") },
-                    )
-                )
-            )
-        }.build()
+    private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> = SuggestAppBarModel.Builder(this).apply {
+        setTitle(getString(R.string.tap_icon_to_copy_to_clipboard))
+        setCloseClickListener { _, _ -> binding.root.setAppBarSuggestView(null) }
+        setButtons(
+            arrayListOf(
+                ButtonModel(
+                    text = getString(R.string.copy_icon),
+                    clickListener = { _, _ -> viewModel.state.value.icon?.copyToClipboard(this@IconActivity, "icon", "icon.png") },
+                ),
+            ),
+        )
+    }.build()
 }

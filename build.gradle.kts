@@ -4,6 +4,11 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.detekt) apply false
+    alias(libs.plugins.spotless) apply false
+    alias(libs.plugins.kover) apply false
+    alias(libs.plugins.android.junit) apply false
+    alias(libs.plugins.roborazzi) apply false
 }
 
 /**
@@ -58,7 +63,17 @@ subprojects {
                 sourceCompatibility = JavaVersion.VERSION_21
                 targetCompatibility = JavaVersion.VERSION_21
             }
-            configurations.all {
+
+            // Apply AndroidX exclusions ONLY to production configurations.
+            // androidTest* and test* configs need genuine AOSP AndroidX modules.
+            val productionConfigPredicate: (String) -> Boolean = { name ->
+                !name.startsWith("test") &&
+                !name.startsWith("androidTest") &&
+                !name.contains("UnitTest", ignoreCase = true) &&
+                !name.contains("AndroidTest", ignoreCase = true)
+            }
+
+            configurations.matching { productionConfigPredicate(it.name) }.configureEach {
                 exclude(group = "androidx.core", module = "core")
                 exclude(group = "androidx.core", module = "core-ktx")
                 exclude(group = "androidx.customview", module = "customview")
@@ -76,4 +91,11 @@ subprojects {
             }
         }
     }
+}
+
+tasks.register("staticAnalysis") {
+    group = "verification"
+    description = "Runs Spotless check + Detekt across all subprojects."
+    dependsOn(subprojects.map { "${it.path}:spotlessCheck" })
+    dependsOn(subprojects.map { "${it.path}:detekt" })
 }

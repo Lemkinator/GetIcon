@@ -34,7 +34,6 @@ class UserSettingsRepository @Inject constructor(
         return settingsFromPreferences(prefs)
     }
 
-
     private fun settingsFromPreferences(prefs: Preferences) = UserSettings(
         iconSize = prefs[KEY_ICON_SIZE] ?: 512,
         maskEnabled = prefs[KEY_MASK_ENABLED] != false,
@@ -42,7 +41,6 @@ class UserSettingsRepository @Inject constructor(
         recentBackgroundColors = prefs[KEY_RECENT_BACKGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-16547330),
         recentForegroundColors = prefs[KEY_RECENT_FOREGROUND_COLORS]?.split(",")?.map { it.toInt() } ?: listOf(-1),
     )
-
 
     private companion object {
         private val KEY_ICON_SIZE = intPreferencesKey("iconSize")

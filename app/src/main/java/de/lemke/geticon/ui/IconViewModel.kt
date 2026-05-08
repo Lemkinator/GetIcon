@@ -68,8 +68,13 @@ class IconViewModel @Inject constructor(
         val fg = userSettings.recentForegroundColors.first()
         val bg = userSettings.recentBackgroundColors.first()
         val result = generateIcon(
-            appInfo, userSettings.iconSize, userSettings.maskEnabled, userSettings.colorEnabled,
-            fg, bg, context.packageManager
+            appInfo,
+            userSettings.iconSize,
+            userSettings.maskEnabled,
+            userSettings.colorEnabled,
+            fg,
+            bg,
+            context.packageManager,
         )
         _state.value = IconUiState(
             icon = result.bitmap,
@@ -130,8 +135,13 @@ class IconViewModel @Inject constructor(
         val appInfo = applicationInfo ?: return
         _state.value = newState.copy(isLoading = true)
         val result = generateIcon(
-            appInfo, newState.size, newState.maskEnabled, newState.colorEnabled,
-            newState.foregroundColor, newState.backgroundColor, context.packageManager
+            appInfo,
+            newState.size,
+            newState.maskEnabled,
+            newState.colorEnabled,
+            newState.foregroundColor,
+            newState.backgroundColor,
+            context.packageManager,
         )
         _state.value = newState.copy(
             icon = result.bitmap,
@@ -142,6 +152,6 @@ class IconViewModel @Inject constructor(
         )
     }
 
-    private fun buildFileName(packageName: String, maskEnabled: Boolean, colorEnabled: Boolean): String =
-        packageName + "_" + if (maskEnabled) "mask" else "default" + if (colorEnabled) "_mono" else ""
+    @Suppress("MaxLineLength")
+    private fun buildFileName(packageName: String, maskEnabled: Boolean, colorEnabled: Boolean): String = packageName + "_" + if (maskEnabled) "mask" else "default" + if (colorEnabled) "_mono" else ""
 }

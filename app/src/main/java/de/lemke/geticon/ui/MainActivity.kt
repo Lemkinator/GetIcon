@@ -55,7 +55,9 @@ import kotlinx.coroutines.launch
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
+class MainActivity :
+    AppCompatActivity(),
+    ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
@@ -65,7 +67,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         val splashScreen = installSplashScreen()
         prepareActivityTransformationFrom()
         super.onCreate(savedInstanceState)
-        if (SDK_INT >= 34) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
+        if (SDK_INT >= VERSION_CODES.UPSIDE_DOWN_CAKE) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
@@ -79,7 +81,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             commonutilsR.xml.preferences_design,
             commonutilsR.xml.preferences_general_language_and_image_save_location,
             commonutilsR.xml.preferences_dev_options_delete_app_data,
-            commonutilsR.xml.preferences_more_info
+            commonutilsR.xml.preferences_more_info,
         )
         initDrawer()
         initAppPicker()
@@ -94,7 +96,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 viewModel.events.receiveAsFlow().collect { event ->
                     when (event) {
                         is MainEvent.NavigateToIcon -> startActivity(
-                            Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
+                            Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo),
                         )
 
                         MainEvent.ShowError -> toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
@@ -126,10 +128,17 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     private fun startSearch() = binding.drawerLayout.startSearchMode(
-        onStart = { it.queryHint = getString(commonutilsR.string.commonutils_search_apps); it.setQuery(commonUtilsSettings.search, false) },
-        onQuery = { query, _ -> applyFilter(query); commonUtilsSettings.search = query; true },
+        onStart = {
+            it.queryHint = getString(commonutilsR.string.commonutils_search_apps)
+            it.setQuery(commonUtilsSettings.search, false)
+        },
+        onQuery = { query, _ ->
+            applyFilter(query)
+            commonUtilsSettings.search = query
+            true
+        },
         onEnd = { applyFilter() },
-        onBackBehavior = DISMISS
+        onBackBehavior = DISMISS,
     )
 
     private fun initDrawer() {
@@ -166,7 +175,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
                 hideSoftInput()
                 view!!.transformToActivity(
                     Intent(this@MainActivity, IconActivity::class.java)
-                        .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(appInfo.packageName, 0))
+                        .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(appInfo.packageName, 0)),
                 )
                 true
             } catch (e: Exception) {
