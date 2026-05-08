@@ -173,7 +173,7 @@ class MainActivity :
         setOnItemClickEventListener { view, appInfo ->
             try {
                 hideSoftInput()
-                view!!.transformToActivity(
+                view?.transformToActivity(
                     Intent(this@MainActivity, IconActivity::class.java)
                         .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(appInfo.packageName, 0)),
                 )
