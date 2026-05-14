@@ -137,7 +137,6 @@ spotless {
         target("src/**/*.kt")
         targetExclude("**/build/**", "**/generated/**")
         ktlint(libs.versions.ktlint.get())
-            .editorConfigOverride(mapOf("ktlint_standard_no-wildcard-imports" to "disabled"))
         trimTrailingWhitespace()
         endWithNewline()
     }

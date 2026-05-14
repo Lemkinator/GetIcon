@@ -18,7 +18,5 @@ object PersistenceModule {
 
     @Provides
     @Singleton
-    fun provideUserSettingsDataStore(
-        @ApplicationContext context: Context,
-    ): DataStore<Preferences> = context.userSettingsStore
+    fun provideUserSettingsDataStore(@ApplicationContext context: Context): DataStore<Preferences> = context.userSettingsStore
 }

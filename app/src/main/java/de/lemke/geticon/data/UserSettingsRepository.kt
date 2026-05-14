@@ -11,9 +11,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /** Provides CRUD operations for user settings. */
-class UserSettingsRepository @Inject constructor(
-    private val dataStore: DataStore<Preferences>,
-) {
+class UserSettingsRepository @Inject constructor(private val dataStore: DataStore<Preferences>) {
 
     /** Returns the current user settings. */
     suspend fun getSettings(): UserSettings = dataStore.data.map(::settingsFromPreferences).first()
