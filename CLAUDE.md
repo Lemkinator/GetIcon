@@ -19,21 +19,25 @@ No unit or instrumented tests exist yet (test source directories exist but are e
 ## Private Dependencies (Required for Build)
 
 Two private GitHub Maven repos are used:
+
 - `https://maven.pkg.github.com/tribalfs/oneui-design`
 - `https://maven.pkg.github.com/lemkinator/common-utils`
 
 Provide credentials via **one** of these (checked in order):
+
 1. `github.properties` in project root: `ghUsername=...` / `ghAccessToken=...`
 2. `~/.gradle/gradle.properties`: `ghUsername=...` / `ghAccessToken=...`
 3. Env vars: `GH_USERNAME` / `GH_ACCESS_TOKEN`
 
 Missing credentials are the most common build failure cause.
 
-Release signing properties (`releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword`) use the same lookup order. Without them the build falls back to debug signing.
+Release signing properties (`releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword`) use the same lookup order.
+Without them the build falls back to debug signing.
 
 ## Architecture
 
-Single-module (`:app`) Android app — extracts and exports app icons. Layered architecture (data/domain/ui) without ViewModels — Activities own state and inject use cases directly:
+Single-module (`:app`) Android app — extracts and exports app icons. Layered architecture (data/domain/ui) without ViewModels — Activities
+own state and inject use cases directly:
 
 - **`data/`** — `UserSettingsRepository`: DataStore Preferences CRUD (icon size, mask, colors)
 - **`domain/`** — thin use cases: `GetUserSettingsUseCase`, `UpdateUserSettingsUseCase`, `AppPickerStrategy`
@@ -45,15 +49,20 @@ DI is Hilt throughout. Async via coroutines (`lifecycleScope.launch`, `suspend`)
 
 ## Key Patterns
 
-**External libraries dominate UI logic.** Many helpers (`prepareActivityTransformationFrom()`, `toast`, `exportBitmap`, `commonUtilsSettings`) live in `io.github.lemkinator:common-utils` (imported as `de.lemke.commonutils`). When changing behavior, inspect call sites in `MainActivity.kt` / `IconActivity.kt` first.
+**External libraries dominate UI logic.** Many helpers (`prepareActivityTransformationFrom()`, `toast`, `exportBitmap`,
+`commonUtilsSettings`) live in `io.github.lemkinator:common-utils` (imported as `de.lemke.commonutils`). When changing behavior, inspect
+call sites in `MainActivity.kt` / `IconActivity.kt` first.
 
-**Resource aliasing** — code imports `de.lemke.commonutils.R as commonutilsR` alongside the app's own `R`. Be aware when touching resource IDs.
+**Resource aliasing** — code imports `de.lemke.commonutils.R as commonutilsR` alongside the app's own `R`. Be aware when touching resource
+IDs.
 
 **KSP code generation** — Hilt and Room annotations require a Gradle build to regenerate sources after editing annotated classes.
 
-**Use cases over repositories** — prefer injecting `GetUserSettingsUseCase` / `UpdateUserSettingsUseCase` rather than `UserSettingsRepository` directly.
+**Use cases over repositories** — prefer injecting `GetUserSettingsUseCase` / `UpdateUserSettingsUseCase` rather than
+`UserSettingsRepository` directly.
 
-**Dependency exclusions** — root `build.gradle.kts` excludes many AndroidX modules from subprojects to prevent duplicate packaging. Check `allprojects`/`subprojects` blocks when updating dependencies.
+**Dependency exclusions** — root `build.gradle.kts` excludes many AndroidX modules from subprojects to prevent duplicate packaging. Check
+`allprojects`/`subprojects` blocks when updating dependencies.
 
 ## Finding Code
 

@@ -95,6 +95,7 @@ class IconActivity :
         return when (item.itemId) {
             R.id.menu_item_icon_save_as_image ->
                 exportBitmap(commonUtilsSettings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher).let { true }
+
             R.id.menu_item_icon_share -> shareBitmap(icon, "icon.png").let { true }
             else -> super.onOptionsItemSelected(item)
         }
@@ -117,13 +118,15 @@ class IconActivity :
         }
         binding.sizeSeekbar.min = 16
         binding.sizeSeekbar.max = 1024
-        binding.sizeSeekbar.setOnSeekBarChangeListener(object : SeslSeekBar.OnSeekBarChangeListener {
-            override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
-            override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
-            override fun onProgressChanged(seekBar: SeslSeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser) viewModel.onSizeChanged(progress)
-            }
-        })
+        binding.sizeSeekbar.setOnSeekBarChangeListener(
+            object : SeslSeekBar.OnSeekBarChangeListener {
+                override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
+                override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
+                override fun onProgressChanged(seekBar: SeslSeekBar, progress: Int, fromUser: Boolean) {
+                    if (fromUser) viewModel.onSizeChanged(progress)
+                }
+            },
+        )
         binding.colorButtonBackground.setOnClickListener { showColorPicker(isBackground = true) }
         binding.colorButtonForeground.setOnClickListener { showColorPicker(isBackground = false) }
     }
