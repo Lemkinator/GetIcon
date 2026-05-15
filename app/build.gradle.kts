@@ -116,6 +116,7 @@ dependencies {
     testImplementation(libs.bundles.robolectric.test)
     testImplementation(libs.arch.core.testing)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.konsist)
     kspTest(libs.hilt.android.compiler)
 
     androidTestImplementation(platform(libs.junit.jupiter.bom))
@@ -128,8 +129,6 @@ dependencies {
     kspAndroidTest(libs.hilt.android.compiler)
 
     debugImplementation(libs.fragment.testing)
-
-    detektPlugins(libs.detekt.rules.ktlint.wrapper)
 }
 
 spotless {

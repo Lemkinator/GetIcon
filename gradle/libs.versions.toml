@@ -8,6 +8,8 @@ kotlin = "2.3.21"
 ksp = "2.3.8"
 room = "2.8.4"
 detekt = "2.0.0-alpha.3"
+konsist = "0.17.3"
+dependency-analysis = "3.12.0"
 spotless = "8.4.0"
 ktlint = "1.7.1"
 kover = "0.9.8"
@@ -63,7 +65,7 @@ arch-core-testing = { module = "androidx.arch.core:core-testing", version.ref = 
 fragment-testing = { module = "androidx.fragment:fragment-testing", version.ref = "fragment-testing" }
 hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt-test" }
 hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt-test" }
-detekt-rules-ktlint-wrapper = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detekt" }
+konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 
 [plugins]
 aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutlibraries" }
@@ -76,6 +78,7 @@ spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 android-junit = { id = "de.mannodermaus.android-junit", version.ref = "junit-android-framework" }
 roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
+dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependency-analysis" }
 
 [bundles]
 room = ["room-ktx", "room-runtime"]

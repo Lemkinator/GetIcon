@@ -1,0 +1,14 @@
+#!/bin/sh
+# Runs Spotless format check before allowing a commit.
+# Opt in: `git config core.hooksPath .githooks` (one-time per clone).
+
+set -e
+
+echo "Running spotlessCheck..."
+./gradlew spotlessCheck --quiet || {
+    echo ""
+    echo "ERROR: Formatting violations detected."
+    echo "Fix with: ./gradlew spotlessApply"
+    echo ""
+    exit 1
+}

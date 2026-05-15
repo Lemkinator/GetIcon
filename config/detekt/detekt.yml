@@ -54,6 +54,3 @@ potential-bugs:
     active: true
   UnsafeCallOnNullableType:
     active: true
-
-ktlint:
-  active: false
