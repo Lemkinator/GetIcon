@@ -84,6 +84,12 @@ NOT be automatically reverted by `spotlessApply` — ktlint only flags violation
 If you re-enable these rules and then disable them again, you must manually restore the inline form
 and re-run `spotlessApply`. See git history for the migration pattern.
 
+**IDE formatter (Ctrl+Alt+L) vs spotlessApply** — these ARE in sync. The ktlint IntelliJ plugin
+(`.idea/ktlint-plugin.xml`, mode `DISTRACT_FREE`) runs ktlint as a **post-processor after**
+IntelliJ's native formatter. Flow: IntelliJ formats → plugin runs ktlint on the result → final
+output matches `spotlessApply` exactly. IntelliJ never "learns" ktlint rules; ktlint just fixes
+IntelliJ's output. If the plugin mode is changed to `MANUAL`, this breaks — keep `DISTRACT_FREE`.
+
 When upgrading ktlint: run `./gradlew spotlessApply` after the bump, check for new IDE diagnostics,
 and add `.editorconfig` overrides for any newly-misbehaving rules.
 
