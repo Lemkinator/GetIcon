@@ -64,6 +64,29 @@ IDs.
 **Dependency exclusions** — root `build.gradle.kts` excludes many AndroidX modules from subprojects to prevent duplicate packaging. Check
 `allprojects`/`subprojects` blocks when updating dependencies.
 
+## Static Analysis
+
+Three tools run as part of `./gradlew build`:
+
+- **Spotless** — enforces formatting via ktlint 1.7.1. Fix violations with `./gradlew spotlessApply`.
+- **Detekt** — static analysis; config at `config/detekt/detekt.yml`. `autoCorrect = false` so fixes are manual.
+- **Kover** — coverage; verify threshold with `./gradlew koverVerify`.
+
+**ktlint rule overrides** — two rules disabled in `.editorconfig` to match community practice
+(NowInAndroid, Pokedex both use the inline form):
+- `ktlint_standard_annotation = disabled` — ktlint 1.7+ moves `@Inject` before `constructor` onto
+  its own continuation line, doubly-indenting the class body (8 sp instead of 4 sp).
+- `ktlint_standard_class-signature = disabled` — in ktlint 1.7+, both rules together enforce the
+  split form; disabling only `annotation` is insufficient.
+
+**Important**: when upgrading ktlint, files already formatted in the ktlint-native (8-space) style will
+NOT be automatically reverted by `spotlessApply` — ktlint only flags violations of *enabled* rules.
+If you re-enable these rules and then disable them again, you must manually restore the inline form
+and re-run `spotlessApply`. See git history for the migration pattern.
+
+When upgrading ktlint: run `./gradlew spotlessApply` after the bump, check for new IDE diagnostics,
+and add `.editorconfig` overrides for any newly-misbehaving rules.
+
 ## Finding Code
 
 - `de.lemke.geticon` package (`app/src/main/java/de/lemke/geticon/`) is the entire app surface

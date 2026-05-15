@@ -39,9 +39,9 @@ import de.lemke.geticon.databinding.ActivityIconBinding
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
+import java.io.IOException
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import java.io.IOException
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
@@ -104,7 +104,10 @@ class IconActivity :
     private fun initViews() {
         setCustomBackAnimation(binding.root, showInAppReviewIfPossible = true)
         binding.icon.translateYWithAppBar(binding.root.appBarLayout, this)
-        binding.icon.setOnClickListener { viewModel.state.value.icon?.copyToClipboard(this, "icon", "icon.png") }
+        binding.icon.setOnClickListener {
+            viewModel.state.value.icon
+                ?.copyToClipboard(this, "icon", "icon.png")
+        }
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (!isRendering) viewModel.onMaskChanged(isChecked)
         }
@@ -112,7 +115,10 @@ class IconActivity :
             if (!isRendering) viewModel.onColorChanged(isChecked)
         }
         binding.sizeEdittext.setOnEditorActionListener { textView, _, _ ->
-            textView.text.toString().toIntOrNull()?.let { viewModel.onSizeChanged(it) }
+            textView.text
+                .toString()
+                .toIntOrNull()
+                ?.let { viewModel.onSizeChanged(it) }
             hideSoftInput()
             true
         }
@@ -121,8 +127,14 @@ class IconActivity :
         binding.sizeSeekbar.setOnSeekBarChangeListener(
             object : SeslSeekBar.OnSeekBarChangeListener {
                 override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
+
                 override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
-                override fun onProgressChanged(seekBar: SeslSeekBar, progress: Int, fromUser: Boolean) {
+
+                override fun onProgressChanged(
+                    seekBar: SeslSeekBar,
+                    progress: Int,
+                    fromUser: Boolean,
+                ) {
                     if (fromUser) viewModel.onSizeChanged(progress)
                 }
             },
@@ -164,7 +176,12 @@ class IconActivity :
         binding.colorCheckbox.isChecked = state.colorEnabled && state.isAdaptiveIcon
         binding.colorCheckbox.isEnabled = state.isAdaptiveIcon
         if (binding.sizeSeekbar.progress != state.size) binding.sizeSeekbar.progress = state.size
-        if (binding.sizeEdittext.text.toString().toIntOrNull() != state.size) binding.sizeEdittext.setText(state.size.toString())
+        if (binding.sizeEdittext.text
+                .toString()
+                .toIntOrNull() != state.size
+        ) {
+            binding.sizeEdittext.setText(state.size.toString())
+        }
         isRendering = false
         setButtonColors(state)
         if (!suggestViewSet && state.icon != null) {
@@ -196,33 +213,40 @@ class IconActivity :
         val state = viewModel.state.value
         val currentColor = if (isBackground) state.backgroundColor else state.foregroundColor
         val recentColors = if (isBackground) state.recentBackgroundColors else state.recentForegroundColors
-        val dialog = SeslColorPickerDialog(
-            this,
-            { color: Int ->
-                if (isBackground) {
-                    viewModel.onBackgroundColorChanged(color)
-                } else {
-                    viewModel.onForegroundColorChanged(color)
-                }
-            },
-            currentColor,
-            recentColors.toIntArray(),
-            true,
-        )
+        val dialog =
+            SeslColorPickerDialog(
+                this,
+                { color: Int ->
+                    if (isBackground) {
+                        viewModel.onBackgroundColorChanged(color)
+                    } else {
+                        viewModel.onForegroundColorChanged(color)
+                    }
+                },
+                currentColor,
+                recentColors.toIntArray(),
+                true,
+            )
         dialog.setTransparencyControlEnabled(true)
         dialog.show()
     }
 
-    private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> = SuggestAppBarModel.Builder(this).apply {
-        setTitle(getString(R.string.tap_icon_to_copy_to_clipboard))
-        setCloseClickListener { _, _ -> binding.root.setAppBarSuggestView(null) }
-        setButtons(
-            arrayListOf(
-                ButtonModel(
-                    text = getString(R.string.copy_icon),
-                    clickListener = { _, _ -> viewModel.state.value.icon?.copyToClipboard(this@IconActivity, "icon", "icon.png") },
-                ),
-            ),
-        )
-    }.build()
+    private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> =
+        SuggestAppBarModel
+            .Builder(this)
+            .apply {
+                setTitle(getString(R.string.tap_icon_to_copy_to_clipboard))
+                setCloseClickListener { _, _ -> binding.root.setAppBarSuggestView(null) }
+                setButtons(
+                    arrayListOf(
+                        ButtonModel(
+                            text = getString(R.string.copy_icon),
+                            clickListener = { _, _ ->
+                                viewModel.state.value.icon
+                                    ?.copyToClipboard(this@IconActivity, "icon", "icon.png")
+                            },
+                        ),
+                    ),
+                )
+            }.build()
 }

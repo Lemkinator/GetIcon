@@ -12,12 +12,12 @@ import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class IconUiState(
     val icon: Bitmap? = null,
@@ -47,7 +47,6 @@ class IconViewModel @Inject constructor(
     private val updateUserSettings: UpdateUserSettingsUseCase,
     private val generateIcon: GenerateIconUseCase,
 ) : ViewModel() {
-
     private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
 
     private val _state = MutableStateFlow(IconUiState())
@@ -68,30 +67,32 @@ class IconViewModel @Inject constructor(
         val userSettings = getUserSettings()
         val fg = userSettings.recentForegroundColors.first()
         val bg = userSettings.recentBackgroundColors.first()
-        val result = generateIcon(
-            appInfo,
-            userSettings.iconSize,
-            userSettings.maskEnabled,
-            userSettings.colorEnabled,
-            fg,
-            bg,
-            context.packageManager,
-        )
-        _state.value = IconUiState(
-            icon = result.bitmap,
-            appName = appInfo.loadLabel(context.packageManager).toString(),
-            size = userSettings.iconSize,
-            maskEnabled = userSettings.maskEnabled,
-            colorEnabled = userSettings.colorEnabled,
-            foregroundColor = fg,
-            backgroundColor = bg,
-            isAdaptiveIcon = result.isAdaptiveIcon,
-            hasMaskedAppIcon = result.hasMaskedAppIcon,
-            fileName = buildFileName(appInfo.packageName, userSettings.maskEnabled, userSettings.colorEnabled),
-            recentForegroundColors = userSettings.recentForegroundColors,
-            recentBackgroundColors = userSettings.recentBackgroundColors,
-            isLoading = false,
-        )
+        val result =
+            generateIcon(
+                appInfo,
+                userSettings.iconSize,
+                userSettings.maskEnabled,
+                userSettings.colorEnabled,
+                fg,
+                bg,
+                context.packageManager,
+            )
+        _state.value =
+            IconUiState(
+                icon = result.bitmap,
+                appName = appInfo.loadLabel(context.packageManager).toString(),
+                size = userSettings.iconSize,
+                maskEnabled = userSettings.maskEnabled,
+                colorEnabled = userSettings.colorEnabled,
+                foregroundColor = fg,
+                backgroundColor = bg,
+                isAdaptiveIcon = result.isAdaptiveIcon,
+                hasMaskedAppIcon = result.hasMaskedAppIcon,
+                fileName = buildFileName(appInfo.packageName, userSettings.maskEnabled, userSettings.colorEnabled),
+                recentForegroundColors = userSettings.recentForegroundColors,
+                recentBackgroundColors = userSettings.recentBackgroundColors,
+                isLoading = false,
+            )
     }
 
     fun onMaskChanged(enabled: Boolean) {
@@ -135,22 +136,24 @@ class IconViewModel @Inject constructor(
     private suspend fun regenerateIcon(newState: IconUiState) {
         val appInfo = applicationInfo ?: return
         _state.value = newState.copy(isLoading = true)
-        val result = generateIcon(
-            appInfo,
-            newState.size,
-            newState.maskEnabled,
-            newState.colorEnabled,
-            newState.foregroundColor,
-            newState.backgroundColor,
-            context.packageManager,
-        )
-        _state.value = newState.copy(
-            icon = result.bitmap,
-            isAdaptiveIcon = result.isAdaptiveIcon,
-            hasMaskedAppIcon = result.hasMaskedAppIcon,
-            fileName = buildFileName(appInfo.packageName, newState.maskEnabled, newState.colorEnabled),
-            isLoading = false,
-        )
+        val result =
+            generateIcon(
+                appInfo,
+                newState.size,
+                newState.maskEnabled,
+                newState.colorEnabled,
+                newState.foregroundColor,
+                newState.backgroundColor,
+                context.packageManager,
+            )
+        _state.value =
+            newState.copy(
+                icon = result.bitmap,
+                isAdaptiveIcon = result.isAdaptiveIcon,
+                hasMaskedAppIcon = result.hasMaskedAppIcon,
+                fileName = buildFileName(appInfo.packageName, newState.maskEnabled, newState.colorEnabled),
+                isLoading = false,
+            )
     }
 
     private fun buildFileName(
