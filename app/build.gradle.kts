@@ -103,32 +103,10 @@ android {
 dependencies {
     implementation(libs.common.utils)
     implementation(libs.datastore.preferences)
-    implementation(libs.bundles.room)
     implementation(libs.hilt.android)
-    ksp(libs.room.compiler)
     ksp(libs.hilt.compiler)
 
-    testImplementation(platform(libs.junit.jupiter.bom))
-    testImplementation(libs.bundles.unit.test)
-    testRuntimeOnly(libs.junit.jupiter.engine)
-    testRuntimeOnly(libs.junit.vintage.engine)
-    testImplementation(libs.junit4)
-    testImplementation(libs.bundles.robolectric.test)
-    testImplementation(libs.arch.core.testing)
-    testImplementation(libs.hilt.android.testing)
     testImplementation(libs.konsist)
-    kspTest(libs.hilt.android.compiler)
-
-    androidTestImplementation(platform(libs.junit.jupiter.bom))
-    androidTestImplementation(libs.bundles.android.test)
-    androidTestImplementation(libs.mockk.android)
-    androidTestImplementation(libs.turbine)
-    androidTestImplementation(libs.truth)
-    androidTestImplementation(libs.coroutines.test)
-    androidTestImplementation(libs.hilt.android.testing)
-    kspAndroidTest(libs.hilt.android.compiler)
-
-    debugImplementation(libs.fragment.testing)
 }
 
 spotless {

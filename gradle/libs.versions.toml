@@ -6,7 +6,6 @@ gradle = "9.2.1"
 hilt = "2.59.2"
 kotlin = "2.3.21"
 ksp = "2.3.8"
-room = "2.8.4"
 detekt = "2.0.0-alpha.3"
 konsist = "0.17.3"
 dependency-analysis = "3.12.0"
@@ -37,9 +36,6 @@ common-utils = { module = "io.github.lemkinator:common-utils", version.ref = "co
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore-preferences" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 junit-jupiter-bom = { module = "org.junit:junit-bom", version.ref = "junit-jupiter-bom" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api" }
 junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params" }
@@ -81,7 +77,6 @@ roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
 dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependency-analysis" }
 
 [bundles]
-room = ["room-ktx", "room-runtime"]
 unit-test = ["junit-jupiter-api", "junit-jupiter-params", "mockk", "turbine", "truth", "coroutines-test"]
 robolectric-test = ["robolectric", "roborazzi", "roborazzi-rule", "androidx-test-core", "androidx-test-core-ktx", "androidx-test-ext-junit"]
 android-test = ["androidx-test-runner", "androidx-test-rules", "androidx-test-ext-junit", "androidx-test-espresso-core", "androidx-test-espresso-intents"]
