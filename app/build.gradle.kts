@@ -77,7 +77,7 @@ android {
             excludes += "/META-INF/LICENSE*"
             excludes += "/META-INF/licenses/**"
         }
-        jniLibs.useLegacyPackaging = true
+        jniLibs.useLegacyPackaging = true // sets extractNativeLibs=true; affects only APK install-time .so extraction, not AAB publishing
     }
     testOptions {
         unitTests {
