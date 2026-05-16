@@ -23,11 +23,11 @@ fun com.android.build.api.dsl.ApplicationBuildType.addConstant(
 
 android {
     namespace = "de.lemke.geticon"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = "de.lemke.geticon"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 32
         versionName = "1.4.2"
     }
