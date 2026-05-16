@@ -28,7 +28,7 @@ style:
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
   MaxLineLength:
-    maxLineLength: 160
+    maxLineLength: 140
   ForbiddenComment:
     active: true
     comments: [ 'TODO:', 'FIXME:' ]
