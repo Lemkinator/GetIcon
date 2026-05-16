@@ -96,11 +96,13 @@ Four tools run as part of `./gradlew build`:
 once per clone:
 
 ```powershell
+git config core.autocrlf input           # Windows: prevents CRLF violations
 git config core.hooksPath .githooks
 ```
 
 The hook runs `spotlessCheck` and exits 1 with a
-`./gradlew spotlessApply` reminder on failure.
+`./gradlew spotlessApply` reminder on failure. It also fails fast with a
+targeted message if `core.autocrlf=true` is detected.
 
 **Dependency analysis** — manual hygiene tool (not in CI). Invoke with:
 
