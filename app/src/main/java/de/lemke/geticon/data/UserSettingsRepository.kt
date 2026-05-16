@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
+import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -42,13 +44,13 @@ class UserSettingsRepository @Inject constructor(
                     ?.split(",")
                     ?.mapNotNull { it.toIntOrNull() }
                     ?.takeIf { it.isNotEmpty() }
-                    ?: listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
+                    ?: listOf(DEFAULT_BACKGROUND_COLOR),
             recentForegroundColors =
                 prefs[KEY_RECENT_FOREGROUND_COLORS]
                     ?.split(",")
                     ?.mapNotNull { it.toIntOrNull() }
                     ?.takeIf { it.isNotEmpty() }
-                    ?: listOf(-1),
+                    ?: listOf(DEFAULT_FOREGROUND_COLOR),
         )
 
     private companion object {
@@ -75,5 +77,6 @@ data class UserSettings(
 ) {
     companion object {
         const val DEFAULT_BACKGROUND_COLOR = 0xFF0381FE.toInt()
+        const val DEFAULT_FOREGROUND_COLOR = -1
     }
 }
