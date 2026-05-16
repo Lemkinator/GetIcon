@@ -93,11 +93,6 @@ android {
         }
         animationsDisabled = true
     }
-    sourceSets {
-        named("test") {
-            resources.srcDir("src/test/screenshots")
-        }
-    }
 }
 
 dependencies {
@@ -106,6 +101,8 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
+    testImplementation(libs.junit.jupiter.api)
+    testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.konsist)
 }
 

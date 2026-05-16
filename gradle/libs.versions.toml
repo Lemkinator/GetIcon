@@ -12,55 +12,16 @@ dependency-analysis = "3.12.0"
 spotless = "8.4.0"
 ktlint = "1.7.1"
 kover = "0.9.8"
-roborazzi = "1.51.0"
-robolectric = "4.16"
 junit-android-framework = "2.0.1"
-junit-jupiter-bom = "5.14.1"
-junit-vintage = "5.14.1"
-junit4 = "4.13.2"
-mockk = "1.14.4"
-turbine = "1.2.1"
-truth = "1.4.5"
-coroutines-test = "1.10.2"
-androidx-test-core = "1.6.1"
-androidx-test-runner = "1.6.2"
-androidx-test-rules = "1.6.1"
-androidx-test-ext-junit = "1.2.1"
-androidx-test-espresso = "3.6.1"
-hilt-test = "2.59.2"
-arch-core-testing = "2.2.0"
-fragment-testing = "1.8.5"
+junit-jupiter = "5.14.1"
 
 [libraries]
 common-utils = { module = "io.github.lemkinator:common-utils", version.ref = "common-utils" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore-preferences" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
-junit-jupiter-bom = { module = "org.junit:junit-bom", version.ref = "junit-jupiter-bom" }
-junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api" }
-junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params" }
-junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine" }
-junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine" }
-junit4 = { module = "junit:junit", version.ref = "junit4" }
-mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
-mockk-android = { module = "io.mockk:mockk-android", version.ref = "mockk" }
-turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
-truth = { module = "com.google.truth:truth", version.ref = "truth" }
-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines-test" }
-robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
-roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
-roborazzi-rule = { module = "io.github.takahirom.roborazzi:roborazzi-junit-rule", version.ref = "roborazzi" }
-androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
-androidx-test-core-ktx = { module = "androidx.test:core-ktx", version.ref = "androidx-test-core" }
-androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
-androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidx-test-rules" }
-androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-test-ext-junit" }
-androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-test-espresso" }
-androidx-test-espresso-intents = { module = "androidx.test.espresso:espresso-intents", version.ref = "androidx-test-espresso" }
-arch-core-testing = { module = "androidx.arch.core:core-testing", version.ref = "arch-core-testing" }
-fragment-testing = { module = "androidx.fragment:fragment-testing", version.ref = "fragment-testing" }
-hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt-test" }
-hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt-test" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter" }
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 
 [plugins]
@@ -73,10 +34,4 @@ detekt = { id = "dev.detekt", version.ref = "detekt" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 android-junit = { id = "de.mannodermaus.android-junit", version.ref = "junit-android-framework" }
-roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
 dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependency-analysis" }
-
-[bundles]
-unit-test = ["junit-jupiter-api", "junit-jupiter-params", "mockk", "turbine", "truth", "coroutines-test"]
-robolectric-test = ["robolectric", "roborazzi", "roborazzi-rule", "androidx-test-core", "androidx-test-core-ktx", "androidx-test-ext-junit"]
-android-test = ["androidx-test-runner", "androidx-test-rules", "androidx-test-ext-junit", "androidx-test-espresso-core", "androidx-test-espresso-intents"]
