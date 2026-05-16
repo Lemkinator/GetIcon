@@ -18,6 +18,9 @@ class ProcessApkUseCase @Inject constructor(
     suspend operator fun invoke(uri: Uri): ApplicationInfo? =
         withContext(Dispatchers.IO) {
             try {
+                context.cacheDir
+                    .listFiles { _, name -> name.startsWith("extractIcon") && name.endsWith(".apk") }
+                    ?.forEach { it.delete() }
                 val tempFile = File.createTempFile("extractIcon", ".apk", context.cacheDir)
                 context.contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
                 val path = tempFile.absolutePath

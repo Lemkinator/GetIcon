@@ -13,6 +13,7 @@ import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -155,6 +156,12 @@ class IconViewModel @Inject constructor(
                 fileName = buildFileName(appInfo.packageName, newState.maskEnabled, newState.colorEnabled),
                 isLoading = false,
             )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        val path = applicationInfo?.sourceDir ?: return
+        if (path.startsWith(context.cacheDir.absolutePath)) File(path).delete()
     }
 
     private fun buildFileName(
