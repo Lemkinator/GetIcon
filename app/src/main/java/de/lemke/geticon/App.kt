@@ -13,5 +13,9 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         initCommonUtilsSettingsAndSetDarkMode()
+        // Clean up any temp APK files leaked by a previous crash (normal cleanup is in IconViewModel.onCleared)
+        cacheDir
+            .listFiles { _, name -> name.startsWith("extractIcon") && name.endsWith(".apk") }
+            ?.forEach { it.delete() }
     }
 }
