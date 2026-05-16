@@ -93,11 +93,17 @@ class IconActivity :
         val state = viewModel.state.value
         val icon = state.icon ?: return super.onOptionsItemSelected(item)
         return when (item.itemId) {
-            R.id.menu_item_icon_save_as_image ->
+            R.id.menu_item_icon_save_as_image -> {
                 exportBitmap(commonUtilsSettings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher).let { true }
+            }
 
-            R.id.menu_item_icon_share -> shareBitmap(icon, "icon.png").let { true }
-            else -> super.onOptionsItemSelected(item)
+            R.id.menu_item_icon_share -> {
+                shareBitmap(icon, "icon.png").let { true }
+            }
+
+            else -> {
+                super.onOptionsItemSelected(item)
+            }
         }
     }
 
