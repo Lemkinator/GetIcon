@@ -79,6 +79,17 @@ android {
         }
         jniLibs.useLegacyPackaging = true // sets extractNativeLibs=true; affects only APK install-time .so extraction, not AAB publishing
     }
+    lint {
+        warningsAsErrors = true
+        // checkDependencies = false: private AAR deps (oneui-design, common-utils) surface
+        // hundreds of unactionable warnings; flip to true once in-project surface is clean
+        checkDependencies = false
+        checkReleaseBuilds = true
+        abortOnError = true
+        baseline = file("lint-baseline.xml")
+        sarifReport = true
+        htmlReport = true
+    }
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
