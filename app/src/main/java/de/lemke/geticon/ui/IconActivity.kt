@@ -98,7 +98,8 @@ class IconActivity :
             }
 
             R.id.menu_item_icon_share -> {
-                shareBitmap(icon, "icon.png").let { true }
+                shareBitmap(icon, "icon.png")
+                true
             }
 
             else -> {
