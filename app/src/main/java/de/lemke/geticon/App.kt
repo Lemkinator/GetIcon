@@ -3,9 +3,6 @@ package de.lemke.geticon
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 /**
  * Main entry point into the application process.
@@ -16,11 +13,5 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         initCommonUtilsSettingsAndSetDarkMode()
-        // Clean up any temp APK files leaked by a previous crash (normal cleanup is in IconViewModel.onCleared)
-        CoroutineScope(Dispatchers.IO).launch {
-            cacheDir
-                .listFiles { _, name -> name.startsWith("extractIcon") && name.endsWith(".apk") }
-                ?.forEach { it.delete() }
-        }
     }
 }
