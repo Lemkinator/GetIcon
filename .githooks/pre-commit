@@ -1,0 +1,23 @@
+#!/bin/sh
+# Runs Spotless format check before allowing a commit.
+# Opt in: `git config core.hooksPath .githooks` (one-time per clone).
+
+set -e
+
+autocrlf=$(git config core.autocrlf 2>/dev/null || echo "unset")
+if [ "$autocrlf" = "true" ]; then
+    echo ""
+    echo "ERROR: core.autocrlf=true causes CRLF line-ending violations in spotlessCheck."
+    echo "Fix with: git config core.autocrlf input"
+    echo ""
+    exit 1
+fi
+
+echo "Running spotlessCheck..."
+./gradlew spotlessCheck --quiet || {
+    echo ""
+    echo "ERROR: Formatting violations detected."
+    echo "Fix with: ./gradlew spotlessApply"
+    echo ""
+    exit 1
+}

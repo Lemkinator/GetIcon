@@ -4,9 +4,11 @@ import android.R.anim.fade_in
 import android.R.anim.fade_out
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
+import android.content.pm.PackageManager.NameNotFoundException
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -55,7 +57,9 @@ import kotlinx.coroutines.launch
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
+class MainActivity :
+    AppCompatActivity(),
+    ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
@@ -65,7 +69,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         val splashScreen = installSplashScreen()
         prepareActivityTransformationFrom()
         super.onCreate(savedInstanceState)
-        if (SDK_INT >= 34) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
+        if (SDK_INT >= VERSION_CODES.UPSIDE_DOWN_CAKE) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
@@ -79,7 +83,7 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             commonutilsR.xml.preferences_design,
             commonutilsR.xml.preferences_general_language_and_image_save_location,
             commonutilsR.xml.preferences_dev_options_delete_app_data,
-            commonutilsR.xml.preferences_more_info
+            commonutilsR.xml.preferences_more_info,
         )
         initDrawer()
         initAppPicker()
@@ -93,11 +97,15 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.events.receiveAsFlow().collect { event ->
                     when (event) {
-                        is MainEvent.NavigateToIcon -> startActivity(
-                            Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
-                        )
+                        is MainEvent.NavigateToIcon -> {
+                            startActivity(
+                                Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo),
+                            )
+                        }
 
-                        MainEvent.ShowError -> toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
+                        MainEvent.ShowError -> {
+                            toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
+                        }
                     }
                 }
             }
@@ -116,21 +124,31 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_main, menu).let { true }
-    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-        R.id.menu_item_search -> startSearch().let { true }
-        else -> super.onOptionsItemSelected(item)
-    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean =
+        when (item.itemId) {
+            R.id.menu_item_search -> startSearch().let { true }
+            else -> super.onOptionsItemSelected(item)
+        }
 
     private fun applyFilter(query: String = "") {
         binding.appPicker.setSearchFilter(query) { binding.noEntryView.updateVisibility(it <= 0, binding.appPicker) }
     }
 
-    private fun startSearch() = binding.drawerLayout.startSearchMode(
-        onStart = { it.queryHint = getString(commonutilsR.string.commonutils_search_apps); it.setQuery(commonUtilsSettings.search, false) },
-        onQuery = { query, _ -> applyFilter(query); commonUtilsSettings.search = query; true },
-        onEnd = { applyFilter() },
-        onBackBehavior = DISMISS
-    )
+    private fun startSearch() =
+        binding.drawerLayout.startSearchMode(
+            onStart = {
+                it.queryHint = getString(commonutilsR.string.commonutils_search_apps)
+                it.setQuery(commonUtilsSettings.search, false)
+            },
+            onQuery = { query, _ ->
+                applyFilter(query)
+                commonUtilsSettings.search = query
+                true
+            },
+            onEnd = { applyFilter() },
+            onBackBehavior = DISMISS,
+        )
 
     private fun initDrawer() {
         binding.navigationView.onNavigationSingleClick { item ->
@@ -149,31 +167,32 @@ class MainActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
-    private fun initAppPicker() = binding.appPicker.apply {
-        appListOrder = ORDER_ASCENDING
-        ViewCompat.setOnApplyWindowInsetsListener(binding.appPicker) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
-            seslSetIndexTipEnabled(true, bars.top)
-            insets
-        }
-        hideSoftInputOnScroll()
-        if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
-        val appInfoDataHelper = SeslAppInfoDataHelper(context, GridAppDataBuilder::class.java)
-        val appInfoDataList = appInfoDataHelper.getPackages().onEach { it.subLabel = it.packageName }
-        submitList(appInfoDataList)
-        setOnItemClickEventListener { view, appInfo ->
-            try {
-                hideSoftInput()
-                view!!.transformToActivity(
-                    Intent(this@MainActivity, IconActivity::class.java)
-                        .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(appInfo.packageName, 0))
-                )
-                true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                toast(commonutilsR.string.commonutils_error_app_not_found)
-                false
+    private fun initAppPicker() =
+        binding.appPicker.apply {
+            appListOrder = ORDER_ASCENDING
+            ViewCompat.setOnApplyWindowInsetsListener(binding.appPicker) { _, insets ->
+                val bars = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+                seslSetIndexTipEnabled(true, bars.top)
+                insets
+            }
+            hideSoftInputOnScroll()
+            if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
+            val appInfoDataHelper = SeslAppInfoDataHelper(context, GridAppDataBuilder::class.java)
+            val appInfoDataList = appInfoDataHelper.getPackages().onEach { it.subLabel = it.packageName }
+            submitList(appInfoDataList)
+            setOnItemClickEventListener { view, appInfo ->
+                try {
+                    hideSoftInput()
+                    view?.transformToActivity(
+                        Intent(this@MainActivity, IconActivity::class.java)
+                            .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(appInfo.packageName, 0)),
+                    )
+                    true
+                } catch (e: NameNotFoundException) {
+                    Log.e("MainActivity", "App not found: ${appInfo.packageName}", e)
+                    toast(commonutilsR.string.commonutils_error_app_not_found)
+                    false
+                }
             }
         }
-    }
 }

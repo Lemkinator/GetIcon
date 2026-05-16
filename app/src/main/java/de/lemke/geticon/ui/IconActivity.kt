@@ -6,6 +6,7 @@ import android.content.res.ColorStateList.valueOf
 import android.graphics.Color.BLACK
 import android.graphics.Color.WHITE
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.CompoundButton
@@ -38,13 +39,16 @@ import de.lemke.geticon.databinding.ActivityIconBinding
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
+import java.io.IOException
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
-class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTranslator() {
+class IconActivity :
+    AppCompatActivity(),
+    ViewYTranslator by AppBarAwareYTranslator() {
     companion object {
         const val KEY_APPLICATION_INFO = "applicationInfo"
     }
@@ -58,10 +62,16 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         registerForActivityResult(StartActivityForResult()) { result: ActivityResult? ->
             val icon = viewModel.state.value.icon ?: return@registerForActivityResult
             try {
-                if (result?.resultCode == RESULT_OK) saveBitmapToUri(result.data?.data, icon)
-                else toast(commonutilsR.string.commonutils_error_saving_image)
-            } catch (e: Exception) {
-                e.printStackTrace()
+                if (result?.resultCode == RESULT_OK) {
+                    saveBitmapToUri(result.data?.data, icon)
+                } else {
+                    toast(commonutilsR.string.commonutils_error_saving_image)
+                }
+            } catch (e: IOException) {
+                Log.e("IconActivity", "Failed to save bitmap to URI", e)
+                toast(commonutilsR.string.commonutils_error_saving_image)
+            } catch (e: SecurityException) {
+                Log.e("IconActivity", "Failed to save bitmap to URI", e)
                 toast(commonutilsR.string.commonutils_error_saving_image)
             }
         }
@@ -83,7 +93,9 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         val state = viewModel.state.value
         val icon = state.icon ?: return super.onOptionsItemSelected(item)
         return when (item.itemId) {
-            R.id.menu_item_icon_save_as_image -> exportBitmap(commonUtilsSettings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher).let { true }
+            R.id.menu_item_icon_save_as_image ->
+                exportBitmap(commonUtilsSettings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher).let { true }
+
             R.id.menu_item_icon_share -> shareBitmap(icon, "icon.png").let { true }
             else -> super.onOptionsItemSelected(item)
         }
@@ -92,7 +104,10 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
     private fun initViews() {
         setCustomBackAnimation(binding.root, showInAppReviewIfPossible = true)
         binding.icon.translateYWithAppBar(binding.root.appBarLayout, this)
-        binding.icon.setOnClickListener { viewModel.state.value.icon?.copyToClipboard(this, "icon", "icon.png") }
+        binding.icon.setOnClickListener {
+            viewModel.state.value.icon
+                ?.copyToClipboard(this, "icon", "icon.png")
+        }
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (!isRendering) viewModel.onMaskChanged(isChecked)
         }
@@ -100,19 +115,30 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
             if (!isRendering) viewModel.onColorChanged(isChecked)
         }
         binding.sizeEdittext.setOnEditorActionListener { textView, _, _ ->
-            textView.text.toString().toIntOrNull()?.let { viewModel.onSizeChanged(it) }
+            textView.text
+                .toString()
+                .toIntOrNull()
+                ?.let { viewModel.onSizeChanged(it) }
             hideSoftInput()
             true
         }
         binding.sizeSeekbar.min = 16
         binding.sizeSeekbar.max = 1024
-        binding.sizeSeekbar.setOnSeekBarChangeListener(object : SeslSeekBar.OnSeekBarChangeListener {
-            override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
-            override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
-            override fun onProgressChanged(seekBar: SeslSeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser) viewModel.onSizeChanged(progress)
-            }
-        })
+        binding.sizeSeekbar.setOnSeekBarChangeListener(
+            object : SeslSeekBar.OnSeekBarChangeListener {
+                override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
+
+                override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
+
+                override fun onProgressChanged(
+                    seekBar: SeslSeekBar,
+                    progress: Int,
+                    fromUser: Boolean,
+                ) {
+                    if (fromUser) viewModel.onSizeChanged(progress)
+                }
+            },
+        )
         binding.colorButtonBackground.setOnClickListener { showColorPicker(isBackground = true) }
         binding.colorButtonForeground.setOnClickListener { showColorPicker(isBackground = false) }
     }
@@ -150,7 +176,12 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         binding.colorCheckbox.isChecked = state.colorEnabled && state.isAdaptiveIcon
         binding.colorCheckbox.isEnabled = state.isAdaptiveIcon
         if (binding.sizeSeekbar.progress != state.size) binding.sizeSeekbar.progress = state.size
-        if (binding.sizeEdittext.text.toString().toIntOrNull() != state.size) binding.sizeEdittext.setText(state.size.toString())
+        if (binding.sizeEdittext.text
+                .toString()
+                .toIntOrNull() != state.size
+        ) {
+            binding.sizeEdittext.setText(state.size.toString())
+        }
         isRendering = false
         setButtonColors(state)
         if (!suggestViewSet && state.icon != null) {
@@ -182,29 +213,40 @@ class IconActivity : AppCompatActivity(), ViewYTranslator by AppBarAwareYTransla
         val state = viewModel.state.value
         val currentColor = if (isBackground) state.backgroundColor else state.foregroundColor
         val recentColors = if (isBackground) state.recentBackgroundColors else state.recentForegroundColors
-        val dialog = SeslColorPickerDialog(
-            this,
-            { color: Int ->
-                if (isBackground) viewModel.onBackgroundColorChanged(color)
-                else viewModel.onForegroundColorChanged(color)
-            },
-            currentColor, recentColors.toIntArray(), true
-        )
+        val dialog =
+            SeslColorPickerDialog(
+                this,
+                { color: Int ->
+                    if (isBackground) {
+                        viewModel.onBackgroundColorChanged(color)
+                    } else {
+                        viewModel.onForegroundColorChanged(color)
+                    }
+                },
+                currentColor,
+                recentColors.toIntArray(),
+                true,
+            )
         dialog.setTransparencyControlEnabled(true)
         dialog.show()
     }
 
     private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> =
-        SuggestAppBarModel.Builder(this).apply {
-            setTitle(getString(R.string.tap_icon_to_copy_to_clipboard))
-            setCloseClickListener { _, _ -> binding.root.setAppBarSuggestView(null) }
-            setButtons(
-                arrayListOf(
-                    ButtonModel(
-                        text = getString(R.string.copy_icon),
-                        clickListener = { _, _ -> viewModel.state.value.icon?.copyToClipboard(this@IconActivity, "icon", "icon.png") },
-                    )
+        SuggestAppBarModel
+            .Builder(this)
+            .apply {
+                setTitle(getString(R.string.tap_icon_to_copy_to_clipboard))
+                setCloseClickListener { _, _ -> binding.root.setAppBarSuggestView(null) }
+                setButtons(
+                    arrayListOf(
+                        ButtonModel(
+                            text = getString(R.string.copy_icon),
+                            clickListener = { _, _ ->
+                                viewModel.state.value.icon
+                                    ?.copyToClipboard(this@IconActivity, "icon", "icon.png")
+                            },
+                        ),
+                    ),
                 )
-            )
-        }.build()
+            }.build()
 }

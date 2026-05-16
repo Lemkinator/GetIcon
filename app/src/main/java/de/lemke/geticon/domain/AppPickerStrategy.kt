@@ -10,7 +10,13 @@ import kotlin.collections.onEach
 
 @Suppress("unused")
 @Keep
-class AppPickerStrategy(appPickerContext: AppPickerContext) : AppItemStrategy(appPickerContext) {
-    override fun convert(dataList: List<AppData>, comparator: Comparator<ViewData>?) =
-        super.convert(dataList, comparator).onEach { if (it is AppInfoViewData) it.searchable = listOfNotNull(it.label, it.packageName) }
+class AppPickerStrategy(
+    appPickerContext: AppPickerContext,
+) : AppItemStrategy(appPickerContext) {
+    override fun convert(
+        dataList: List<AppData>,
+        comparator: Comparator<ViewData>?,
+    ) = super.convert(dataList, comparator).onEach {
+        if (it is AppInfoViewData) it.searchable = listOfNotNull(it.label, it.packageName)
+    }
 }
