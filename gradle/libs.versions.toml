@@ -13,7 +13,7 @@ spotless = "8.4.0"
 ktlint = "1.7.1"
 kover = "0.9.8"
 junit-android-framework = "2.0.1"
-junit-jupiter = "5.14.1"
+junit-jupiter = "5.14.4"
 
 [libraries]
 common-utils = { module = "io.github.lemkinator:common-utils", version.ref = "common-utils" }
