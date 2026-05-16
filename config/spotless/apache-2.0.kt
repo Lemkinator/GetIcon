@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2026 Leonard Lemke
+ * Copyright 2022-$YEAR Leonard Lemke
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,3 @@
  * limitations under the License.
  */
 
-package de.lemke.geticon
-
-import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
-
-/**
- * Main entry point into the application process.
- * Registered in the AndroidManifest.xml file.
- */
-@HiltAndroidApp
-class App : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        initCommonUtilsSettingsAndSetDarkMode()
-    }
-}
