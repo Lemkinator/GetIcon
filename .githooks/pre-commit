@@ -1,5 +1,5 @@
 #!/bin/sh
-# Runs Spotless format check before allowing a commit.
+# Runs static analysis (Spotless + Detekt) before allowing a commit.
 # Opt in: `git config core.hooksPath .githooks` (one-time per clone).
 
 set -e
@@ -13,11 +13,12 @@ if [ "$autocrlf" = "true" ]; then
     exit 1
 fi
 
-echo "Running spotlessCheck..."
-./gradlew spotlessCheck --quiet || {
+echo "Running staticAnalysis..."
+./gradlew staticAnalysis --quiet || {
     echo ""
-    echo "ERROR: Formatting violations detected."
-    echo "Fix with: ./gradlew spotlessApply"
+    echo "ERROR: Static analysis violations detected."
+    echo "Fix formatting with: ./gradlew spotlessApply"
+    echo "Fix Detekt issues:    ./gradlew detekt"
     echo ""
     exit 1
 }
