@@ -5,9 +5,17 @@ on:
     branches: [ main ]
     paths: [ 'app/build.gradle.kts' ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
 jobs:
   build-and-publish-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       GH_USERNAME: ${{ secrets.GH_USERNAME }}
       GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
@@ -25,18 +33,11 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '21'
 
-      - name: Cache Gradle and wrapper
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Extract version information
         id: version_info
@@ -45,18 +46,12 @@ jobs:
           OLD_VERSION_CODE=$(git show $PREV:app/build.gradle.kts | grep 'versionCode' | sed -E 's/.*versionCode\s*=\s*([0-9]+).*/\1/')
           VERSION_CODE=$(grep 'versionCode' app/build.gradle.kts | sed -E 's/.*versionCode\s*=\s*([0-9]+).*/\1/')
           VERSION_NAME=$(grep 'versionName' app/build.gradle.kts | sed -E 's/.*versionName\s*=\s*"([^"]+)".*/\1/')
-          
-          # Set outputs
+
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
           echo "changed=$([ "$OLD_VERSION_CODE" != "$VERSION_CODE" ] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-          
-          # Display info
-          echo "Version: $VERSION_NAME (code: $VERSION_CODE, changed: $([ "$OLD_VERSION_CODE" != "$VERSION_CODE" ] && echo "true" || echo "false"))"
 
-      # All subsequent steps only run if version code has changed
-      - name: Make Gradle executable
-        run: chmod +x ./gradlew
+          echo "Version: $VERSION_NAME (code: $VERSION_CODE, changed: $([ "$OLD_VERSION_CODE" != "$VERSION_CODE" ] && echo "true" || echo "false"))"
 
       - name: Prepare for build
         if: steps.version_info.outputs.changed == 'true'
@@ -65,7 +60,7 @@ jobs:
       - name: Build APK
         if: steps.version_info.outputs.changed == 'true'
         run: |
-          ./gradlew :app:assembleRelease
+          chmod +x ./gradlew && ./gradlew :app:assembleRelease --stacktrace
           mkdir -p app/release
           cp -v -r app/build/outputs/apk/release app
 
@@ -89,7 +84,7 @@ jobs:
       - name: Prepare Play Store release
         if: steps.version_info.outputs.changed == 'true'
         run: |
-          ./gradlew :app:bundleRelease
+          ./gradlew :app:bundleRelease --stacktrace
           mkdir -p app/build/outputs/whatsNew
           echo "Automated Upload" > app/build/outputs/whatsNew/whatsnew-en-US
           echo "Automatischer Upload" > app/build/outputs/whatsNew/whatsnew-de-DE
