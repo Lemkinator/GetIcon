@@ -34,14 +34,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.checkAppStartAndHandleOOBE
+import de.lemke.commonutils.collectEvents
 import de.lemke.commonutils.configureCommonUtilsSplashScreen
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.onNavigationSingleClick
@@ -68,8 +66,6 @@ import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISM
 import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
@@ -109,20 +105,16 @@ class MainActivity :
     }
 
     private fun collectEvents() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.events.receiveAsFlow().collect { event ->
-                    when (event) {
-                        is MainEvent.NavigateToIcon -> {
-                            startActivity(
-                                Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo),
-                            )
-                        }
+        collectEvents(viewModel.events) { event ->
+            when (event) {
+                is MainEvent.NavigateToIcon -> {
+                    startActivity(
+                        Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo),
+                    )
+                }
 
-                        MainEvent.ShowError -> {
-                            toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
-                        }
-                    }
+                MainEvent.ShowError -> {
+                    toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
                 }
             }
         }

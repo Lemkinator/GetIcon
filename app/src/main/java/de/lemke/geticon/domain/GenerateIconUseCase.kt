@@ -30,8 +30,9 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.drawable.toBitmap
 import androidx.reflect.app.SeslApplicationPackageManagerReflector.semGetApplicationIconForIconTray
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.lemke.commonutils.di.DefaultDispatcher
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
 data class IconResult(
@@ -42,6 +43,7 @@ data class IconResult(
 
 class GenerateIconUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) {
     @SuppressLint("RestrictedApi")
     suspend operator fun invoke(
@@ -53,7 +55,7 @@ class GenerateIconUseCase @Inject constructor(
         backgroundColor: Int,
         packageManager: PackageManager,
     ): IconResult =
-        withContext(Dispatchers.Default) {
+        withContext(defaultDispatcher) {
             val appIcon: Drawable =
                 try {
                     applicationInfo.loadIcon(packageManager)

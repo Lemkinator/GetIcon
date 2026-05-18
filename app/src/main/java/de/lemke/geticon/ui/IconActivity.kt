@@ -33,14 +33,13 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.graphics.toColor
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.picker3.app.SeslColorPickerDialog
 import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.collectEvents
+import de.lemke.commonutils.collectState
 import de.lemke.commonutils.copyToClipboard
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.exportBitmap
@@ -56,8 +55,6 @@ import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import java.io.IOException
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
@@ -168,23 +165,15 @@ class IconActivity :
     }
 
     private fun collectState() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.state.collect { renderState(it) }
-            }
-        }
+        collectState(viewModel.state) { renderState(it) }
     }
 
     private fun collectEvents() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.events.receiveAsFlow().collect { event ->
-                    when (event) {
-                        IconEvent.Finish -> {
-                            toast(commonutilsR.string.commonutils_error_app_not_found)
-                            finishAfterTransition()
-                        }
-                    }
+        collectEvents(viewModel.events) { event ->
+            when (event) {
+                IconEvent.Finish -> {
+                    toast(commonutilsR.string.commonutils_error_app_not_found)
+                    finishAfterTransition()
                 }
             }
         }
