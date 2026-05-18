@@ -4,7 +4,7 @@
 
 set -e
 
-autocrlf=$(git config core.autocrlf 2>/dev/null || echo "unset")
+autocrlf=$(git config --bool core.autocrlf 2>/dev/null || echo "false")
 if [ "$autocrlf" = "true" ]; then
     echo ""
     echo "ERROR: core.autocrlf=true causes CRLF line-ending violations in spotlessCheck."
@@ -16,7 +16,7 @@ fi
 echo "Running staticAnalysis..."
 ./gradlew staticAnalysis --quiet || {
     echo ""
-    echo "ERROR: Static analysis violations detected."
+    echo "ERROR: Static analysis or build failed."
     echo "Fix formatting with: ./gradlew spotlessApply"
     echo "Fix Detekt issues:    ./gradlew detekt"
     echo ""
