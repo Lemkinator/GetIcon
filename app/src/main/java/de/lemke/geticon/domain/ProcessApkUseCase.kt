@@ -21,18 +21,20 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.lemke.commonutils.di.IoDispatcher
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
 class ProcessApkUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
     suspend operator fun invoke(uri: Uri): ApplicationInfo? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             try {
                 val tempFile = File.createTempFile("extractIcon", ".apk", context.cacheDir)
                 context.contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }

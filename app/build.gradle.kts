@@ -123,10 +123,14 @@ android {
 }
 
 dependencies {
+    implementation(libs.oneui.design)
+    implementation(libs.oneui.icons)
     implementation(libs.common.utils)
     implementation(libs.datastore.preferences)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+
+    debugImplementation(libs.leakcanary)
 
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
