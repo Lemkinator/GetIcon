@@ -31,7 +31,7 @@ import kotlinx.coroutines.withContext
 
 class ProcessApkUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
     suspend operator fun invoke(uri: Uri): ApplicationInfo? =
         withContext(ioDispatcher) {

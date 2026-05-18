@@ -43,7 +43,7 @@ data class IconResult(
 
 class GenerateIconUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+    @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) {
     @SuppressLint("RestrictedApi")
     suspend operator fun invoke(
