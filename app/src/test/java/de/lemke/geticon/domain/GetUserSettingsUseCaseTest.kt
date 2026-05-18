@@ -21,6 +21,7 @@ import de.lemke.geticon.data.UserSettingsRepository
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 
 class GetUserSettingsUseCaseTest : FunSpec({
@@ -33,10 +34,11 @@ class GetUserSettingsUseCaseTest : FunSpec({
                 iconSize = 256,
                 maskEnabled = false,
                 colorEnabled = true,
-                recentForegroundColors = listOf(-1),
+                recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
                 recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
             )
         coEvery { repo.getSettings() } returns expected
         useCase() shouldBe expected
+        coVerify(exactly = 1) { repo.getSettings() }
     }
 })

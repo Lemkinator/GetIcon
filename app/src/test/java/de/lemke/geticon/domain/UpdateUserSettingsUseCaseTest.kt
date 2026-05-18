@@ -31,12 +31,20 @@ class UpdateUserSettingsUseCaseTest : FunSpec({
 
     test("delegates transform to repository") {
         val transformSlot = slot<(UserSettings) -> UserSettings>()
+        val base =
+            UserSettings(
+                iconSize = 512,
+                maskEnabled = true,
+                colorEnabled = false,
+                recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
+                recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
+            )
         val updated =
             UserSettings(
                 iconSize = 128,
                 maskEnabled = true,
                 colorEnabled = false,
-                recentForegroundColors = listOf(-1),
+                recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
                 recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
             )
         coEvery { repo.updateSettings(capture(transformSlot)) } returns updated
@@ -45,5 +53,6 @@ class UpdateUserSettingsUseCaseTest : FunSpec({
 
         result shouldBe updated
         coVerify(exactly = 1) { repo.updateSettings(any()) }
+        transformSlot.captured(base).iconSize shouldBe 128
     }
 })

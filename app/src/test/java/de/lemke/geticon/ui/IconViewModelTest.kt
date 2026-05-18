@@ -29,6 +29,7 @@ import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -49,12 +50,13 @@ class IconViewModelTest : ShouldSpec({
             iconSize = 512,
             maskEnabled = true,
             colorEnabled = false,
-            recentForegroundColors = listOf(-1),
+            recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
             recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
         )
     val mockIconResult = IconResult(bitmap = mockk<Bitmap>(relaxed = true), isAdaptiveIcon = true, hasMaskedAppIcon = false)
 
     beforeEach {
+        clearMocks(getUserSettings, updateUserSettings, generateIcon)
         every { mockContext.packageManager } returns mockPackageManager
         every { mockContext.cacheDir } returns File(System.getProperty("java.io.tmpdir") ?: "/tmp")
         coEvery { getUserSettings() } returns defaultSettings
@@ -200,6 +202,27 @@ class IconViewModelTest : ShouldSpec({
             val viewModel = buildViewModel(appInfo)
             viewModel.onSizeChanged(256)
             coVerify(atLeast = 1) { updateUserSettings(any()) }
+        }
+
+        should("onCleared skips file deletion when sourceDir is not in cacheDir") {
+            appInfo.sourceDir = "/data/app/com.example.test.apk"
+            val viewModel = buildViewModel(appInfo)
+            viewModel.javaClass
+                .getDeclaredMethod("onCleared")
+                .also { it.isAccessible = true }
+                .invoke(viewModel)
+        }
+
+        should("onCleared deletes temp file when sourceDir is in cacheDir") {
+            val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
+            val tmpFile = File(tmpDir, "test_icon.apk").also { it.createNewFile() }
+            appInfo.sourceDir = tmpFile.absolutePath
+            val viewModel = buildViewModel(appInfo)
+            viewModel.javaClass
+                .getDeclaredMethod("onCleared")
+                .also { it.isAccessible = true }
+                .invoke(viewModel)
+            tmpFile.exists() shouldBe false
         }
     }
 })

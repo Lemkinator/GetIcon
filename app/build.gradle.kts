@@ -193,12 +193,13 @@ kover {
                     "hilt_aggregated_deps.*",
                     "*.di.*",
                     "*Activity",
+                    "*Activity\$*",
                 )
             }
         }
         verify {
             rule {
-                minBound(65)
+                minBound(70)
             }
         }
     }
