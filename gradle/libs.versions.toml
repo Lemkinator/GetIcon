@@ -1,6 +1,7 @@
 [versions]
 aboutlibraries = "14.2.0"
 common-utils = "1.0.0"
+coroutines-test = "1.11.0"
 datastore-preferences = "1.2.1"
 dependency-analysis = "3.12.0"
 detekt = "2.0.0-alpha.3"
@@ -9,6 +10,7 @@ hilt = "2.59.2"
 junit-android-framework = "2.0.1"
 junit-jupiter = "6.0.3"
 konsist = "0.17.3"
+kotest = "6.1.11"
 kotlin = "2.3.21"
 kover = "0.9.8"
 ksp = "2.3.8"
@@ -16,21 +18,32 @@ ksp = "2.3.8"
 #noinspection UnusedVersionCatalogEntry
 ktlint = "1.7.1"
 leakcanary = "2.14"
+mockk = "1.14.9"
 oneui-design = "0.9.11+oneui8"
 oneui-icons = "1.1.0"
 spotless = "8.5.1"
+turbine = "1.2.1"
 
 [libraries]
 common-utils = { module = "io.github.lemkinator:common-utils", version.ref = "common-utils" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines-test" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore-preferences" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter" }
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 leakcanary = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 oneui-design = { module = "io.github.tribalfs:oneui-design", version.ref = "oneui-design" }
 oneui-icons = { module = "io.github.oneuiproject:icons", version.ref = "oneui-icons" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+
+[bundles]
+unit-test = ["kotest-runner-junit5", "kotest-assertions-core", "kotest-property", "mockk", "turbine", "coroutines-test"]
 
 [plugins]
 aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutlibraries" }
