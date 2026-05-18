@@ -123,6 +123,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.oneui.design)
+    implementation(libs.oneui.icons)
     implementation(libs.common.utils)
     implementation(libs.datastore.preferences)
     implementation(libs.hilt.android)
