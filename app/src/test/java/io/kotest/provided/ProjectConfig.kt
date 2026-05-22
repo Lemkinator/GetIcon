@@ -19,7 +19,6 @@ package io.kotest.provided
 import de.lemke.geticon.TestDispatcherListener
 import io.kotest.core.config.AbstractProjectConfig
 
-@Suppress("unused") // Kotest discovers this by convention from the io.kotest.provided package
 class ProjectConfig : AbstractProjectConfig() {
     override val extensions = listOf(TestDispatcherListener())
 }
