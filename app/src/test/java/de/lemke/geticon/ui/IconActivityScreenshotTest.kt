@@ -17,7 +17,6 @@
 package de.lemke.geticon.ui
 
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -34,12 +33,10 @@ import org.robolectric.annotation.GraphicsMode
 class IconActivityScreenshotTest {
     @Test
     fun iconActivity_default() {
-        val appInfo =
-            ApplicationInfo().apply {
-                packageName = ApplicationProvider.getApplicationContext<App>().packageName
-            }
+        val context = ApplicationProvider.getApplicationContext<App>()
+        val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
         val intent =
-            Intent(ApplicationProvider.getApplicationContext(), IconActivity::class.java)
+            Intent(context, IconActivity::class.java)
                 .putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
         ActivityScenario.launch<IconActivity>(intent).use { scenario ->
             scenario.onActivity { activity ->
