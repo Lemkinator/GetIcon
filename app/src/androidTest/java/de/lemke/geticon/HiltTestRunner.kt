@@ -25,5 +25,5 @@ class HiltTestRunner : AndroidJUnitRunner() {
         cl: ClassLoader,
         name: String,
         ctx: Context,
-    ): Application = android.app.Instrumentation.newApplication(TestApplication_Application::class.java, ctx)
+    ): Application = super.newApplication(cl, TestApplication_Application::class.java.name, ctx)
 }
