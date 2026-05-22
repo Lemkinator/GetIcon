@@ -16,12 +16,16 @@
 
 package de.lemke.geticon
 
-import dagger.hilt.android.testing.HiltTestApplication
+import android.app.Application
+import dagger.hilt.android.testing.CustomTestApplication
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 
-class TestApp : HiltTestApplication() {
+open class TestApp : Application() {
     override fun onCreate() {
         super.onCreate()
         initCommonUtilsSettingsAndSetDarkMode()
     }
 }
+
+@CustomTestApplication(TestApp::class)
+interface TestApplication
