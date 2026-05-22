@@ -3,8 +3,6 @@ name: CI
 on:
   pull_request:
   merge_group:
-  push:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -141,6 +139,8 @@ jobs:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
+  # Runs only when push trigger is active (currently disabled — CI runs on PRs only).
+  # To enable: add `push: branches: [main]` to the `on:` block above.
   dependency-submission:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
