@@ -19,57 +19,59 @@ package de.lemke.geticon.data
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 
-class UserSettingsRepositoryTest : ShouldSpec({
-    lateinit var repo: UserSettingsRepository
+class UserSettingsRepositoryTest : ShouldSpec(
+    {
+        lateinit var repo: UserSettingsRepository
 
-    beforeEach { repo = UserSettingsRepository(FakeDataStore()) }
+        beforeEach { repo = UserSettingsRepository(FakeDataStore()) }
 
-    should("return defaults on fresh store") {
-        val settings = repo.getSettings()
-        settings.iconSize shouldBe 512
-        settings.maskEnabled shouldBe true
-        settings.colorEnabled shouldBe false
-        settings.recentForegroundColors shouldBe listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
-        settings.recentBackgroundColors shouldBe listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
-    }
+        should("return defaults on fresh store") {
+            val settings = repo.getSettings()
+            settings.iconSize shouldBe 512
+            settings.maskEnabled shouldBe true
+            settings.colorEnabled shouldBe false
+            settings.recentForegroundColors shouldBe listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
+            settings.recentBackgroundColors shouldBe listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
+        }
 
-    should("persist iconSize round-trip") {
-        repo.updateSettings { it.copy(iconSize = 256) }
-        repo.getSettings().iconSize shouldBe 256
-    }
+        should("persist iconSize round-trip") {
+            repo.updateSettings { it.copy(iconSize = 256) }
+            repo.getSettings().iconSize shouldBe 256
+        }
 
-    should("persist maskEnabled = false") {
-        repo.updateSettings { it.copy(maskEnabled = false) }
-        repo.getSettings().maskEnabled shouldBe false
-    }
+        should("persist maskEnabled = false") {
+            repo.updateSettings { it.copy(maskEnabled = false) }
+            repo.getSettings().maskEnabled shouldBe false
+        }
 
-    should("persist colorEnabled = true") {
-        repo.updateSettings { it.copy(colorEnabled = true) }
-        repo.getSettings().colorEnabled shouldBe true
-    }
+        should("persist colorEnabled = true") {
+            repo.updateSettings { it.copy(colorEnabled = true) }
+            repo.getSettings().colorEnabled shouldBe true
+        }
 
-    should("persist recentForegroundColors round-trip") {
-        val colors = listOf(0xFF0000FF.toInt(), 0xFF00FF00.toInt())
-        repo.updateSettings { it.copy(recentForegroundColors = colors) }
-        repo.getSettings().recentForegroundColors shouldBe colors
-    }
+        should("persist recentForegroundColors round-trip") {
+            val colors = listOf(0xFF0000FF.toInt(), 0xFF00FF00.toInt())
+            repo.updateSettings { it.copy(recentForegroundColors = colors) }
+            repo.getSettings().recentForegroundColors shouldBe colors
+        }
 
-    should("persist recentBackgroundColors round-trip") {
-        val colors = listOf(0xFFFF0000.toInt(), 0xFF0000FF.toInt())
-        repo.updateSettings { it.copy(recentBackgroundColors = colors) }
-        repo.getSettings().recentBackgroundColors shouldBe colors
-    }
+        should("persist recentBackgroundColors round-trip") {
+            val colors = listOf(0xFFFF0000.toInt(), 0xFF0000FF.toInt())
+            repo.updateSettings { it.copy(recentBackgroundColors = colors) }
+            repo.getSettings().recentBackgroundColors shouldBe colors
+        }
 
-    should("return updated settings from updateSettings") {
-        val result = repo.updateSettings { it.copy(iconSize = 128) }
-        result.iconSize shouldBe 128
-    }
+        should("return updated settings from updateSettings") {
+            val result = repo.updateSettings { it.copy(iconSize = 128) }
+            result.iconSize shouldBe 128
+        }
 
-    should("apply multiple sequential updates") {
-        repo.updateSettings { it.copy(iconSize = 64) }
-        repo.updateSettings { it.copy(maskEnabled = false) }
-        val settings = repo.getSettings()
-        settings.iconSize shouldBe 64
-        settings.maskEnabled shouldBe false
-    }
-})
+        should("apply multiple sequential updates") {
+            repo.updateSettings { it.copy(iconSize = 64) }
+            repo.updateSettings { it.copy(maskEnabled = false) }
+            val settings = repo.getSettings()
+            settings.iconSize shouldBe 64
+            settings.maskEnabled shouldBe false
+        }
+    },
+)

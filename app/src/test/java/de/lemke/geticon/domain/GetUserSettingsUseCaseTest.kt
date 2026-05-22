@@ -24,21 +24,23 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 
-class GetUserSettingsUseCaseTest : FunSpec({
-    val repo = mockk<UserSettingsRepository>()
-    val useCase = GetUserSettingsUseCase(repo)
+class GetUserSettingsUseCaseTest : FunSpec(
+    {
+        val repo = mockk<UserSettingsRepository>()
+        val useCase = GetUserSettingsUseCase(repo)
 
-    test("delegates to repository") {
-        val expected =
-            UserSettings(
-                iconSize = 256,
-                maskEnabled = false,
-                colorEnabled = true,
-                recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
-                recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
-            )
-        coEvery { repo.getSettings() } returns expected
-        useCase() shouldBe expected
-        coVerify(exactly = 1) { repo.getSettings() }
-    }
-})
+        test("delegates to repository") {
+            val expected =
+                UserSettings(
+                    iconSize = 256,
+                    maskEnabled = false,
+                    colorEnabled = true,
+                    recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
+                    recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
+                )
+            coEvery { repo.getSettings() } returns expected
+            useCase() shouldBe expected
+            coVerify(exactly = 1) { repo.getSettings() }
+        }
+    },
+)

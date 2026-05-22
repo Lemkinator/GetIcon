@@ -27,49 +27,51 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.receiveAsFlow
 
-class MainViewModelTest : ShouldSpec({
-    val processApk = mockk<ProcessApkUseCase>()
-    lateinit var viewModel: MainViewModel
+class MainViewModelTest : ShouldSpec(
+    {
+        val processApk = mockk<ProcessApkUseCase>()
+        lateinit var viewModel: MainViewModel
 
-    beforeEach { viewModel = MainViewModel(processApk) }
+        beforeEach { viewModel = MainViewModel(processApk) }
 
-    should("emit ShowError when uri is null") {
-        viewModel.events.receiveAsFlow().test {
-            viewModel.onApkPicked(null)
-            awaitItem() shouldBe MainEvent.ShowError
+        should("emit ShowError when uri is null") {
+            viewModel.events.receiveAsFlow().test {
+                viewModel.onApkPicked(null)
+                awaitItem() shouldBe MainEvent.ShowError
+            }
         }
-    }
 
-    should("emit ShowError when processApk returns null") {
-        val uri = mockk<Uri>()
-        coEvery { processApk(uri) } returns null
+        should("emit ShowError when processApk returns null") {
+            val uri = mockk<Uri>()
+            coEvery { processApk(uri) } returns null
 
-        viewModel.events.receiveAsFlow().test {
-            viewModel.onApkPicked(uri)
-            awaitItem() shouldBe MainEvent.ShowError
+            viewModel.events.receiveAsFlow().test {
+                viewModel.onApkPicked(uri)
+                awaitItem() shouldBe MainEvent.ShowError
+            }
         }
-    }
 
-    should("emit NavigateToIcon when processApk succeeds") {
-        val uri = mockk<Uri>()
-        val appInfo = mockk<ApplicationInfo>()
-        coEvery { processApk(uri) } returns appInfo
+        should("emit NavigateToIcon when processApk succeeds") {
+            val uri = mockk<Uri>()
+            val appInfo = mockk<ApplicationInfo>()
+            coEvery { processApk(uri) } returns appInfo
 
-        viewModel.events.receiveAsFlow().test {
-            viewModel.onApkPicked(uri)
-            awaitItem().shouldBeInstanceOf<MainEvent.NavigateToIcon>()
+            viewModel.events.receiveAsFlow().test {
+                viewModel.onApkPicked(uri)
+                awaitItem().shouldBeInstanceOf<MainEvent.NavigateToIcon>()
+            }
         }
-    }
 
-    should("NavigateToIcon carries the returned ApplicationInfo") {
-        val uri = mockk<Uri>()
-        val appInfo = mockk<ApplicationInfo>()
-        coEvery { processApk(uri) } returns appInfo
+        should("NavigateToIcon carries the returned ApplicationInfo") {
+            val uri = mockk<Uri>()
+            val appInfo = mockk<ApplicationInfo>()
+            coEvery { processApk(uri) } returns appInfo
 
-        viewModel.events.receiveAsFlow().test {
-            viewModel.onApkPicked(uri)
-            val event = awaitItem() as MainEvent.NavigateToIcon
-            event.applicationInfo shouldBe appInfo
+            viewModel.events.receiveAsFlow().test {
+                viewModel.onApkPicked(uri)
+                val event = awaitItem() as MainEvent.NavigateToIcon
+                event.applicationInfo shouldBe appInfo
+            }
         }
-    }
-})
+    },
+)
