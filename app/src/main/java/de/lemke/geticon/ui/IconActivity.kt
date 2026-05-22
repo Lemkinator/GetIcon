@@ -126,9 +126,10 @@ class IconActivity :
         setCustomBackAnimation(binding.root, showInAppReviewIfPossible = true)
         binding.icon.translateYWithAppBar(binding.root.appBarLayout, this)
         binding.icon.setOnLongClickListener {
-            viewModel.state.value.icon
-                ?.copyToClipboard(this, "icon", "icon.png")
-            true
+            viewModel.state.value.icon?.let {
+                it.copyToClipboard(this, "icon", "icon.png")
+                true
+            } ?: false
         }
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (!isRendering) viewModel.onMaskChanged(isChecked)
