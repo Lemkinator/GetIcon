@@ -3,6 +3,8 @@ name: CI
 on:
   pull_request:
   merge_group:
+  push:
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,10 +32,19 @@ jobs:
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+      - name: Upload static analysis reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-reports
+          path: |
+            app/build/reports/detekt/
+            app/build/reports/lint-results-*
 
   unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: static-analysis
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -53,6 +64,7 @@ jobs:
   screenshot-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: static-analysis
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -75,10 +87,13 @@ jobs:
           name: roborazzi-diff
           path: app/build/reports/roborazzi/
 
-  assemble:
+  instrumented-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [ static-analysis, unit-tests, screenshot-tests ]
+    timeout-minutes: 45
+    needs: static-analysis
+    strategy:
+      matrix:
+        api-level: [34]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -89,8 +104,59 @@ jobs:
           java-version: '21'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
-      - name: Assemble release
-        run: chmod +x ./gradlew && ./gradlew assembleRelease --stacktrace
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          profile: pixel_6
+          script: chmod +x ./gradlew && ./gradlew connectedDebugAndroidTest --stacktrace
+        env:
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [unit-tests, screenshot-tests]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Assemble
+        run: chmod +x ./gradlew && ./gradlew assembleDebug assembleRelease --stacktrace
+        env:
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+
+  dependency-submission:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Submit dependency graph
+        uses: gradle/actions/dependency-submission@v6
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
