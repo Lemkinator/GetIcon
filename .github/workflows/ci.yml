@@ -139,24 +139,3 @@ jobs:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
-  # Runs only when push trigger is active (currently disabled — CI runs on PRs only).
-  # To enable: add `push: branches: [main]` to the `on:` block above.
-  dependency-submission:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '21'
-      - name: Submit dependency graph
-        uses: gradle/actions/dependency-submission@v6
-        env:
-          GH_USERNAME: ${{ secrets.GH_USERNAME }}
-          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
