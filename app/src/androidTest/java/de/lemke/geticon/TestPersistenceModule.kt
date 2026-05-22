@@ -16,27 +16,23 @@
 
 package de.lemke.geticon
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
-import java.io.File
 import javax.inject.Singleton
+import org.junit.rules.TemporaryFolder
 
 @Module
 @TestInstallIn(components = [SingletonComponent::class], replaces = [PersistenceModule::class])
 object TestPersistenceModule {
     @Provides
     @Singleton
-    fun provideTestDataStore(
-        @ApplicationContext context: Context,
-    ): DataStore<Preferences> =
+    fun provideTestDataStore(tmpFolder: TemporaryFolder): DataStore<Preferences> =
         PreferenceDataStoreFactory.create {
-            File(context.cacheDir, "test_user_settings.preferences_pb")
+            tmpFolder.newFile("test_user_settings.preferences_pb")
         }
 }

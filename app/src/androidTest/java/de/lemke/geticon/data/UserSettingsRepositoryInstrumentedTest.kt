@@ -18,6 +18,7 @@ package de.lemke.geticon.data
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
+import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.kotest.matchers.shouldBe
@@ -26,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 
 /** Confirms end-to-end Hilt wiring with an isolated test DataStore (via TestInstallIn). */
@@ -33,7 +35,10 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class UserSettingsRepositoryInstrumentedTest {
-    @get:Rule val hiltRule = HiltAndroidRule(this)
+    @field:BindValue @get:Rule(order = 0)
+    val tmpFolder: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+
+    @get:Rule(order = 1) val hiltRule = HiltAndroidRule(this)
 
     @Inject lateinit var repo: UserSettingsRepository
 
