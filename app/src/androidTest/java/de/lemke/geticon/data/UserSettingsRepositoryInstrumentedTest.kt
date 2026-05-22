@@ -43,12 +43,7 @@ class UserSettingsRepositoryInstrumentedTest {
     @Test
     fun iconSizeRoundTrip() =
         runTest {
-            val original = repo.getSettings().iconSize
-            try {
-                repo.updateSettings { it.copy(iconSize = 200) }
-                repo.getSettings().iconSize shouldBe 200
-            } finally {
-                repo.updateSettings { it.copy(iconSize = original) }
-            }
+            repo.updateSettings { it.copy(iconSize = 200) }
+            repo.getSettings().iconSize shouldBe 200
         }
 }
