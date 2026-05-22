@@ -44,7 +44,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class IconActivityTest {
     @field:BindValue @get:Rule(order = 0)
-    val tmpFolder: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+    val tmpFolder: TemporaryFolder = TemporaryFolder()
 
     @get:Rule(order = 1) val hiltRule = HiltAndroidRule(this)
 

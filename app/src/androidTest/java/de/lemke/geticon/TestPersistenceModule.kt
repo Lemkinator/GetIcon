@@ -23,6 +23,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import java.io.File
 import javax.inject.Singleton
 import org.junit.rules.TemporaryFolder
 
@@ -33,6 +34,6 @@ object TestPersistenceModule {
     @Singleton
     fun provideTestDataStore(tmpFolder: TemporaryFolder): DataStore<Preferences> =
         PreferenceDataStoreFactory.create {
-            tmpFolder.newFile("test_user_settings.preferences_pb")
+            File(tmpFolder.root, "test_user_settings.preferences_pb")
         }
 }
