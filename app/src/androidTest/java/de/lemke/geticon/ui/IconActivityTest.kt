@@ -43,10 +43,12 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class IconActivityTest {
-    @field:BindValue @get:Rule(order = 0)
+    @field:BindValue
+    @get:Rule(order = 0)
     val tmpFolder: TemporaryFolder = TemporaryFolder()
 
-    @get:Rule(order = 1) val hiltRule = HiltAndroidRule(this)
+    @get:Rule(order = 1)
+    val hiltRule = HiltAndroidRule(this)
 
     private lateinit var appInfo: ApplicationInfo
 
