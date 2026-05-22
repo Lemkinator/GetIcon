@@ -142,6 +142,38 @@ When upgrading ktlint: run `./gradlew spotlessApply` after the bump,
 check for new IDE diagnostics, and add `.editorconfig` overrides for any
 newly-misbehaving rules.
 
+## Version Policy
+
+**Default: use the latest stable version of every dependency.**
+Renovate keeps minor/patch updates current; bump majors manually
+with release-note review.
+
+Document any pin or downgrade with a `# Why pinned:` comment in
+`libs.versions.toml`. Known exception classes:
+
+1. **Kotlin + KSP lockstep** — KSP minor must match Kotlin minor
+   (e.g. Kotlin `2.3.21` requires KSP `2.3.x`). Renovate's
+   `kotlin` group enforces this.
+2. **Static-analysis on fresh Kotlin majors** — Detekt typically
+   lags new Kotlin releases by 1–3 months. Stay on the latest
+   pre-release / alpha that supports your Kotlin version until a
+   stable one lands.
+3. **Plugin AGP compatibility windows** — e.g. `dependency-analysis`
+   declares supported AGP ranges. Check the plugin's docs before
+   bumping AGP.
+4. **CI emulator images** — pin to the most stable image, not the
+   newest. New API images take months to stabilize.
+5. **Private deps** (`common-utils`, `oneui-design`) — excluded from
+   Renovate; bump manually.
+6. **Android Lint** ships with AGP — no separate dep to track. The
+   `lint-baseline.xml` file IS allowed to grow on AGP bumps; review
+   the diff but don't gate on it.
+
+After touching `libs.versions.toml` or any `build.gradle.kts` dep
+block: run `./gradlew lintDebug` before pushing (catches
+`NewerVersionAvailable`). The pre-commit hook only runs
+`spotlessCheck` — lint is manual.
+
 ## Finding Code
 
 - `de.lemke.geticon` package (`app/src/main/java/de/lemke/geticon/`) is

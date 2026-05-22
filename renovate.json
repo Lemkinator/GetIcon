@@ -7,22 +7,85 @@
     ":configMigration"
   ],
   "ignoreDeps": [
-    "io.github.lemkinator:common-utils"
+    "io.github.lemkinator:common-utils",
+    "io.github.tribalfs:oneui-design"
   ],
   "packageRules": [
     {
       "matchUpdateTypes": [
-        "minor",
         "patch",
         "digest"
       ],
       "matchCurrentVersion": "!/^0/",
+      "automerge": true,
+      "automergeType": "branch",
+      "platformAutomerge": true
+    },
+    {
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "matchCurrentVersion": "!/^0/",
+      "matchPackageNames": [
+        "io.kotest:**",
+        "io.mockk:**",
+        "app.cash.turbine:**",
+        "com.google.dagger:**",
+        "io.ktor:**",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-test"
+      ],
       "automerge": true
+    },
+    {
+      "groupName": "kotlin",
+      "matchPackageNames": [
+        "org.jetbrains.kotlin:**",
+        "org.jetbrains.kotlin.android",
+        "com.google.devtools.ksp**"
+      ]
     },
     {
       "groupName": "hilt",
       "matchPackageNames": [
-        "com.google.dagger**"
+        "com.google.dagger:**",
+        "com.google.dagger.hilt.android"
+      ]
+    },
+    {
+      "groupName": "androidx-test",
+      "matchPackageNames": [
+        "androidx.test:**",
+        "androidx.test.ext:**",
+        "androidx.test.espresso:**"
+      ]
+    },
+    {
+      "groupName": "kotest",
+      "matchPackageNames": [
+        "io.kotest:**",
+        "de.mannodermaus.android-junit"
+      ]
+    },
+    {
+      "groupName": "ktor",
+      "matchPackageNames": [
+        "io.ktor:**"
+      ]
+    },
+    {
+      "groupName": "screenshot-testing",
+      "matchPackageNames": [
+        "io.github.takahirom.roborazzi:**",
+        "io.github.takahirom.roborazzi",
+        "org.robolectric:**"
+      ]
+    },
+    {
+      "groupName": "static-analysis",
+      "matchPackageNames": [
+        "dev.detekt:**",
+        "io.gitlab.arturbosch.detekt**",
+        "com.diffplug.spotless"
       ]
     }
   ]
