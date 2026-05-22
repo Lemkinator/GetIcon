@@ -58,6 +58,7 @@ import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.databinding.ActivityMainBinding
+import de.lemke.geticon.openLeakCanary
 import de.lemke.geticon.ui.IconActivity.Companion.KEY_APPLICATION_INFO
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
@@ -159,12 +160,14 @@ class MainActivity :
         )
 
     private fun initDrawer() {
+        binding.navigationView.findMenuItem(R.id.leaks_dest)?.isVisible = BuildConfig.DEBUG
         binding.navigationView.onNavigationSingleClick { item ->
             when (item.itemId) {
                 R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
                 R.id.about_app_dest -> findViewById<View>(R.id.about_app_dest).transformToActivity(CommonUtilsAboutActivity::class.java)
                 R.id.about_me_dest -> findViewById<View>(R.id.about_me_dest).transformToActivity(CommonUtilsAboutMeActivity::class.java)
                 R.id.settings_dest -> findViewById<View>(R.id.settings_dest).transformToActivity(CommonUtilsSettingsActivity::class.java)
+                R.id.leaks_dest -> openLeakCanary(this)
                 else -> return@onNavigationSingleClick false
             }
             true

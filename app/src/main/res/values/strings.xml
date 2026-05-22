@@ -24,6 +24,7 @@
     <string name="commonutils_privacy_website" translatable="false">https://www.leonard-lemke.com/apps/geticon/privacy-policy</string>
 
     <!--Other-->
+    <string name="memory_leaks" translatable="false">Memory leaks</string>
     <string name="long_press_icon_to_copy_to_clipboard">Long press icon to copy to clipboard</string>
     <string name="copy_icon">Copy icon</string>
     <string name="extract_icon_from_apk">Extract icon from APK</string>
