@@ -125,9 +125,11 @@ class IconActivity :
     private fun initViews() {
         setCustomBackAnimation(binding.root, showInAppReviewIfPossible = true)
         binding.icon.translateYWithAppBar(binding.root.appBarLayout, this)
-        binding.icon.setOnClickListener {
-            viewModel.state.value.icon
-                ?.copyToClipboard(this, "icon", "icon.png")
+        binding.icon.setOnLongClickListener {
+            viewModel.state.value.icon?.let {
+                it.copyToClipboard(this, "icon", "icon.png")
+                true
+            } ?: false
         }
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (!isRendering) viewModel.onMaskChanged(isChecked)
@@ -248,7 +250,7 @@ class IconActivity :
         SuggestAppBarModel
             .Builder(this)
             .apply {
-                setTitle(getString(R.string.tap_icon_to_copy_to_clipboard))
+                setTitle(getString(R.string.long_press_icon_to_copy_to_clipboard))
                 setCloseClickListener { _, _ -> binding.root.setAppBarSuggestView(null) }
                 setButtons(
                     arrayListOf(
