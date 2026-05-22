@@ -19,7 +19,7 @@
     <string name="about_app">Über GetIcon</string>
 
     <!--Other-->
-    <string name="tap_icon_to_copy_to_clipboard">Tippe auf das Icon, um es in die Zwischenablage zu kopieren</string>
+    <string name="long_press_icon_to_copy_to_clipboard">Halte das Icon gedrückt, um es in die Zwischenablage zu kopieren</string>
     <string name="copy_icon">Icon kopieren</string>
     <string name="extract_icon_from_apk">Icon aus APK extrahieren</string>
 
