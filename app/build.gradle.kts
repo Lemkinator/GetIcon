@@ -77,6 +77,7 @@ android {
         debug {
             isDebuggable = true
             isMinifyEnabled = false
+            //noinspection NotShrinkingResources
             isShrinkResources = false
             applicationIdSuffix = ".debug"
             addConstant("APP_NAME", "Get Icon (Debug)")
@@ -132,6 +133,7 @@ dependencies {
 
     debugImplementation(libs.leakcanary)
 
+    testImplementation(libs.bundles.unit.test)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.konsist)
@@ -191,12 +193,13 @@ kover {
                     "hilt_aggregated_deps.*",
                     "*.di.*",
                     "*Activity",
+                    "*Activity\$*",
                 )
             }
         }
         verify {
             rule {
-                minBound(0)
+                minBound(70)
             }
         }
     }
