@@ -22,7 +22,7 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.kotest.matchers.shouldBe
 import javax.inject.Inject
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -44,7 +44,7 @@ class UserSettingsRepositoryInstrumentedTest {
 
     @Test
     fun iconSizeRoundTrip() =
-        runBlocking {
+        runTest {
             val original = repo.getSettings().iconSize
             try {
                 repo.updateSettings { it.copy(iconSize = 200) }

@@ -47,8 +47,7 @@ class IconActivityTest {
 
     @Before
     fun setUp() {
-        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
-        appInfo = ctx.packageManager.getApplicationInfo(ctx.packageName, 0)
+        appInfo = InstrumentationRegistry.getInstrumentation().targetContext.applicationInfo
     }
 
     @Test
