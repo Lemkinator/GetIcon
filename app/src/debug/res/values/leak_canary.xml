@@ -14,14 +14,6 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
-    <application>
-        <activity
-            android:name="leakcanary.internal.activity.LeakActivity"
-            android:enabled="false"
-            tools:replace="android:enabled" />
-    </application>
-
-</manifest>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <bool name="leak_canary_add_launcher_icon" tools:ignore="UnusedResources">false</bool>
+</resources>
