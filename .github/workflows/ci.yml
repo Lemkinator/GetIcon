@@ -134,7 +134,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Assemble
-        run: chmod +x ./gradlew && ./gradlew assembleDebug assembleRelease --stacktrace
+        run: chmod +x ./gradlew && ./gradlew assembleRelease --stacktrace
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
