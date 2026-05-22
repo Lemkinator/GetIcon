@@ -47,6 +47,7 @@ android {
         targetSdk = 37
         versionCode = 32
         versionName = "1.4.2"
+        testInstrumentationRunner = "de.lemke.geticon.HiltTestRunner"
     }
     @Suppress("UnstableApiUsage")
     androidResources.localeFilters += listOf("en", "de")
@@ -129,6 +130,7 @@ dependencies {
     implementation(libs.oneui.icons)
     implementation(libs.common.utils)
     implementation(libs.datastore.preferences)
+    implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
@@ -145,6 +147,14 @@ dependencies {
     testImplementation(libs.arch.core.testing)
     testImplementation(libs.hilt.android.testing)
     kspTest(libs.hilt.compiler)
+
+    androidTestImplementation(libs.bundles.android.test)
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.turbine)
+    androidTestImplementation(libs.kotest.assertions.core)
+    androidTestImplementation(libs.coroutines.test)
+    androidTestImplementation(libs.hilt.android.testing)
+    kspAndroidTest(libs.hilt.compiler)
 }
 
 spotless {

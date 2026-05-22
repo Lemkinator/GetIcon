@@ -65,10 +65,14 @@ subprojects {
                 targetCompatibility = JavaVersion.VERSION_21
             }
 
-            // Apply AndroidX exclusions ONLY to production configurations.
-            // androidTest* and test* configs need genuine AOSP AndroidX modules.
+            // Apply AndroidX exclusions to production AND androidTest* configurations.
+            // Only unit-test configs (starting with "test") need genuine AOSP AndroidX for
+            // Robolectric. Instrumented tests (androidTest*) run the real app on device and must
+            // use oneui-design's extended versions — otherwise setSeslNaviMenuItemType and similar
+            // Samsung APIs fail because the test APK's standard MenuItemCompat shadows the main
+            // APK's oneui version.
             val productionConfigPredicate: (String) -> Boolean = { name ->
-                !name.contains("test", ignoreCase = true)
+                !name.startsWith("test", ignoreCase = true)
             }
 
             configurations.matching { productionConfigPredicate(it.name) }.configureEach {
