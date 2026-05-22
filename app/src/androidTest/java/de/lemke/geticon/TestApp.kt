@@ -16,14 +16,12 @@
 
 package de.lemke.geticon
 
-import android.app.Application
-import android.content.Context
-import androidx.test.runner.AndroidJUnitRunner
+import dagger.hilt.android.testing.HiltTestApplication
+import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 
-class HiltTestRunner : AndroidJUnitRunner() {
-    override fun newApplication(
-        cl: ClassLoader,
-        name: String,
-        ctx: Context,
-    ): Application = android.app.Instrumentation.newApplication(TestApp::class.java, ctx)
+class TestApp : HiltTestApplication() {
+    override fun onCreate() {
+        super.onCreate()
+        initCommonUtilsSettingsAndSetDarkMode()
+    }
 }

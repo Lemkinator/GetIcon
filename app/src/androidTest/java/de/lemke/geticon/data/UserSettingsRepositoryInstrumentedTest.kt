@@ -28,9 +28,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Confirms end-to-end Hilt wiring: real DataStore on device, no fakes.
- */
+/** Confirms end-to-end Hilt wiring with an isolated test DataStore (via TestInstallIn). */
 @HiltAndroidTest
 @LargeTest
 @RunWith(AndroidJUnit4::class)
