@@ -37,5 +37,6 @@ dependencies {
 }
 
 baselineProfile {
+    @Suppress("UnstableApiUsage")
     enableEmulatorDisplay = false
 }
