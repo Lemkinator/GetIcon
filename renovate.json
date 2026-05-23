@@ -6,10 +6,7 @@
     ":renovatePrefix",
     ":configMigration"
   ],
-  "ignoreDeps": [
-    "io.github.lemkinator:common-utils",
-    "io.github.tribalfs:oneui-design"
-  ],
+  "platformAutomerge": true,
   "packageRules": [
     {
       "matchUpdateTypes": [
@@ -17,9 +14,7 @@
         "digest"
       ],
       "matchCurrentVersion": "!/^0/",
-      "automerge": true,
-      "automergeType": "branch",
-      "platformAutomerge": true
+      "automerge": true
     },
     {
       "matchUpdateTypes": [
@@ -28,11 +23,13 @@
       "matchCurrentVersion": "!/^0/",
       "matchPackageNames": [
         "io.kotest:**",
+        "de.mannodermaus.android-junit",
         "io.mockk:**",
         "app.cash.turbine:**",
         "com.google.dagger:**",
+        "com.google.dagger.hilt.android",
         "io.ktor:**",
-        "org.jetbrains.kotlinx:kotlinx-coroutines-test"
+        "org.jetbrains.kotlinx:kotlinx-coroutines-**"
       ],
       "automerge": true
     },

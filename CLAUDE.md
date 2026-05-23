@@ -163,9 +163,7 @@ Document any pin or downgrade with a `# Why pinned:` comment in
    bumping AGP.
 4. **CI emulator images** — pin to the most stable image, not the
    newest. New API images take months to stabilize.
-5. **Private deps** (`common-utils`, `oneui-design`) — excluded from
-   Renovate; bump manually.
-6. **Android Lint** ships with AGP — no separate dep to track. The
+5. **Android Lint** ships with AGP — no separate dep to track. The
    `lint-baseline.xml` file IS allowed to grow on AGP bumps; review
    the diff but don't gate on it.
 
