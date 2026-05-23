@@ -67,18 +67,14 @@ subprojects {
                 targetCompatibility = JavaVersion.VERSION_21
             }
 
-            // AndroidX exclusions only apply to :app. oneui-design replaces these modules; the
-            // exclusions prevent AOSP originals from shadowing the oneui forks at runtime.
-            // :baselineprofile (com.android.test) needs genuine AOSP AndroidX for UiAutomator
-            // and benchmark libs — do NOT apply exclusions there.
-            if (project.name == "app") {
+            // oneui-design replaces these AOSP AndroidX modules with Samsung forks; exclude
+            // AOSP originals from all com.android.application modules to prevent shadowing.
+            // com.android.test modules (e.g. :baselineprofile) are not matched and keep
+            // genuine AOSP AndroidX for UiAutomator and benchmark dependencies.
+            plugins.withId("com.android.application") {
                 // Exclude from production AND androidTest* configs (not unit-test* which need
                 // real AOSP AndroidX for Robolectric).
-                val productionConfigPredicate: (String) -> Boolean = { name ->
-                    !name.startsWith("test", ignoreCase = true)
-                }
-
-                configurations.matching { productionConfigPredicate(it.name) }.configureEach {
+                configurations.matching { !it.name.startsWith("test", ignoreCase = true) }.configureEach {
                     exclude(group = "androidx.core", module = "core")
                     exclude(group = "androidx.core", module = "core-ktx")
                     exclude(group = "androidx.customview", module = "customview")
