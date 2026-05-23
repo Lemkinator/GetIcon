@@ -28,7 +28,6 @@
         "app.cash.turbine:**",
         "com.google.dagger:**",
         "com.google.dagger.hilt.android",
-        "io.ktor:**",
         "org.jetbrains.kotlinx:kotlinx-coroutines-**"
       ],
       "automerge": true
@@ -61,12 +60,6 @@
       "matchPackageNames": [
         "io.kotest:**",
         "de.mannodermaus.android-junit"
-      ]
-    },
-    {
-      "groupName": "ktor",
-      "matchPackageNames": [
-        "io.ktor:**"
       ]
     },
     {
