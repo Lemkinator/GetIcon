@@ -37,7 +37,8 @@
       "matchPackageNames": [
         "androidx.test:**",
         "androidx.test.ext:**",
-        "androidx.test.espresso:**"
+        "androidx.test.espresso:**",
+        "androidx.test.uiautomator:**"
       ]
     },
     {
