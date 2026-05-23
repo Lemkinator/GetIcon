@@ -20,7 +20,7 @@
 .DS_Store
 .kotlin/
 
-/build
+build/
 *.aab
 
 /captures
