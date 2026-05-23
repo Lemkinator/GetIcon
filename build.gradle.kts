@@ -63,8 +63,8 @@ subprojects {
     plugins.withId("com.android.base") {
         project.extensions.findByType(CommonExtension::class.java)?.apply {
             compileOptions.apply {
-                sourceCompatibility = JavaVersion.VERSION_21
-                targetCompatibility = JavaVersion.VERSION_21
+                sourceCompatibility = JavaVersion.toVersion(libs.versions.jvmTarget.get())
+                targetCompatibility = JavaVersion.toVersion(libs.versions.jvmTarget.get())
             }
 
             // oneui-design replaces these AOSP AndroidX modules with Samsung forks; exclude

@@ -21,10 +21,10 @@ plugins {
 
 android {
     namespace = "de.lemke.geticon.baselineprofile"
-    compileSdk = 37
+    compileSdk = libs.versions.compileSdk.get().toInt()
     defaultConfig {
         minSdk = 28
-        targetSdk = 37
+        targetSdk = libs.versions.targetSdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     targetProjectPath = ":app"
