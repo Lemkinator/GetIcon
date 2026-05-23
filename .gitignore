@@ -5,8 +5,10 @@
 !/.idea/icon.png
 !/.idea/AndroidProjectSystem.xml
 !/.idea/codeStyles/
+!/.idea/codeStyles/**
 !/.idea/compiler.xml
 !/.idea/inspectionProfiles/
+!/.idea/inspectionProfiles/**
 !/.idea/jarRepositories.xml
 !/.idea/kotlinc.xml
 !/.idea/ktlint-plugin.xml
