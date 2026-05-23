@@ -33,9 +33,9 @@ jobs:
       - name: Generate baseline profile
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 35
           arch: x86_64
-          profile: pixel_6
+          profile: pixel_9
           script: chmod +x ./gradlew && ./gradlew :baselineprofile:generateBaselineProfile --stacktrace
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
