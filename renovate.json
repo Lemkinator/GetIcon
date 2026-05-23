@@ -10,26 +10,11 @@
   "packageRules": [
     {
       "matchUpdateTypes": [
+        "minor",
         "patch",
         "digest"
       ],
       "matchCurrentVersion": "!/^0/",
-      "automerge": true
-    },
-    {
-      "matchUpdateTypes": [
-        "minor"
-      ],
-      "matchCurrentVersion": "!/^0/",
-      "matchPackageNames": [
-        "io.kotest:**",
-        "de.mannodermaus.android-junit",
-        "io.mockk:**",
-        "app.cash.turbine:**",
-        "com.google.dagger:**",
-        "com.google.dagger.hilt.android",
-        "org.jetbrains.kotlinx:kotlinx-coroutines-**"
-      ],
       "automerge": true
     },
     {
