@@ -9,6 +9,9 @@
 .idea/**/shelf
 .idea/**/deploymentTargetSelector.xml
 .idea/**/appInsightsSettings.xml
+.idea/**/markdown.xml
+.idea/**/migrations.xml
+.idea/**/copilot.data.migration*.xml
 
 # AWS User-specific
 .idea/**/aws.xml
@@ -101,3 +104,4 @@ fabric.properties
 /local.properties
 local.properties
 keystore.properties
+github.properties
