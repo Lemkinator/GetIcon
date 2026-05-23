@@ -235,7 +235,7 @@ kover {
                     "hilt_aggregated_deps.*",
                     "*.di.*",
                     "*Activity",
-                    "*Activity\$*",
+                    "*Activity$*",
                 )
             }
         }
