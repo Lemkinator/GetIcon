@@ -71,6 +71,12 @@
       ]
     },
     {
+      "groupName": "github-actions",
+      "matchManagers": [
+        "github-actions"
+      ]
+    },
+    {
       "groupName": "static-analysis",
       "matchPackageNames": [
         "dev.detekt:**",
