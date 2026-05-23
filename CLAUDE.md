@@ -140,7 +140,14 @@ plugin mode is changed to `MANUAL`, this breaks — keep `DISTRACT_FREE`.
 
 When upgrading ktlint: run `./gradlew spotlessApply` after the bump,
 check for new IDE diagnostics, and add `.editorconfig` overrides for any
-newly-misbehaving rules.
+newly misbehaving rules.
+
+## Version Policy
+
+After touching `libs.versions.toml` or any `build.gradle.kts` dep
+block: run `./gradlew lintDebug` before pushing (catches
+`NewerVersionAvailable`). The pre-commit hook only runs
+`spotlessCheck` — lint is manual.
 
 ## Finding Code
 

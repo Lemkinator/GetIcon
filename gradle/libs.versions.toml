@@ -11,7 +11,7 @@ coroutines = "1.11.0"
 datastore-preferences = "1.2.1"
 dependency-analysis = "3.13.0"
 detekt = "2.0.0-alpha.3"
-gradle = "9.2.1"
+agp = "9.2.1"
 hilt = "2.59.2"
 junit-android-framework = "2.0.1"
 junit5 = "6.1.0"
@@ -74,7 +74,7 @@ unit-test = ["kotest-runner-junit5", "kotest-assertions-core", "kotest-property"
 
 [plugins]
 aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutlibraries" }
-android-application = { id = "com.android.application", version.ref = "gradle" }
+android-application = { id = "com.android.application", version.ref = "agp" }
 android-junit = { id = "de.mannodermaus.android-junit", version.ref = "junit-android-framework" }
 dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependency-analysis" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
