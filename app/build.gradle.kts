@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalRoborazziApi::class)
+
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.hilt.android)
@@ -23,6 +27,7 @@ plugins {
     alias(libs.plugins.spotless)
     alias(libs.plugins.kover)
     alias(libs.plugins.android.junit)
+    alias(libs.plugins.baselineprofile)
     alias(libs.plugins.roborazzi)
 }
 
@@ -40,11 +45,17 @@ fun com.android.build.api.dsl.ApplicationBuildType.addConstant(
 
 android {
     namespace = "de.lemke.geticon"
-    compileSdk = 37
+    compileSdk =
+        libs.versions.compileSdk
+            .get()
+            .toInt()
     defaultConfig {
         applicationId = "de.lemke.geticon"
         minSdk = 26
-        targetSdk = 37
+        targetSdk =
+            libs.versions.targetSdk
+                .get()
+                .toInt()
         versionCode = 32
         versionName = "1.4.2"
         testInstrumentationRunner = "de.lemke.geticon.HiltTestRunner"
@@ -134,6 +145,8 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
+    implementation(libs.profileinstaller)
+
     debugImplementation(libs.leakcanary)
 
     testImplementation(libs.bundles.unit.test)
@@ -189,11 +202,15 @@ detekt {
 }
 
 tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
-    jvmTarget = "21"
+    jvmTarget = libs.versions.jvmTarget.get()
     reports {
         html.required.set(true)
         sarif.required.set(true)
     }
+}
+
+baselineProfile {
+    dexLayoutOptimization = true
 }
 
 roborazzi {
@@ -218,7 +235,7 @@ kover {
                     "hilt_aggregated_deps.*",
                     "*.di.*",
                     "*Activity",
-                    "*Activity\$*",
+                    "*Activity$*",
                 )
             }
         }

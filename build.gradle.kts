@@ -8,6 +8,8 @@ plugins {
     alias(libs.plugins.spotless) apply false
     alias(libs.plugins.kover) apply false
     alias(libs.plugins.android.junit) apply false
+    alias(libs.plugins.android.test) apply false
+    alias(libs.plugins.baselineprofile) apply false
     alias(libs.plugins.roborazzi) apply false
     alias(libs.plugins.dependency.analysis)
 }
@@ -61,35 +63,33 @@ subprojects {
     plugins.withId("com.android.base") {
         project.extensions.findByType(CommonExtension::class.java)?.apply {
             compileOptions.apply {
-                sourceCompatibility = JavaVersion.VERSION_21
-                targetCompatibility = JavaVersion.VERSION_21
+                sourceCompatibility = JavaVersion.toVersion(libs.versions.jvmTarget.get())
+                targetCompatibility = JavaVersion.toVersion(libs.versions.jvmTarget.get())
             }
 
-            // Apply AndroidX exclusions to production AND androidTest* configurations.
-            // Only unit-test configs (starting with "test") need genuine AOSP AndroidX for
-            // Robolectric. Instrumented tests (androidTest*) run the real app on device and must
-            // use oneui-design's extended versions — otherwise setSeslNaviMenuItemType and similar
-            // Samsung APIs fail because the test APK's standard MenuItemCompat shadows the main
-            // APK's oneui version.
-            val productionConfigPredicate: (String) -> Boolean = { name ->
-                !name.startsWith("test", ignoreCase = true)
-            }
-
-            configurations.matching { productionConfigPredicate(it.name) }.configureEach {
-                exclude(group = "androidx.core", module = "core")
-                exclude(group = "androidx.core", module = "core-ktx")
-                exclude(group = "androidx.customview", module = "customview")
-                exclude(group = "androidx.coordinatorlayout", module = "coordinatorlayout")
-                exclude(group = "androidx.drawerlayout", module = "drawerlayout")
-                exclude(group = "androidx.viewpager2", module = "viewpager2")
-                exclude(group = "androidx.viewpager", module = "viewpager")
-                exclude(group = "androidx.appcompat", module = "appcompat")
-                exclude(group = "androidx.fragment", module = "fragment")
-                exclude(group = "androidx.preference", module = "preference")
-                exclude(group = "androidx.recyclerview", module = "recyclerview")
-                exclude(group = "androidx.slidingpanelayout", module = "slidingpanelayout")
-                exclude(group = "androidx.swiperefreshlayout", module = "swiperefreshlayout")
-                exclude(group = "com.google.android.material", module = "material")
+            // oneui-design replaces these AOSP AndroidX modules with Samsung forks; exclude
+            // AOSP originals from all com.android.application modules to prevent shadowing.
+            // com.android.test modules (e.g. :baselineprofile) are not matched and keep
+            // genuine AOSP AndroidX for UiAutomator and benchmark dependencies.
+            plugins.withId("com.android.application") {
+                // Exclude from production AND androidTest* configs (not unit-test* which need
+                // real AOSP AndroidX for Robolectric).
+                configurations.matching { !it.name.startsWith("test", ignoreCase = true) }.configureEach {
+                    exclude(group = "androidx.core", module = "core")
+                    exclude(group = "androidx.core", module = "core-ktx")
+                    exclude(group = "androidx.customview", module = "customview")
+                    exclude(group = "androidx.coordinatorlayout", module = "coordinatorlayout")
+                    exclude(group = "androidx.drawerlayout", module = "drawerlayout")
+                    exclude(group = "androidx.viewpager2", module = "viewpager2")
+                    exclude(group = "androidx.viewpager", module = "viewpager")
+                    exclude(group = "androidx.appcompat", module = "appcompat")
+                    exclude(group = "androidx.fragment", module = "fragment")
+                    exclude(group = "androidx.preference", module = "preference")
+                    exclude(group = "androidx.recyclerview", module = "recyclerview")
+                    exclude(group = "androidx.slidingpanelayout", module = "slidingpanelayout")
+                    exclude(group = "androidx.swiperefreshlayout", module = "swiperefreshlayout")
+                    exclude(group = "com.google.android.material", module = "material")
+                }
             }
         }
     }
