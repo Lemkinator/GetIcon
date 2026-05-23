@@ -6,7 +6,6 @@ androidx-test-ext-junit = "1.3.0"
 androidx-test-rules = "1.7.0"
 androidx-test-runner = "1.7.0"
 arch-core-testing = "2.2.0"
-# Why pinned: benchmark-macro 1.4.x incompatible with AGP 9.2.x; remove once 1.5.0 stable
 benchmark-macro = "1.5.0-alpha06"
 common-utils = "1.0.0"
 coroutines = "1.11.0"
