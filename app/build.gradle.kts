@@ -23,6 +23,7 @@ plugins {
     alias(libs.plugins.spotless)
     alias(libs.plugins.kover)
     alias(libs.plugins.android.junit)
+    alias(libs.plugins.baselineprofile)
     alias(libs.plugins.roborazzi)
 }
 
@@ -134,6 +135,8 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
+    implementation(libs.profileinstaller)
+
     debugImplementation(libs.leakcanary)
 
     testImplementation(libs.bundles.unit.test)
@@ -194,6 +197,10 @@ tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
         html.required.set(true)
         sarif.required.set(true)
     }
+}
+
+baselineProfile {
+    dexLayoutOptimization = true
 }
 
 roborazzi {
