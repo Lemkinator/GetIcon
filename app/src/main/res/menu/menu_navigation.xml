@@ -28,13 +28,13 @@
     <group android:id="@+id/navigation_about_group">
 
         <item
-            android:id="@+id/about_app_dest"
+            android:id="@+id/commonutils_about_dest"
             android:icon="@drawable/ic_oui_info_outline"
-            android:title="@string/about_app"
+            android:title="@string/commonutils_about_app"
             app:showAsAction="always" />
 
         <item
-            android:id="@+id/about_me_dest"
+            android:id="@+id/commonutils_about_me_dest"
             android:icon="@drawable/ic_oui_contact_outline"
             android:title="@string/commonutils_about_me"
             app:showAsAction="always" />
@@ -42,7 +42,7 @@
     </group>
 
     <item
-        android:id="@+id/settings_dest"
+        android:id="@+id/commonutils_settings_dest"
         android:icon="@drawable/ic_oui_settings_outline"
         android:title="@string/commonutils_settings"
         app:showAsAction="always" />
