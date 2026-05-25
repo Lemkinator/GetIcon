@@ -35,14 +35,6 @@ fun String.toEnvVarStyle(): String = replace(Regex("([a-z])([A-Z])"), "$1_$2").u
 
 fun getProperty(key: String): String? = rootProject.findProperty(key)?.toString() ?: System.getenv(key.toEnvVarStyle())
 
-fun com.android.build.api.dsl.ApplicationBuildType.addConstant(
-    name: String,
-    value: String,
-) {
-    manifestPlaceholders += mapOf(name to value)
-    buildConfigField("String", name, "\"$value\"")
-}
-
 android {
     namespace = "de.lemke.geticon"
     compileSdk =
@@ -83,7 +75,6 @@ android {
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
-            addConstant("APP_NAME", "Get Icon")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             ndk { debugSymbolLevel = "FULL" }
         }
@@ -93,7 +84,6 @@ android {
             //noinspection NotShrinkingResources
             isShrinkResources = false
             applicationIdSuffix = ".debug"
-            addConstant("APP_NAME", "Get Icon (Debug)")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

@@ -20,7 +20,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:drawerBackAnimation="true"
-    app:expanded="false">
+    app:expanded="false"
+    app:title="@string/app_name">
 
     <dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
         android:id="@+id/navigationView"
