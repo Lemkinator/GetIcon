@@ -65,7 +65,11 @@ class IconViewModel @Inject constructor(
     private val updateUserSettings: UpdateUserSettingsUseCase,
     private val generateIcon: GenerateIconUseCase,
 ) : ViewModel() {
-    private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
+    companion object {
+        const val KEY_APPLICATION_INFO = "applicationInfo"
+    }
+
+    private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(KEY_APPLICATION_INFO)
 
     private val _state = MutableStateFlow(IconUiState())
     val state: StateFlow<IconUiState> = _state.asStateFlow()

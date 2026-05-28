@@ -24,33 +24,37 @@ import android.graphics.Color.WHITE
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
+import android.view.MenuInflater
 import android.view.MenuItem
+import android.view.View
 import android.widget.CompoundButton
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.graphics.toColor
+import androidx.core.view.MenuProvider
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.picker3.app.SeslColorPickerDialog
 import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.DrawerHost
+import de.lemke.commonutils.autoCleared
+import de.lemke.commonutils.clearLastNestedScrollingChild
 import de.lemke.commonutils.collectEvents
 import de.lemke.commonutils.collectState
 import de.lemke.commonutils.copyToClipboard
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.exportBitmap
-import de.lemke.commonutils.prepareActivityTransformationTo
 import de.lemke.commonutils.saveBitmapToUri
-import de.lemke.commonutils.setCustomBackAnimation
-import de.lemke.commonutils.setWindowTransparent
 import de.lemke.commonutils.shareBitmap
 import de.lemke.commonutils.toast
 import de.lemke.geticon.R
-import de.lemke.geticon.databinding.ActivityIconBinding
+import de.lemke.geticon.databinding.FragmentIconBinding
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
@@ -59,75 +63,81 @@ import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
-class IconActivity :
-    AppCompatActivity(),
+class IconFragment :
+    Fragment(R.layout.fragment_icon),
     ViewYTranslator by AppBarAwareYTranslator() {
-    companion object {
-        const val KEY_APPLICATION_INFO = "applicationInfo"
-    }
-
-    private lateinit var binding: ActivityIconBinding
+    private val binding by autoCleared { FragmentIconBinding.bind(requireView()) }
+    private val drawerLayout get() = (requireActivity() as DrawerHost).drawerLayout
     private val viewModel: IconViewModel by viewModels()
     private var isRendering = false
     private var suggestViewSet = false
+
+    private val menuProvider =
+        object : MenuProvider {
+            override fun onCreateMenu(
+                menu: Menu,
+                menuInflater: MenuInflater,
+            ) = menuInflater.inflate(R.menu.menu_icon, menu)
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                val state = viewModel.state.value
+                val icon = state.icon ?: return false
+                return when (menuItem.itemId) {
+                    R.id.menu_item_icon_save_as_image -> {
+                        exportBitmap(commonUtilsSettings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher)
+                        true
+                    }
+
+                    R.id.menu_item_icon_share -> {
+                        shareBitmap(icon, "icon.png")
+                        true
+                    }
+
+                    else -> false
+                }
+            }
+        }
 
     private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(StartActivityForResult()) { result: ActivityResult? ->
             val icon = viewModel.state.value.icon ?: return@registerForActivityResult
             try {
-                if (result?.resultCode == RESULT_OK) {
-                    saveBitmapToUri(result.data?.data, icon)
+                if (result?.resultCode == android.app.Activity.RESULT_OK) {
+                    requireContext().saveBitmapToUri(result.data?.data, icon)
                 } else {
                     toast(commonutilsR.string.commonutils_error_saving_image)
                 }
             } catch (e: IOException) {
-                Log.e("IconActivity", "Failed to save bitmap to URI", e)
+                Log.e("IconFragment", "Failed to save bitmap to URI", e)
                 toast(commonutilsR.string.commonutils_error_saving_image)
             } catch (e: SecurityException) {
-                Log.e("IconActivity", "Failed to save bitmap to URI", e)
+                Log.e("IconFragment", "Failed to save bitmap to URI", e)
                 toast(commonutilsR.string.commonutils_error_saving_image)
             }
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        prepareActivityTransformationTo()
-        super.onCreate(savedInstanceState)
-        binding = ActivityIconBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        setWindowTransparent(true)
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?,
+    ) {
+        super.onViewCreated(view, savedInstanceState)
         initViews()
-        collectState()
-        collectEvents()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val state = viewModel.state.value
-        val icon = state.icon ?: return super.onOptionsItemSelected(item)
-        return when (item.itemId) {
-            R.id.menu_item_icon_save_as_image -> {
-                exportBitmap(commonUtilsSettings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher)
-                true
-            }
-
-            R.id.menu_item_icon_share -> {
-                shareBitmap(icon, "icon.png")
-                true
-            }
-
-            else -> {
-                super.onOptionsItemSelected(item)
+        collectState(viewModel.state) { renderState(it) }
+        collectEvents(viewModel.events) { event ->
+            when (event) {
+                IconEvent.Finish -> {
+                    toast(commonutilsR.string.commonutils_error_app_not_found)
+                    findNavController().navigateUp()
+                }
             }
         }
     }
 
     private fun initViews() {
-        setCustomBackAnimation(binding.root, showInAppReviewIfPossible = true)
-        binding.icon.translateYWithAppBar(binding.root.appBarLayout, this)
+        binding.icon.translateYWithAppBar(drawerLayout.appBarLayout, viewLifecycleOwner)
         binding.icon.setOnLongClickListener {
             viewModel.state.value.icon?.let {
-                it.copyToClipboard(this, "icon", "icon.png")
+                it.copyToClipboard(requireContext(), "icon", "icon.png")
                 true
             } ?: false
         }
@@ -142,7 +152,7 @@ class IconActivity :
                 .toString()
                 .toIntOrNull()
                 ?.let { viewModel.onSizeChanged(it) }
-            hideSoftInput()
+            requireActivity().hideSoftInput()
             true
         }
         binding.sizeSeekbar.min = 16
@@ -166,25 +176,10 @@ class IconActivity :
         binding.colorButtonForeground.setOnClickListener { showColorPicker(isBackground = false) }
     }
 
-    private fun collectState() {
-        collectState(viewModel.state) { renderState(it) }
-    }
-
-    private fun collectEvents() {
-        collectEvents(viewModel.events) { event ->
-            when (event) {
-                IconEvent.Finish -> {
-                    toast(commonutilsR.string.commonutils_error_app_not_found)
-                    finishAfterTransition()
-                }
-            }
-        }
-    }
-
     @SuppressLint("SetTextI18n")
     private fun renderState(state: IconUiState) {
         isRendering = true
-        if (state.appName.isNotEmpty()) binding.root.setTitle(state.appName)
+        if (state.appName.isNotEmpty()) drawerLayout.setTitle(state.appName)
         state.icon?.let { binding.icon.setImageBitmap(it) }
         binding.maskedCheckbox.isChecked = state.maskEnabled && state.hasMaskedAppIcon
         binding.maskedCheckbox.isEnabled = state.hasMaskedAppIcon
@@ -200,7 +195,7 @@ class IconActivity :
         isRendering = false
         setButtonColors(state)
         if (!suggestViewSet && state.icon != null) {
-            binding.root.setAppBarSuggestView(createSuggestAppBarModel())
+            drawerLayout.setAppBarSuggestView(createSuggestAppBarModel())
             suggestViewSet = true
         }
     }
@@ -216,11 +211,13 @@ class IconActivity :
             binding.colorButtonForeground.backgroundTintList = valueOf(state.foregroundColor)
         } else {
             binding.colorButtonBackground.isEnabled = false
-            binding.colorButtonBackground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
-            binding.colorButtonBackground.backgroundTintList = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonBackground.setTextColor(requireContext().getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
+            binding.colorButtonBackground.backgroundTintList =
+                valueOf(requireContext().getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
             binding.colorButtonForeground.isEnabled = false
-            binding.colorButtonForeground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
-            binding.colorButtonForeground.backgroundTintList = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonForeground.setTextColor(requireContext().getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
+            binding.colorButtonForeground.backgroundTintList =
+                valueOf(requireContext().getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
         }
     }
 
@@ -228,40 +225,71 @@ class IconActivity :
         val state = viewModel.state.value
         val currentColor = if (isBackground) state.backgroundColor else state.foregroundColor
         val recentColors = if (isBackground) state.recentBackgroundColors else state.recentForegroundColors
-        val dialog =
-            SeslColorPickerDialog(
-                this,
-                { color: Int ->
-                    if (isBackground) {
-                        viewModel.onBackgroundColorChanged(color)
-                    } else {
-                        viewModel.onForegroundColorChanged(color)
-                    }
-                },
-                currentColor,
-                recentColors.toIntArray(),
-                true,
-            )
-        dialog.setTransparencyControlEnabled(true)
-        dialog.show()
+        SeslColorPickerDialog(
+            requireContext(),
+            { color: Int ->
+                if (isBackground) viewModel.onBackgroundColorChanged(color) else viewModel.onForegroundColorChanged(color)
+            },
+            currentColor,
+            recentColors.toIntArray(),
+            true,
+        ).apply {
+            setTransparencyControlEnabled(true)
+            show()
+        }
     }
 
-    private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> =
-        SuggestAppBarModel
-            .Builder(this)
+    override fun onResume() {
+        super.onResume()
+        requireActivity().addMenuProvider(menuProvider)
+        drawerLayout.showNavigationButtonAsBack = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        requireActivity().removeMenuProvider(menuProvider)
+    }
+
+    override fun onDestroyView() {
+        // Remove once sesl-androidx CoordinatorLayout uses WeakReference<View> for
+        // mLastNestedScrollingChild (fix tracked in sesl-androidx fix/memory-leaks).
+        clearLastNestedScrollingChild()
+        super.onDestroyView()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        drawerLayout.setAppBarSuggestView(null)
+        suggestViewSet = false
+    }
+
+    private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> {
+        // Remove WeakReference workaround once the Material/Samsung StackViewGroup
+        // hideAnimator no longer holds a strong mTarget ref after animation end, preventing
+        // GC of SuggestAppBarView → SuggestAppBarModel → listeners.
+        val layout = drawerLayout
+        val weakVm = java.lang.ref.WeakReference(viewModel)
+        val appCtx = requireContext().applicationContext
+        return SuggestAppBarModel
+            .Builder(requireContext())
             .apply {
                 setTitle(getString(R.string.long_press_icon_to_copy_to_clipboard))
-                setCloseClickListener { _, _ -> binding.root.setAppBarSuggestView(null) }
+                setCloseClickListener { _, _ -> layout.setAppBarSuggestView(null) }
                 setButtons(
                     arrayListOf(
                         ButtonModel(
                             text = getString(R.string.copy_icon),
                             clickListener = { _, _ ->
-                                viewModel.state.value.icon
-                                    ?.copyToClipboard(this@IconActivity, "icon", "icon.png")
+                                weakVm
+                                    .get()
+                                    ?.state
+                                    ?.value
+                                    ?.icon
+                                    ?.copyToClipboard(appCtx, "icon", "icon.png")
                             },
                         ),
                     ),
                 )
             }.build()
+    }
 }

@@ -14,29 +14,27 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<dev.oneuiproject.oneui.layout.NavDrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<dev.oneuiproject.oneui.widget.RoundedFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    app:drawerBackAnimation="true"
-    app:expanded="false"
-    app:title="@string/app_name">
+    app:edgeInsetLeft="10dp"
+    app:edgeInsetRight="10dp"
+    app:roundedCorners="top_right|top_left">
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/navigationHost"
-        android:name="androidx.navigation.fragment.NavHostFragment"
+    <androidx.picker.widget.SeslAppPickerGridView
+        android:id="@+id/appPicker"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:defaultNavHost="true"
-        app:layout_location="main_content"
-        app:navGraph="@navigation/main_navigation" />
+        android:layout_marginHorizontal="10dp"
+        android:background="?android:colorBackground"
+        android:clipToPadding="false"
+        android:scrollbarStyle="outsideOverlay"
+        app:strategy="de.lemke.geticon.domain.AppPickerStrategy" />
 
-    <dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
-        android:id="@+id/navigationView"
+    <de.lemke.commonutils.ui.widget.NoEntryView
+        android:id="@+id/noEntryView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_location="drawer_panel"
-        app:menu="@menu/menu_navigation" />
+        android:layout_height="match_parent" />
 
-</dev.oneuiproject.oneui.layout.NavDrawerLayout>
+</dev.oneuiproject.oneui.widget.RoundedFrameLayout>
