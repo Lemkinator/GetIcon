@@ -226,6 +226,8 @@ kover {
                     "*.di.*",
                     "*Activity",
                     "*Activity$*",
+                    "*Fragment",
+                    "*Fragment$*",
                 )
             }
         }
