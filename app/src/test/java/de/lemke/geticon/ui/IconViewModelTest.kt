@@ -71,7 +71,7 @@ class IconViewModelTest : ShouldSpec(
         fun buildViewModel(appInfo: ApplicationInfo? = null): IconViewModel {
             val handle =
                 if (appInfo != null) {
-                    SavedStateHandle(mapOf(IconActivity.KEY_APPLICATION_INFO to appInfo))
+                    SavedStateHandle(mapOf(IconViewModel.KEY_APPLICATION_INFO to appInfo))
                 } else {
                     SavedStateHandle()
                 }
