@@ -33,7 +33,7 @@ ksp = "2.3.9"
 #noinspection UnusedVersionCatalogEntry
 ktlint = "1.7.1"
 leakcanary = "2.14"
-mockk = "1.14.9"
+mockk = "1.14.11"
 oneui-design = "0.9.12+oneui8"
 oneui-icons = "1.1.0"
 profileinstaller = "1.4.1"
