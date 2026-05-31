@@ -15,8 +15,9 @@ All commands run from the repo root on Windows (PowerShell or Git Bash):
 ./gradlew clean build --no-daemon
 ```
 
-No unit or instrumented tests exist yet (test source directories exist but
-are empty).
+Unit tests exist: `IconViewModelTest`, `IconActivityScreenshotTest` (Roborazzi),
+`MainActivityScreenshotTest` (Roborazzi), plus Konsist architecture tests.
+No instrumented tests yet.
 
 ## Private Dependencies (Required for Build)
 
