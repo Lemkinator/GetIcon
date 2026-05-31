@@ -15,7 +15,6 @@
  */
 package de.lemke.geticon.baselineprofile
 
-import android.content.Intent
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -45,7 +44,7 @@ class BaselineProfileGenerator {
             maxIterations = 10,
             includeInStartupProfile = true,
         ) {
-            startActivityAndWait(Intent().apply { putExtra(EXTRA_SKIP_FIRST_RUN, true) })
+            startActivityAndWait { it.putExtra(EXTRA_SKIP_FIRST_RUN, true) }
             navigateToIconAndBack()
         }
 }

@@ -15,9 +15,11 @@ rootProject.name = "Get Icon"
 include(":app")
 include(":baselineprofile")
 
-// TODO: remove after common-utils is published with the fragment/nav APIs
-includeBuild("../common-utils") {
-    dependencySubstitution {
-        substitute(module("io.github.lemkinator:common-utils")).using(project(":lib"))
+val commonUtilsDir = file("../common-utils")
+if (commonUtilsDir.exists()) {
+    includeBuild(commonUtilsDir) {
+        dependencySubstitution {
+            substitute(module("io.github.lemkinator:common-utils")).using(project(":lib"))
+        }
     }
 }

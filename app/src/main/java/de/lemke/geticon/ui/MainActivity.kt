@@ -81,7 +81,7 @@ class MainActivity :
         val splashScreen = installSplashScreen()
         prepareActivityTransformationFrom()
         super.onCreate(savedInstanceState)
-        if (handleFirstRun(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, allowSkip = BuildConfig.FIRST_RUN_SKIPPABLE)) return
+        handleFirstRun(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, allowSkip = BuildConfig.FIRST_RUN_SKIPPABLE) ?: return
         if (SDK_INT >= VERSION_CODES.UPSIDE_DOWN_CAKE) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -164,11 +164,20 @@ class MainActivity :
             when (item.itemId) {
                 R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
                 R.id.commonutils_about_dest ->
-                    findViewById<View>(R.id.commonutils_about_dest).transformToActivity(CommonUtilsAboutActivity::class.java)
+                    (
+                        findViewById(R.id.commonutils_about_dest)
+                            ?: binding.navigationView
+                    ).transformToActivity(CommonUtilsAboutActivity::class.java)
                 R.id.commonutils_about_me_dest ->
-                    findViewById<View>(R.id.commonutils_about_me_dest).transformToActivity(CommonUtilsAboutMeActivity::class.java)
+                    (
+                        findViewById(R.id.commonutils_about_me_dest)
+                            ?: binding.navigationView
+                    ).transformToActivity(CommonUtilsAboutMeActivity::class.java)
                 R.id.commonutils_settings_dest ->
-                    findViewById<View>(R.id.commonutils_settings_dest).transformToActivity(CommonUtilsSettingsActivity::class.java)
+                    (
+                        findViewById(R.id.commonutils_settings_dest)
+                            ?: binding.navigationView
+                    ).transformToActivity(CommonUtilsSettingsActivity::class.java)
                 R.id.leaks_dest -> openLeakCanary(this)
                 else -> return@onNavigationSingleClick false
             }
