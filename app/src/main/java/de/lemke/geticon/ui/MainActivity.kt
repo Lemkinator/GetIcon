@@ -174,7 +174,7 @@ class MainActivity :
             }
             true
         }
-        binding.drawerLayout.setTitle(BuildConfig.APP_NAME)
+        binding.drawerLayout.setTitle(getString(R.string.app_name))
         binding.drawerLayout.setupHeaderAndNavRail(getString(R.string.about_app))
         binding.drawerLayout.isImmersiveScroll = true
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)

@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package de.lemke.geticon.baselineprofile
 
+import android.content.Intent
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -28,6 +28,7 @@ import org.junit.runner.RunWith
 
 private const val PACKAGE_NAME = "de.lemke.geticon"
 private const val TIMEOUT_MS = 5_000L
+private const val EXTRA_SKIP_FIRST_RUN = "commonUtilsSkipFirstRun"
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
@@ -43,28 +44,18 @@ class BaselineProfileGenerator {
             maxIterations = 10,
             includeInStartupProfile = true,
         ) {
-            startActivityAndClearOOBE()
+            startActivityAndWait(Intent().apply { putExtra(EXTRA_SKIP_FIRST_RUN, true) })
             navigateToIconAndBack()
         }
 }
 
-private fun MacrobenchmarkScope.startActivityAndClearOOBE() {
-    startActivityAndWait()
-    // Dismiss OOBE if shown (first install or TOS update)
-    val oobeButton = device.wait(Until.findObject(By.res(PACKAGE_NAME, "oobeIntroFooterButton")), TIMEOUT_MS)
-    oobeButton?.click()
-    device.waitForIdle()
-}
-
 private fun MacrobenchmarkScope.navigateToIconAndBack() {
-    // Wait for app picker to load and tap the first item
     val appItem =
         device
             .wait(Until.findObject(By.res(PACKAGE_NAME, "appPicker")), TIMEOUT_MS)
             ?.let { device.wait(Until.findObject(By.clazz("android.widget.TextView")), TIMEOUT_MS) }
     appItem?.click()
     device.waitForIdle()
-    // Wait for icon screen to load
     device.wait(Until.findObject(By.res(PACKAGE_NAME, "icon")), TIMEOUT_MS)
     device.pressBack()
     device.waitForIdle()
