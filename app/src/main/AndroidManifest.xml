@@ -53,6 +53,9 @@
             android:value="@xml/meta_geticon" />
 
         <activity
+            android:name=".ui.IconActivity"
+            android:configChanges="screenLayout|screenSize" />
+        <activity
             android:name=".ui.MainActivity"
             android:configChanges="orientation|screenLayout|screenSize"
             android:exported="true"

@@ -16,35 +16,31 @@
 
 package de.lemke.geticon.ui
 
+import android.content.Intent
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
-import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.geticon.App
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-// sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
-// App::class: uses the production Hilt component so App.onCreate() initializes commonUtilsSettings.
 @RunWith(RobolectricTestRunner::class)
 @Config(application = App::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class MainActivityScreenshotTest {
-    @Before
-    fun setup() {
-        // Bypass OOBE: fresh test has lastVersionCode == -1 which triggers openOOBEAndFinish().
-        commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
-        commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
-    }
-
+class IconActivityScreenshotTest {
     @Test
-    fun mainActivity_default() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+    fun iconActivity_default() {
+        val context = ApplicationProvider.getApplicationContext<App>()
+        val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
+        val intent =
+            Intent(context, IconActivity::class.java)
+                .putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
+        ActivityScenario.launch<IconActivity>(intent).use { scenario ->
             scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("main_default.png")
+                activity.window.decorView.captureRoboImage("icon_default.png")
             }
         }
     }

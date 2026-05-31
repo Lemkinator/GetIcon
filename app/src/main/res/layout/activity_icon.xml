@@ -14,19 +14,22 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<dev.oneuiproject.oneui.layout.ToolbarLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:background="?roundedCornerColor"
+    app:expanded="false"
+    app:showNavButtonAsBack="true">
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:fillViewport="true"
-        android:paddingHorizontal="10dp">
+        android:paddingHorizontal="10dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        app:layout_location="main_content">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -52,7 +55,8 @@
         android:background="?android:colorBackground"
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp">
+        android:paddingVertical="8dp"
+        app:layout_location="footer">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -131,4 +135,4 @@
 
     </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
 
-</LinearLayout>
+</dev.oneuiproject.oneui.layout.ToolbarLayout>

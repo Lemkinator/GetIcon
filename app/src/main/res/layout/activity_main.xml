@@ -23,20 +23,35 @@
     app:expanded="false"
     app:title="@string/app_name">
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/navigationHost"
-        android:name="androidx.navigation.fragment.NavHostFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:defaultNavHost="true"
-        app:layout_location="main_content"
-        app:navGraph="@navigation/main_navigation" />
-
     <dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
         android:id="@+id/navigationView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_location="drawer_panel"
         app:menu="@menu/menu_navigation" />
+
+    <dev.oneuiproject.oneui.widget.RoundedFrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:edgeInsetLeft="10dp"
+        app:edgeInsetRight="10dp"
+        app:roundedCorners="top_right|top_left">
+
+        <androidx.picker.widget.SeslAppPickerGridView
+            android:id="@+id/appPicker"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="10dp"
+            android:background="?android:colorBackground"
+            android:clipToPadding="false"
+            android:scrollbarStyle="outsideOverlay"
+            app:strategy="de.lemke.geticon.domain.AppPickerStrategy" />
+
+        <de.lemke.commonutils.ui.widget.NoEntryView
+            android:id="@+id/noEntryView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </dev.oneuiproject.oneui.widget.RoundedFrameLayout>
 
 </dev.oneuiproject.oneui.layout.NavDrawerLayout>
