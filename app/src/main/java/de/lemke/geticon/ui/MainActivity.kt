@@ -38,16 +38,15 @@ import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
-import de.lemke.commonutils.checkAppStartAndHandleOOBE
 import de.lemke.commonutils.collectEvents
 import de.lemke.commonutils.configureCommonUtilsSplashScreen
 import de.lemke.commonutils.data.commonUtilsSettings
+import de.lemke.commonutils.handleFirstRun
 import de.lemke.commonutils.onNavigationSingleClick
 import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
 import de.lemke.commonutils.setupCommonUtilsAboutActivity
-import de.lemke.commonutils.setupCommonUtilsOOBEActivity
 import de.lemke.commonutils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.setupHeaderAndNavRail
 import de.lemke.commonutils.toast
@@ -82,12 +81,12 @@ class MainActivity :
         val splashScreen = installSplashScreen()
         prepareActivityTransformationFrom()
         super.onCreate(savedInstanceState)
+        if (handleFirstRun(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, allowSkip = BuildConfig.FIRST_RUN_SKIPPABLE)) return
         if (SDK_INT >= VERSION_CODES.UPSIDE_DOWN_CAKE) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
-        setupCommonUtilsOOBEActivity(nextActivity = MainActivity::class.java)
-        if (!checkAppStartAndHandleOOBE(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME)) openMain(savedInstanceState)
+        openMain(savedInstanceState)
     }
 
     private fun openMain(savedInstanceState: Bundle?) {
@@ -164,9 +163,12 @@ class MainActivity :
         binding.navigationView.onNavigationSingleClick { item ->
             when (item.itemId) {
                 R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
-                R.id.about_app_dest -> findViewById<View>(R.id.about_app_dest).transformToActivity(CommonUtilsAboutActivity::class.java)
-                R.id.about_me_dest -> findViewById<View>(R.id.about_me_dest).transformToActivity(CommonUtilsAboutMeActivity::class.java)
-                R.id.settings_dest -> findViewById<View>(R.id.settings_dest).transformToActivity(CommonUtilsSettingsActivity::class.java)
+                R.id.commonutils_about_dest ->
+                    findViewById<View>(R.id.commonutils_about_dest).transformToActivity(CommonUtilsAboutActivity::class.java)
+                R.id.commonutils_about_me_dest ->
+                    findViewById<View>(R.id.commonutils_about_me_dest).transformToActivity(CommonUtilsAboutMeActivity::class.java)
+                R.id.commonutils_settings_dest ->
+                    findViewById<View>(R.id.commonutils_settings_dest).transformToActivity(CommonUtilsSettingsActivity::class.java)
                 R.id.leaks_dest -> openLeakCanary(this)
                 else -> return@onNavigationSingleClick false
             }
