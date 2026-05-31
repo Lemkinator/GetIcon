@@ -63,11 +63,11 @@ fragment transitions needing reflection, OneUI screens authored as activities).
 activities; navigation between them uses shared-element activity transitions
 (`transformToActivity`).
 
-**First run** uses the common-utils first-run flow: `handleFirstRun(...)` is the first
+**First run** uses the common-utils onboarding flow: `onboardIfNeeded(...)` is the first
 call in `MainActivity.onCreate` (before inflating UI) and launches OOBE as a task-root
 activity when needed (predictive back = app exit; no Main leak on first start). GetIcon
 uses OOBE only. The baseline-profile (`nonMinifiedRelease`) build sets
-`BuildConfig.FIRST_RUN_SKIPPABLE = true`, so the benchmark passes `EXTRA_SKIP_FIRST_RUN`
+`BuildConfig.FIRST_RUN_SKIPPABLE = true`, so the benchmark passes `EXTRA_SKIP_ONBOARDING`
 to bypass OOBE and measure Main + Icon only; production `release` keeps it `false`.
 
 ## Key Patterns
