@@ -28,6 +28,7 @@ import org.junit.runner.RunWith
 
 private const val PACKAGE_NAME = "de.lemke.geticon"
 private const val TIMEOUT_MS = 5_000L
+// Must match de.lemke.commonutils.EXTRA_SKIP_FIRST_RUN — cannot import from test module
 private const val EXTRA_SKIP_FIRST_RUN = "commonUtilsSkipFirstRun"
 
 @RunWith(AndroidJUnit4::class)
@@ -53,7 +54,7 @@ private fun MacrobenchmarkScope.navigateToIconAndBack() {
     val appItem =
         device
             .wait(Until.findObject(By.res(PACKAGE_NAME, "appPicker")), TIMEOUT_MS)
-            ?.let { device.wait(Until.findObject(By.clazz("android.widget.TextView")), TIMEOUT_MS) }
+            ?.findObject(By.clazz("android.widget.TextView"))
     appItem?.click()
     device.waitForIdle()
     device.wait(Until.findObject(By.res(PACKAGE_NAME, "icon")), TIMEOUT_MS)
