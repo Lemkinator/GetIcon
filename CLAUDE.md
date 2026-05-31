@@ -55,6 +55,20 @@ own state and inject use cases directly:
 DI is Hilt throughout. Async via coroutines (`lifecycleScope.launch`,
 `suspend`). ViewBinding enabled.
 
+**Multi-activity (not single-activity).** OneUI (sesl-androidx) is activity-oriented;
+single-activity + Navigation Component was tried and reverted (buggy menu, leaky
+fragment transitions needing reflection, OneUI screens authored as activities).
+`MainActivity` (app picker) and `IconActivity` (preview/export) are separate
+activities; navigation between them uses shared-element activity transitions
+(`transformToActivity`).
+
+**First run** uses the common-utils first-run flow: `handleFirstRun(...)` is the first
+call in `MainActivity.onCreate` (before inflating UI) and launches OOBE as a task-root
+activity when needed (predictive back = app exit; no Main leak on first start). GetIcon
+uses OOBE only. The baseline-profile (`nonMinifiedRelease`) build sets
+`BuildConfig.FIRST_RUN_SKIPPABLE = true`, so the benchmark passes `EXTRA_SKIP_FIRST_RUN`
+to bypass OOBE and measure Main + Icon only; production `release` keeps it `false`.
+
 ## Key Patterns
 
 **External libraries dominate UI logic.** Many helpers
