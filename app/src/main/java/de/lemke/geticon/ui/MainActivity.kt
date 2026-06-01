@@ -16,8 +16,6 @@
 
 package de.lemke.geticon.ui
 
-import android.R.anim.fade_in
-import android.R.anim.fade_out
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
 import android.content.pm.PackageManager.NameNotFoundException
@@ -43,6 +41,7 @@ import de.lemke.commonutils.configureCommonUtilsSplashScreen
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.onNavigationSingleClick
 import de.lemke.commonutils.onboardIfNeeded
+import de.lemke.commonutils.overrideFadeOpenTransition
 import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
@@ -83,7 +82,7 @@ class MainActivity :
         super.onCreate(savedInstanceState)
         @Suppress("KotlinConstantConditions")
         onboardIfNeeded(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, allowSkip = BuildConfig.FIRST_RUN_SKIPPABLE) ?: return
-        if (SDK_INT >= VERSION_CODES.UPSIDE_DOWN_CAKE) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
+        overrideFadeOpenTransition()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
