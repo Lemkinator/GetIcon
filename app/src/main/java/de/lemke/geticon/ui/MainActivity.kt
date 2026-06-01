@@ -86,10 +86,6 @@ class MainActivity :
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
-        openMain(savedInstanceState)
-    }
-
-    private fun openMain(savedInstanceState: Bundle?) {
         setupCommonUtilsAboutActivity(appVersion = BuildConfig.VERSION_NAME)
         setupCommonUtilsSettingsActivity(
             commonutilsR.xml.preferences_design,
