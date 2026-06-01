@@ -51,6 +51,7 @@ android {
         versionCode = 32
         versionName = "1.4.2"
         testInstrumentationRunner = "de.lemke.geticon.HiltTestRunner"
+        buildConfigField("boolean", "FIRST_RUN_SKIPPABLE", "false")
     }
     @Suppress("UnstableApiUsage")
     androidResources.localeFilters += listOf("en", "de")
@@ -123,6 +124,16 @@ android {
             }
         }
         animationsDisabled = true
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("nonMinifiedRelease")) { variant ->
+        variant.buildConfigFields!!.put(
+            "FIRST_RUN_SKIPPABLE",
+            com.android.build.api.variant
+                .BuildConfigField("boolean", "true", "Allow benchmarks to skip the first-run chain"),
+        )
     }
 }
 

@@ -16,8 +16,6 @@
 
 package de.lemke.geticon.ui
 
-import android.R.anim.fade_in
-import android.R.anim.fade_out
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
 import android.content.pm.PackageManager.NameNotFoundException
@@ -27,7 +25,6 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -38,16 +35,15 @@ import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
-import de.lemke.commonutils.checkAppStartAndHandleOOBE
 import de.lemke.commonutils.collectEvents
 import de.lemke.commonutils.configureCommonUtilsSplashScreen
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.onNavigationSingleClick
+import de.lemke.commonutils.onboardIfNeeded
 import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
 import de.lemke.commonutils.setupCommonUtilsAboutActivity
-import de.lemke.commonutils.setupCommonUtilsOOBEActivity
 import de.lemke.commonutils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.setupHeaderAndNavRail
 import de.lemke.commonutils.toast
@@ -80,17 +76,13 @@ class MainActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
-        prepareActivityTransformationFrom()
         super.onCreate(savedInstanceState)
-        if (SDK_INT >= VERSION_CODES.UPSIDE_DOWN_CAKE) overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, fade_in, fade_out)
+        @Suppress("KotlinConstantConditions")
+        onboardIfNeeded(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, allowSkip = BuildConfig.FIRST_RUN_SKIPPABLE) ?: return
+        prepareActivityTransformationFrom()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
-        setupCommonUtilsOOBEActivity(nextActivity = MainActivity::class.java)
-        if (!checkAppStartAndHandleOOBE(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME)) openMain(savedInstanceState)
-    }
-
-    private fun openMain(savedInstanceState: Bundle?) {
         setupCommonUtilsAboutActivity(appVersion = BuildConfig.VERSION_NAME)
         setupCommonUtilsSettingsActivity(
             commonutilsR.xml.preferences_design,
@@ -163,16 +155,33 @@ class MainActivity :
         binding.navigationView.findMenuItem(R.id.leaks_dest)?.isVisible = BuildConfig.DEBUG
         binding.navigationView.onNavigationSingleClick { item ->
             when (item.itemId) {
-                R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
-                R.id.about_app_dest -> findViewById<View>(R.id.about_app_dest).transformToActivity(CommonUtilsAboutActivity::class.java)
-                R.id.about_me_dest -> findViewById<View>(R.id.about_me_dest).transformToActivity(CommonUtilsAboutMeActivity::class.java)
-                R.id.settings_dest -> findViewById<View>(R.id.settings_dest).transformToActivity(CommonUtilsSettingsActivity::class.java)
-                R.id.leaks_dest -> openLeakCanary(this)
-                else -> return@onNavigationSingleClick false
+                R.id.extract_icon_from_apk_dest -> {
+                    pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
+                }
+
+                R.id.commonutils_about_dest -> {
+                    transformToActivity(R.id.commonutils_about_dest, CommonUtilsAboutActivity::class.java)
+                }
+
+                R.id.commonutils_about_me_dest -> {
+                    transformToActivity(R.id.commonutils_about_me_dest, CommonUtilsAboutMeActivity::class.java)
+                }
+
+                R.id.commonutils_settings_dest -> {
+                    transformToActivity(R.id.commonutils_settings_dest, CommonUtilsSettingsActivity::class.java)
+                }
+
+                R.id.leaks_dest -> {
+                    openLeakCanary(this)
+                }
+
+                else -> {
+                    return@onNavigationSingleClick false
+                }
             }
             true
         }
-        binding.drawerLayout.setTitle(BuildConfig.APP_NAME)
+        binding.drawerLayout.setTitle(getString(R.string.app_name))
         binding.drawerLayout.setupHeaderAndNavRail(getString(R.string.about_app))
         binding.drawerLayout.isImmersiveScroll = true
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)

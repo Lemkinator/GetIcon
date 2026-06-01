@@ -26,7 +26,7 @@ open class TestApp : Application() {
         super.onCreate()
         initCommonUtilsSettingsAndSetDarkMode()
         // Prevent OOBE redirect: fresh SharedPreferences has lastVersionCode = -1 which triggers
-        // checkAppStartAndHandleOOBE → finishAfterTransition, leaving MainActivity DESTROYED.
+        // onboardIfNeeded → finishAfterTransition, leaving MainActivity DESTROYED.
         commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
         commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
     }

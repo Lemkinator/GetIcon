@@ -15,8 +15,10 @@ All commands run from the repo root on Windows (PowerShell or Git Bash):
 ./gradlew clean build --no-daemon
 ```
 
-No unit or instrumented tests exist yet (test source directories exist but
-are empty).
+Unit tests exist: `IconViewModelTest`, `IconActivityScreenshotTest` (Roborazzi),
+`MainActivityScreenshotTest` (Roborazzi), plus Konsist architecture tests.
+Instrumented tests: `TestApp.kt` (test application class) and the baseline profile
+generator (`BaselineProfileGenerator`) — both run on device via AndroidJUnit4.
 
 ## Private Dependencies (Required for Build)
 
@@ -54,6 +56,20 @@ own state and inject use cases directly:
 
 DI is Hilt throughout. Async via coroutines (`lifecycleScope.launch`,
 `suspend`). ViewBinding enabled.
+
+**Multi-activity (not single-activity).** OneUI (sesl-androidx) is activity-oriented;
+single-activity + Navigation Component was tried and reverted (buggy menu, leaky
+fragment transitions needing reflection, OneUI screens authored as activities).
+`MainActivity` (app picker) and `IconActivity` (preview/export) are separate
+activities; navigation between them uses shared-element activity transitions
+(`transformToActivity`).
+
+**First run** uses the common-utils onboarding flow: `onboardIfNeeded(...)` is the first
+call in `MainActivity.onCreate` (before inflating UI) and launches OOBE as a task-root
+activity when needed (predictive back = app exit; no Main leak on first start). GetIcon
+uses OOBE only. The baseline-profile (`nonMinifiedRelease`) build sets
+`BuildConfig.FIRST_RUN_SKIPPABLE = true`, so the benchmark passes `EXTRA_SKIP_ONBOARDING`
+to bypass OOBE and measure Main + Icon only; production `release` keeps it `false`.
 
 ## Key Patterns
 

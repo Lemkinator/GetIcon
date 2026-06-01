@@ -13,6 +13,28 @@
     </issue>
 
     <issue
+        id="Overdraw"
+        message="Possible overdraw: Root element paints background `?roundedCornerColor` with a theme that also paints a background (inferred theme is `@style/CommonUtils.AppTheme`)"
+        errorLine1="    android:background=&quot;?roundedCornerColor&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout-land/activity_icon.xml"
+            line="22"
+            column="5" />
+    </issue>
+
+    <issue
+        id="Overdraw"
+        message="Possible overdraw: Root element paints background `?roundedCornerColor` with a theme that also paints a background (inferred theme is `@style/CommonUtils.AppTheme`)"
+        errorLine1="    android:background=&quot;?roundedCornerColor&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/activity_icon.xml"
+            line="22"
+            column="5" />
+    </issue>
+
+    <issue
         id="UnusedResources"
         message="The resource `R.color.primary_color` appears to be unused"
         errorLine1="    &lt;color name=&quot;primary_color&quot;>#F48FB1&lt;/color>"
@@ -85,7 +107,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="18"
+            line="19"
             column="13" />
     </issue>
 
@@ -96,7 +118,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="22"
+            line="23"
             column="13" />
     </issue>
 
@@ -107,7 +129,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="23"
+            line="25"
             column="13" />
     </issue>
 
@@ -118,7 +140,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="24"
+            line="26"
             column="13" />
     </issue>
 

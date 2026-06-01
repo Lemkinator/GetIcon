@@ -13,15 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package de.lemke.geticon.baselineprofile
 
+import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+
+private const val PACKAGE_NAME = "de.lemke.geticon"
+private const val TIMEOUT_MS = 5_000L
+
+// Must match de.lemke.commonutils.EXTRA_SKIP_ONBOARDING — cannot import from test module
+private const val EXTRA_SKIP_ONBOARDING = "commonUtilsSkipOnboarding"
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
@@ -31,7 +39,33 @@ class BaselineProfileGenerator {
 
     @Test
     fun generate() =
-        rule.collect(packageName = "de.lemke.geticon") {
-            startActivityAndWait()
+        rule.collect(
+            packageName = PACKAGE_NAME,
+            stableIterations = 3,
+            maxIterations = 10,
+            includeInStartupProfile = true,
+        ) {
+            startActivityAndWait { it.putExtra(EXTRA_SKIP_ONBOARDING, true) }
+            navigateToIconAndBack()
         }
+}
+
+private fun MacrobenchmarkScope.navigateToIconAndBack() {
+    val appItem =
+        checkNotNull(
+            device
+                .wait(
+                    Until.findObject(
+                        By.res(PACKAGE_NAME, "appPicker").hasDescendant(By.clazz("android.widget.TextView")),
+                    ),
+                    TIMEOUT_MS,
+                )?.findObject(By.clazz("android.widget.TextView")),
+        ) { "appPicker list item not found within ${TIMEOUT_MS}ms" }
+    appItem.click()
+    device.waitForIdle()
+    checkNotNull(device.wait(Until.findObject(By.res(PACKAGE_NAME, "icon")), TIMEOUT_MS)) {
+        "icon screen not found within ${TIMEOUT_MS}ms"
+    }
+    device.pressBack()
+    device.waitForIdle()
 }
