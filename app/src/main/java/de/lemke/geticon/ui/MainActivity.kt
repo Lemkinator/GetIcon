@@ -76,10 +76,10 @@ class MainActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
-        prepareActivityTransformationFrom()
         super.onCreate(savedInstanceState)
         @Suppress("KotlinConstantConditions")
         onboardIfNeeded(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, allowSkip = BuildConfig.FIRST_RUN_SKIPPABLE) ?: return
+        prepareActivityTransformationFrom()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
