@@ -17,7 +17,8 @@ All commands run from the repo root on Windows (PowerShell or Git Bash):
 
 Unit tests exist: `IconViewModelTest`, `IconActivityScreenshotTest` (Roborazzi),
 `MainActivityScreenshotTest` (Roborazzi), plus Konsist architecture tests.
-No instrumented tests yet.
+Instrumented tests: `TestApp.kt` (test application class) and the baseline profile
+generator (`BaselineProfileGenerator`) — both run on device via AndroidJUnit4.
 
 ## Private Dependencies (Required for Build)
 
