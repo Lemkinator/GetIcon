@@ -27,6 +27,7 @@ import org.junit.runner.RunWith
 
 private const val PACKAGE_NAME = "de.lemke.geticon"
 private const val TIMEOUT_MS = 5_000L
+
 // Must match de.lemke.commonutils.EXTRA_SKIP_ONBOARDING — cannot import from test module
 private const val EXTRA_SKIP_ONBOARDING = "commonUtilsSkipOnboarding"
 
@@ -51,12 +52,16 @@ class BaselineProfileGenerator {
 
 private fun MacrobenchmarkScope.navigateToIconAndBack() {
     val appItem =
-        device
-            .wait(Until.findObject(By.res(PACKAGE_NAME, "appPicker")), TIMEOUT_MS)
-            ?.findObject(By.clazz("android.widget.TextView"))
-    appItem?.click()
+        checkNotNull(
+            device
+                .wait(Until.findObject(By.res(PACKAGE_NAME, "appPicker")), TIMEOUT_MS)
+                ?.findObject(By.clazz("android.widget.TextView")),
+        ) { "appPicker list item not found within ${TIMEOUT_MS}ms" }
+    appItem.click()
     device.waitForIdle()
-    device.wait(Until.findObject(By.res(PACKAGE_NAME, "icon")), TIMEOUT_MS)
+    checkNotNull(device.wait(Until.findObject(By.res(PACKAGE_NAME, "icon")), TIMEOUT_MS)) {
+        "icon screen not found within ${TIMEOUT_MS}ms"
+    }
     device.pressBack()
     device.waitForIdle()
 }
