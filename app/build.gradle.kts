@@ -147,6 +147,7 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
 
     debugImplementation(libs.leakcanary)
 
@@ -242,9 +243,11 @@ kover {
                 )
             }
         }
-        verify {
-            rule {
-                minBound(70)
+        variant("debug") {
+            verify {
+                rule {
+                    minBound(70)
+                }
             }
         }
     }

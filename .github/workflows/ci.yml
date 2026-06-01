@@ -54,7 +54,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Run unit tests
-        run: chmod +x ./gradlew && ./gradlew testDebugUnitTest koverHtmlReport --stacktrace
+        run: chmod +x ./gradlew && ./gradlew testDebugUnitTest koverHtmlReportDebug koverVerifyDebug --stacktrace
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}

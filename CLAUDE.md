@@ -103,7 +103,7 @@ Four tools run as part of `./gradlew build`:
   `./gradlew spotlessApply`.
 - **Detekt** — static analysis; config at `config/detekt/detekt.yml`.
   `autoCorrect = false` so fixes are manual.
-- **Kover** — coverage; verify threshold with `./gradlew koverVerify`.
+- **Kover** — coverage; verify threshold with `./gradlew koverVerifyDebug`.
 - **Konsist** — architecture rules in
   `app/src/test/java/de/lemke/geticon/ArchitectureTest.kt`. Enforces
   `data/domain/ui` layering. Runs as part of `./gradlew test`.
