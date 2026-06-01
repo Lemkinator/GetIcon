@@ -41,7 +41,6 @@ import de.lemke.commonutils.configureCommonUtilsSplashScreen
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.onNavigationSingleClick
 import de.lemke.commonutils.onboardIfNeeded
-import de.lemke.commonutils.overrideFadeOpenTransition
 import de.lemke.commonutils.prepareActivityTransformationFrom
 import de.lemke.commonutils.restoreSearchAndActionMode
 import de.lemke.commonutils.saveSearchAndActionMode
@@ -82,7 +81,6 @@ class MainActivity :
         super.onCreate(savedInstanceState)
         @Suppress("KotlinConstantConditions")
         onboardIfNeeded(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, allowSkip = BuildConfig.FIRST_RUN_SKIPPABLE) ?: return
-        overrideFadeOpenTransition()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
