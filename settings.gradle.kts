@@ -14,12 +14,3 @@ plugins {
 rootProject.name = "Get Icon"
 include(":app")
 include(":baselineprofile")
-
-val commonUtilsDir = file("../common-utils")
-if (commonUtilsDir.exists()) {
-    includeBuild(commonUtilsDir) {
-        dependencySubstitution {
-            substitute(module("io.github.lemkinator:common-utils")).using(project(":lib"))
-        }
-    }
-}
