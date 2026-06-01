@@ -54,8 +54,12 @@ private fun MacrobenchmarkScope.navigateToIconAndBack() {
     val appItem =
         checkNotNull(
             device
-                .wait(Until.findObject(By.res(PACKAGE_NAME, "appPicker")), TIMEOUT_MS)
-                ?.findObject(By.clazz("android.widget.TextView")),
+                .wait(
+                    Until.findObject(
+                        By.res(PACKAGE_NAME, "appPicker").hasDescendant(By.clazz("android.widget.TextView")),
+                    ),
+                    TIMEOUT_MS,
+                )?.findObject(By.clazz("android.widget.TextView")),
         ) { "appPicker list item not found within ${TIMEOUT_MS}ms" }
     appItem.click()
     device.waitForIdle()
