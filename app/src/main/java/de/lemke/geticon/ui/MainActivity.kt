@@ -25,7 +25,6 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -161,15 +160,15 @@ class MainActivity :
                 }
 
                 R.id.commonutils_about_dest -> {
-                    findViewById<View>(R.id.commonutils_about_dest).transformToActivity(CommonUtilsAboutActivity::class.java)
+                    transformToActivity(R.id.commonutils_about_dest, CommonUtilsAboutActivity::class.java)
                 }
 
                 R.id.commonutils_about_me_dest -> {
-                    findViewById<View>(R.id.commonutils_about_me_dest).transformToActivity(CommonUtilsAboutMeActivity::class.java)
+                    transformToActivity(R.id.commonutils_about_me_dest, CommonUtilsAboutMeActivity::class.java)
                 }
 
                 R.id.commonutils_settings_dest -> {
-                    findViewById<View>(R.id.commonutils_settings_dest).transformToActivity(CommonUtilsSettingsActivity::class.java)
+                    transformToActivity(R.id.commonutils_settings_dest, CommonUtilsSettingsActivity::class.java)
                 }
 
                 R.id.leaks_dest -> {
