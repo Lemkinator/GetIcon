@@ -91,7 +91,7 @@ jobs:
     needs: static-analysis
     strategy:
       matrix:
-        api-level: [ 34 ]
+        api-level: [ 35 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -113,7 +113,7 @@ jobs:
         with:
           api-level: ${{ matrix.api-level }}
           arch: x86_64
-          profile: pixel_6
+          profile: pixel_9
           script: chmod +x ./gradlew && ./gradlew connectedDebugAndroidTest --stacktrace
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}

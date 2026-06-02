@@ -49,7 +49,7 @@ Run macrobenchmarks manually (not CI-gated — numbers are advisory and device-s
 `startupBaselineProfile` should be within ~10 % of `Full()` and clearly below `None()`.
 JIT/ClassInit metrics near zero with profile applied = proof the profile works.
 
-Benchmarks run on GMD `pixel6Api34` (Pixel 6, API 34, AOSP image). AOSP (not `google_apis`)
+Benchmarks run on GMD `pixel9Api35` (Pixel 9, API 35, AOSP image). AOSP (not `google_apis`)
 is required — Play images run background work that adds measurement noise.
 
 ## Private Dependencies (Required for Build)

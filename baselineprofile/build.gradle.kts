@@ -36,9 +36,9 @@ android {
     targetProjectPath = ":app"
     experimentalProperties["android.experimental.self-instrumenting"] = true
     testOptions.managedDevices.localDevices {
-        create("pixel6Api34") {
-            device = "Pixel 6"
-            apiLevel = 34
+        create("pixel9Api35") {
+            device = "Pixel 9"
+            apiLevel = 35
             systemImageSource = "aosp"
         }
     }
@@ -55,6 +55,6 @@ baselineProfile {
     @Suppress("UnstableApiUsage")
     enableEmulatorDisplay = false
     managedDevices.clear()
-    managedDevices += "pixel6Api34"
+    managedDevices += "pixel9Api35"
     useConnectedDevices = false
 }
