@@ -17,13 +17,17 @@
 package de.lemke.geticon.ui
 
 import android.content.Intent
+import android.os.Looper
+import android.widget.CompoundButton
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import de.lemke.geticon.App
+import de.lemke.geticon.R
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -31,16 +35,49 @@ import org.robolectric.annotation.GraphicsMode
 @Config(application = App::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IconActivityScreenshotTest {
-    @Test
-    fun iconActivity_default() {
+    private fun launchIconActivity(): ActivityScenario<IconActivity> {
         val context = ApplicationProvider.getApplicationContext<App>()
         val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
         val intent =
             Intent(context, IconActivity::class.java)
                 .putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
-        ActivityScenario.launch<IconActivity>(intent).use { scenario ->
+        return ActivityScenario.launch(intent)
+    }
+
+    @Test
+    fun iconActivity_default() {
+        launchIconActivity().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.window.decorView.captureRoboImage("icon_default.png")
+            }
+        }
+    }
+
+    @Test
+    fun iconActivity_maskDisabled() {
+        launchIconActivity().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<CompoundButton>(R.id.masked_checkbox)?.performClick()
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.window.decorView.captureRoboImage("icon_mask_disabled.png")
+            }
+        }
+    }
+
+    @Test
+    fun iconActivity_colorEnabled() {
+        launchIconActivity().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<CompoundButton>(R.id.color_checkbox)?.performClick()
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.window.decorView.captureRoboImage("icon_color_enabled.png")
             }
         }
     }
