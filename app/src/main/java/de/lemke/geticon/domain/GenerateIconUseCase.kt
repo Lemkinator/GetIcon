@@ -62,6 +62,7 @@ class GenerateIconUseCase @Inject constructor(
                 } catch (_: Exception) {
                     AppCompatResources.getDrawable(context, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)!!
                 }
+            // SeslBaseReflector.invoke (used internally) swallows all reflection exceptions; null = unavailable on non-OneUI.
             val maskedAppIcon = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
             val isAdaptiveIcon = appIcon is AdaptiveIconDrawable
             val hasMaskedAppIcon = isAdaptiveIcon || maskedAppIcon != null

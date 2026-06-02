@@ -16,6 +16,7 @@
 
 package de.lemke.geticon.data
 
+import androidx.datastore.preferences.core.stringPreferencesKey
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 
@@ -72,6 +73,54 @@ class UserSettingsRepositoryTest : ShouldSpec(
             val settings = repo.getSettings()
             settings.iconSize shouldBe 64
             settings.maskEnabled shouldBe false
+        }
+
+        should("iconSize clamped to min 16 when stored value is below range") {
+            repo.updateSettings { it.copy(iconSize = 5) }
+            repo.getSettings().iconSize shouldBe 16
+        }
+
+        should("iconSize clamped to max 1024 when stored value is above range") {
+            repo.updateSettings { it.copy(iconSize = 9999) }
+            repo.getSettings().iconSize shouldBe 1024
+        }
+
+        should("recentBackgroundColors caps to 6 when more than 6 stored") {
+            val colors = (1..7).map { 0xFF000000.toInt() + it }
+            repo.updateSettings { it.copy(recentBackgroundColors = colors) }
+            repo.getSettings().recentBackgroundColors.size shouldBe 6
+        }
+
+        should("recentForegroundColors caps to 6 when more than 6 stored") {
+            val colors = (1..7).map { 0xFF000000.toInt() + it }
+            repo.updateSettings { it.copy(recentForegroundColors = colors) }
+            repo.getSettings().recentForegroundColors.size shouldBe 6
+        }
+
+        should("recentBackgroundColors falls back to default when all stored values are invalid") {
+            val ds = FakeDataStore()
+            ds.updateData { it.toMutablePreferences().also { m -> m[stringPreferencesKey("recentBackgroundColors")] = "abc,,xyz" } }
+            val r = UserSettingsRepository(ds)
+            r.getSettings().recentBackgroundColors shouldBe listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
+        }
+
+        should("recentForegroundColors falls back to default on empty string") {
+            val ds = FakeDataStore()
+            ds.updateData { it.toMutablePreferences().also { m -> m[stringPreferencesKey("recentForegroundColors")] = "" } }
+            val r = UserSettingsRepository(ds)
+            r.getSettings().recentForegroundColors shouldBe listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
+        }
+
+        should("recentBackgroundColors keeps only valid integers from mixed input") {
+            val ds = FakeDataStore()
+            val validColor = 0xFF0381FE.toInt()
+            ds.updateData {
+                it.toMutablePreferences().also { m ->
+                    m[stringPreferencesKey("recentBackgroundColors")] = "abc,$validColor"
+                }
+            }
+            val r = UserSettingsRepository(ds)
+            r.getSettings().recentBackgroundColors shouldBe listOf(validColor)
         }
     },
 )

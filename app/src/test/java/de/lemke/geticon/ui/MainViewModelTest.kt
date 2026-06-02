@@ -19,6 +19,7 @@ package de.lemke.geticon.ui
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import app.cash.turbine.test
+import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -41,9 +42,19 @@ class MainViewModelTest : ShouldSpec(
             }
         }
 
-        should("emit ShowError when processApk returns null") {
+        should("emit ShowError when processApk returns InvalidApk") {
             val uri = mockk<Uri>()
-            coEvery { processApk(uri) } returns null
+            coEvery { processApk(uri) } returns ApkProcessResult.InvalidApk
+
+            viewModel.events.receiveAsFlow().test {
+                viewModel.onApkPicked(uri)
+                awaitItem() shouldBe MainEvent.ShowError
+            }
+        }
+
+        should("emit ShowError when processApk returns Error") {
+            val uri = mockk<Uri>()
+            coEvery { processApk(uri) } returns ApkProcessResult.Error
 
             viewModel.events.receiveAsFlow().test {
                 viewModel.onApkPicked(uri)
@@ -54,7 +65,7 @@ class MainViewModelTest : ShouldSpec(
         should("emit NavigateToIcon when processApk succeeds") {
             val uri = mockk<Uri>()
             val appInfo = mockk<ApplicationInfo>()
-            coEvery { processApk(uri) } returns appInfo
+            coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
 
             viewModel.events.receiveAsFlow().test {
                 viewModel.onApkPicked(uri)
@@ -65,7 +76,7 @@ class MainViewModelTest : ShouldSpec(
         should("NavigateToIcon carries the returned ApplicationInfo") {
             val uri = mockk<Uri>()
             val appInfo = mockk<ApplicationInfo>()
-            coEvery { processApk(uri) } returns appInfo
+            coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
 
             viewModel.events.receiveAsFlow().test {
                 viewModel.onApkPicked(uri)

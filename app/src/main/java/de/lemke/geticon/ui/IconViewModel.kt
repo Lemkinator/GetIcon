@@ -35,6 +35,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class IconUiState(
@@ -43,8 +44,8 @@ data class IconUiState(
     val size: Int = 512,
     val maskEnabled: Boolean = true,
     val colorEnabled: Boolean = false,
-    val foregroundColor: Int = 0,
-    val backgroundColor: Int = 0,
+    val foregroundColor: Int = DEFAULT_FOREGROUND_COLOR,
+    val backgroundColor: Int = DEFAULT_BACKGROUND_COLOR,
     val isAdaptiveIcon: Boolean = false,
     val hasMaskedAppIcon: Boolean = false,
     val fileName: String = "",
@@ -55,6 +56,8 @@ data class IconUiState(
 
 sealed class IconEvent {
     data object Finish : IconEvent()
+
+    data class GenerateFailed(val cause: Throwable) : IconEvent()
 }
 
 @HiltViewModel
@@ -80,37 +83,42 @@ class IconViewModel @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun loadInitialState() {
         val appInfo = applicationInfo ?: return
-        val userSettings = getUserSettings()
-        val fg = userSettings.recentForegroundColors.first()
-        val bg = userSettings.recentBackgroundColors.first()
-        val result =
-            generateIcon(
-                appInfo,
-                userSettings.iconSize,
-                userSettings.maskEnabled,
-                userSettings.colorEnabled,
-                fg,
-                bg,
-                context.packageManager,
-            )
-        _state.value =
-            IconUiState(
-                icon = result.bitmap,
-                appName = appInfo.loadLabel(context.packageManager).toString(),
-                size = userSettings.iconSize,
-                maskEnabled = userSettings.maskEnabled,
-                colorEnabled = userSettings.colorEnabled,
-                foregroundColor = fg,
-                backgroundColor = bg,
-                isAdaptiveIcon = result.isAdaptiveIcon,
-                hasMaskedAppIcon = result.hasMaskedAppIcon,
-                fileName = buildFileName(appInfo.packageName, userSettings.maskEnabled, userSettings.colorEnabled),
-                recentForegroundColors = userSettings.recentForegroundColors,
-                recentBackgroundColors = userSettings.recentBackgroundColors,
-                isLoading = false,
-            )
+        try {
+            val userSettings = getUserSettings()
+            val fg = userSettings.recentForegroundColors.first()
+            val bg = userSettings.recentBackgroundColors.first()
+            val result =
+                generateIcon(
+                    appInfo,
+                    userSettings.iconSize,
+                    userSettings.maskEnabled,
+                    userSettings.colorEnabled,
+                    fg,
+                    bg,
+                    context.packageManager,
+                )
+            _state.value =
+                IconUiState(
+                    icon = result.bitmap,
+                    appName = appInfo.loadLabel(context.packageManager).toString(),
+                    size = userSettings.iconSize,
+                    maskEnabled = userSettings.maskEnabled,
+                    colorEnabled = userSettings.colorEnabled,
+                    foregroundColor = fg,
+                    backgroundColor = bg,
+                    isAdaptiveIcon = result.isAdaptiveIcon,
+                    hasMaskedAppIcon = result.hasMaskedAppIcon,
+                    fileName = buildFileName(appInfo.packageName, userSettings.maskEnabled, userSettings.colorEnabled),
+                    recentForegroundColors = userSettings.recentForegroundColors,
+                    recentBackgroundColors = userSettings.recentBackgroundColors,
+                    isLoading = false,
+                )
+        } catch (e: Exception) {
+            events.send(IconEvent.GenerateFailed(e))
+        }
     }
 
     fun onMaskChanged(enabled: Boolean) {
@@ -151,27 +159,34 @@ class IconViewModel @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun regenerateIcon(newState: IconUiState) {
         val appInfo = applicationInfo ?: return
         _state.value = newState.copy(isLoading = true)
-        val result =
-            generateIcon(
-                appInfo,
-                newState.size,
-                newState.maskEnabled,
-                newState.colorEnabled,
-                newState.foregroundColor,
-                newState.backgroundColor,
-                context.packageManager,
-            )
-        _state.value =
-            newState.copy(
-                icon = result.bitmap,
-                isAdaptiveIcon = result.isAdaptiveIcon,
-                hasMaskedAppIcon = result.hasMaskedAppIcon,
-                fileName = buildFileName(appInfo.packageName, newState.maskEnabled, newState.colorEnabled),
-                isLoading = false,
-            )
+        try {
+            val result =
+                generateIcon(
+                    appInfo,
+                    newState.size,
+                    newState.maskEnabled,
+                    newState.colorEnabled,
+                    newState.foregroundColor,
+                    newState.backgroundColor,
+                    context.packageManager,
+                )
+            _state.update {
+                it.copy(
+                    icon = result.bitmap,
+                    isAdaptiveIcon = result.isAdaptiveIcon,
+                    hasMaskedAppIcon = result.hasMaskedAppIcon,
+                    fileName = buildFileName(appInfo.packageName, it.maskEnabled, it.colorEnabled),
+                    isLoading = false,
+                )
+            }
+        } catch (e: Exception) {
+            _state.update { it.copy(isLoading = false) }
+            events.send(IconEvent.GenerateFailed(e))
+        }
     }
 
     override fun onCleared() {

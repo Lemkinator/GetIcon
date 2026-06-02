@@ -19,6 +19,7 @@ package de.lemke.geticon.ui
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.ColorStateList.valueOf
+import android.graphics.Bitmap
 import android.graphics.Color.BLACK
 import android.graphics.Color.WHITE
 import android.os.Bundle
@@ -54,7 +55,6 @@ import de.lemke.geticon.databinding.ActivityIconBinding
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
-import java.io.IOException
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
@@ -74,20 +74,25 @@ class IconActivity :
     private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(StartActivityForResult()) { result: ActivityResult? ->
             val icon = viewModel.state.value.icon ?: return@registerForActivityResult
-            try {
-                if (result?.resultCode == RESULT_OK) {
-                    saveBitmapToUri(result.data?.data, icon)
-                } else {
-                    toast(commonutilsR.string.commonutils_error_saving_image)
-                }
-            } catch (e: IOException) {
-                Log.e("IconActivity", "Failed to save bitmap to URI", e)
-                toast(commonutilsR.string.commonutils_error_saving_image)
-            } catch (e: SecurityException) {
-                Log.e("IconActivity", "Failed to save bitmap to URI", e)
+            saveIconToUri(result, icon)
+        }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun saveIconToUri(
+        result: ActivityResult?,
+        icon: Bitmap,
+    ) {
+        try {
+            if (result?.resultCode == RESULT_OK) {
+                saveBitmapToUri(result.data?.data, icon)
+            } else {
                 toast(commonutilsR.string.commonutils_error_saving_image)
             }
+        } catch (e: Exception) {
+            Log.e("IconActivity", "Failed to save bitmap to URI", e)
+            toast(commonutilsR.string.commonutils_error_saving_image)
         }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         prepareActivityTransformationTo()
@@ -175,6 +180,10 @@ class IconActivity :
             when (event) {
                 IconEvent.Finish -> {
                     toast(commonutilsR.string.commonutils_error_app_not_found)
+                    finishAfterTransition()
+                }
+                is IconEvent.GenerateFailed -> {
+                    toast(R.string.error_icon_generation_failed)
                     finishAfterTransition()
                 }
             }

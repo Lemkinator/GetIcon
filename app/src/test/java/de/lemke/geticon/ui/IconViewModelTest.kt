@@ -21,6 +21,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
@@ -29,6 +30,7 @@ import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -37,6 +39,7 @@ import io.mockk.mockk
 import java.io.File
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 
 class IconViewModelTest : ShouldSpec(
     {
@@ -224,6 +227,77 @@ class IconViewModelTest : ShouldSpec(
                     .also { it.isAccessible = true }
                     .invoke(viewModel)
                 tmpFile.exists() shouldBe false
+            }
+
+            should("isLoading is false after initial load completes") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.state.value.isLoading shouldBe false
+            }
+
+            should("isLoading is false after regenerateIcon completes") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onMaskChanged(false)
+                viewModel.state.value.isLoading shouldBe false
+            }
+
+            should("isLoading resets to false when regenerateIcon throws") {
+                val viewModel = buildViewModel(appInfo)
+                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("regen failed")
+                viewModel.onMaskChanged(false)
+                viewModel.state.value.isLoading shouldBe false
+            }
+
+            should("emit GenerateFailed when generateIcon throws in loadInitialState") {
+                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("load failed")
+                val viewModel = buildViewModel(appInfo)
+                viewModel.events.receiveAsFlow().test {
+                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
+            should("emit GenerateFailed when generateIcon throws in regenerateIcon") {
+                val viewModel = buildViewModel(appInfo)
+                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("regen failed")
+                viewModel.events.receiveAsFlow().test {
+                    viewModel.onMaskChanged(false)
+                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
+            should("buildFileName: mask=true color=false produces _mask suffix") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_mask"
+            }
+
+            should("buildFileName: mask=false color=false produces _default suffix") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onMaskChanged(false)
+                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_default"
+            }
+
+            should("buildFileName: mask=true color=true produces _mask_mono suffix") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onColorChanged(true)
+                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_mask_mono"
+            }
+
+            should("buildFileName: mask=false color=true produces _default_mono suffix") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onMaskChanged(false)
+                viewModel.onColorChanged(true)
+                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_default_mono"
+            }
+
+            should("onForegroundColorChanged caps recent colors to 6") {
+                val viewModel = buildViewModel(appInfo)
+                repeat(7) { i -> viewModel.onForegroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentForegroundColors.size shouldBe 6
+            }
+
+            should("onBackgroundColorChanged caps recent colors to 6") {
+                val viewModel = buildViewModel(appInfo)
+                repeat(7) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentBackgroundColors.size shouldBe 6
             }
         }
     },

@@ -31,6 +31,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
@@ -63,6 +64,9 @@ import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISM
 import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
@@ -187,7 +191,7 @@ class MainActivity :
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
-    private fun initAppPicker() =
+    private fun initAppPicker() {
         binding.appPicker.apply {
             appListOrder = ORDER_ASCENDING
             ViewCompat.setOnApplyWindowInsetsListener(binding.appPicker) { _, insets ->
@@ -197,9 +201,6 @@ class MainActivity :
             }
             hideSoftInputOnScroll()
             if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
-            val appInfoDataHelper = SeslAppInfoDataHelper(context, GridAppDataBuilder::class.java)
-            val appInfoDataList = appInfoDataHelper.getPackages().onEach { it.subLabel = it.packageName }
-            submitList(appInfoDataList)
             setOnItemClickEventListener { view, appInfo ->
                 try {
                     hideSoftInput()
@@ -215,4 +216,14 @@ class MainActivity :
                 }
             }
         }
+        lifecycleScope.launch {
+            val list =
+                withContext(Dispatchers.IO) {
+                    SeslAppInfoDataHelper(this@MainActivity, GridAppDataBuilder::class.java)
+                        .getPackages()
+                        .onEach { it.subLabel = it.packageName }
+                }
+            binding.appPicker.submitList(list)
+        }
+    }
 }
