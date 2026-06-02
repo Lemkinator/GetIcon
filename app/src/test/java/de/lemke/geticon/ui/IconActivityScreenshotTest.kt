@@ -55,12 +55,13 @@ class IconActivityScreenshotTest {
         fun updateUserSettings(): UpdateUserSettingsUseCase
     }
 
-    private fun updateUserSettings() =
+    private val updateUserSettings by lazy {
         EntryPointAccessors
             .fromApplication(
                 ApplicationProvider.getApplicationContext(),
                 SettingsEntryPoint::class.java,
             ).updateUserSettings()
+    }
 
     @Before
     fun resetSettings() {
@@ -69,7 +70,7 @@ class IconActivityScreenshotTest {
             .getApplicationContext<HiltTestApplication>()
             .initCommonUtilsSettingsAndSetDarkMode()
         runBlocking {
-            updateUserSettings().invoke {
+            updateUserSettings.invoke {
                 UserSettings(
                     iconSize = UserSettings.DEFAULT_ICON_SIZE,
                     maskEnabled = true,
@@ -81,55 +82,39 @@ class IconActivityScreenshotTest {
         }
     }
 
-    private fun launchIconActivity(): ActivityScenario<IconActivity> {
+    private fun captureIconScreenshot(
+        fileName: String,
+        preSetup: (suspend () -> Unit)? = null,
+    ) {
+        preSetup?.let { runBlocking { it() } }
         val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
         val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
-        val intent =
-            Intent(context, IconActivity::class.java)
-                .putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
-        return ActivityScenario.launch(intent)
+        val intent = Intent(context, IconActivity::class.java).putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
+        ActivityScenario.launch<IconActivity>(intent).use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.window.decorView.captureRoboImage(fileName)
+            }
+        }
     }
 
     @Test
     fun iconActivity_default() {
-        launchIconActivity().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("icon_default.png")
-            }
-        }
+        captureIconScreenshot("icon_default.png")
     }
 
     @Test
     fun iconActivity_maskDisabled() {
-        runBlocking { updateUserSettings().invoke { it.copy(maskEnabled = false) } }
-        launchIconActivity().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("icon_mask_disabled.png")
-            }
-        }
+        captureIconScreenshot("icon_mask_disabled.png") { updateUserSettings.invoke { it.copy(maskEnabled = false) } }
     }
 
     @Test
     fun iconActivity_colorEnabled() {
-        runBlocking { updateUserSettings().invoke { it.copy(colorEnabled = true) } }
-        launchIconActivity().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("icon_color_enabled.png")
-            }
-        }
+        captureIconScreenshot("icon_color_enabled.png") { updateUserSettings.invoke { it.copy(colorEnabled = true) } }
     }
 
     @Test
     fun iconActivity_sizeSmall() {
-        runBlocking { updateUserSettings().invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) } }
-        launchIconActivity().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("icon_size_small.png")
-            }
-        }
+        captureIconScreenshot("icon_size_small.png") { updateUserSettings.invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) } }
     }
 }
