@@ -20,6 +20,38 @@ Unit tests exist: `IconViewModelTest`, `IconActivityScreenshotTest` (Roborazzi),
 Instrumented tests: `TestApp.kt` (test application class) and the baseline profile
 generator (`BaselineProfileGenerator`) — both run on device via AndroidJUnit4.
 
+### Baseline Profile & Benchmarks
+
+Generate the baseline profile (Gradle Managed Device — downloads ~1 GB image on first run):
+
+```powershell
+./gradlew :app:generateBaselineProfile `
+  -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+```
+
+Run macrobenchmarks manually (not CI-gated — numbers are advisory and device-sensitive):
+
+```powershell
+# Startup: 4 compilation modes (None / Partial-Disable / Partial-Require / Full) + JIT/ClassInit metrics
+# Scroll: FrameTimingMetric on the app-picker RecyclerView
+./gradlew :baselineprofile:pixel6Api34BenchmarkReleaseAndroidTest
+```
+
+**4 compilation modes explained:**
+
+| Mode | Meaning |
+| ---- | ------- |
+| `None()` | Pure JIT — worst case baseline |
+| `Partial(Disable, warmupIterations=1)` | Partial AOT, profile disabled |
+| `Partial(Require)` | Our shipped state — profile must be present |
+| `Full()` | Everything AOT — upper bound |
+
+`startupBaselineProfile` should be within ~10 % of `Full()` and clearly below `None()`.
+JIT/ClassInit metrics near zero with profile applied = proof the profile works.
+
+Benchmarks run on GMD `pixel6Api34` (Pixel 6, API 34, AOSP image). AOSP (not `google_apis`)
+is required — Play images run background work that adds measurement noise.
+
 ## Private Dependencies (Required for Build)
 
 Two private GitHub Maven repos are used:
