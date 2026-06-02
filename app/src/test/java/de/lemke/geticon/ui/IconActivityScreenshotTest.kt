@@ -18,12 +18,15 @@ package de.lemke.geticon.ui
 
 import android.content.Intent
 import android.os.Looper
-import android.widget.CompoundButton
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
+import dagger.hilt.android.EntryPointAccessors
 import de.lemke.geticon.App
-import de.lemke.geticon.R
+import de.lemke.geticon.data.UserSettings
+import de.lemke.geticon.di.UserSettingsEntryPoint
+import kotlinx.coroutines.runBlocking
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,6 +38,28 @@ import org.robolectric.annotation.GraphicsMode
 @Config(application = App::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IconActivityScreenshotTest {
+    private fun updateUserSettings() =
+        EntryPointAccessors
+            .fromApplication(
+                ApplicationProvider.getApplicationContext(),
+                UserSettingsEntryPoint::class.java,
+            ).updateUserSettings()
+
+    @Before
+    fun resetSettings() {
+        runBlocking {
+            updateUserSettings().invoke {
+                UserSettings(
+                    iconSize = UserSettings.DEFAULT_ICON_SIZE,
+                    maskEnabled = true,
+                    colorEnabled = false,
+                    recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
+                    recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
+                )
+            }
+        }
+    }
+
     private fun launchIconActivity(): ActivityScenario<IconActivity> {
         val context = ApplicationProvider.getApplicationContext<App>()
         val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
@@ -56,11 +81,8 @@ class IconActivityScreenshotTest {
 
     @Test
     fun iconActivity_maskDisabled() {
+        runBlocking { updateUserSettings().invoke { it.copy(maskEnabled = false) } }
         launchIconActivity().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                requireNotNull(activity.findViewById<CompoundButton>(R.id.masked_checkbox)).performClick()
-            }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.window.decorView.captureRoboImage("icon_mask_disabled.png")
@@ -70,11 +92,8 @@ class IconActivityScreenshotTest {
 
     @Test
     fun iconActivity_colorEnabled() {
+        runBlocking { updateUserSettings().invoke { it.copy(colorEnabled = true) } }
         launchIconActivity().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                requireNotNull(activity.findViewById<CompoundButton>(R.id.color_checkbox)).performClick()
-            }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.window.decorView.captureRoboImage("icon_color_enabled.png")
