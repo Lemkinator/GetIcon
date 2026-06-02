@@ -19,6 +19,7 @@
     <string name="about_app">Über GetIcon</string>
 
     <!--Other-->
+    <string name="error_icon_generation_failed">Icon konnte nicht generiert werden</string>
     <string name="long_press_icon_to_copy_to_clipboard">Halte das Icon gedrückt, um es in die Zwischenablage zu kopieren</string>
     <string name="copy_icon">Icon kopieren</string>
     <string name="extract_icon_from_apk">Icon aus APK extrahieren</string>

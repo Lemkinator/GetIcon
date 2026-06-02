@@ -21,7 +21,12 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
 import de.lemke.geticon.data.UserSettings
+import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
+import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.IconResult
@@ -29,6 +34,7 @@ import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -37,6 +43,7 @@ import io.mockk.mockk
 import java.io.File
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 
 class IconViewModelTest : ShouldSpec(
     {
@@ -48,7 +55,7 @@ class IconViewModelTest : ShouldSpec(
 
         val defaultSettings =
             UserSettings(
-                iconSize = 512,
+                iconSize = DEFAULT_ICON_SIZE,
                 maskEnabled = true,
                 colorEnabled = false,
                 recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
@@ -141,24 +148,24 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.size shouldBe 300
             }
 
-            should("onSizeChanged clamps value below 16 to 16") {
+            should("onSizeChanged clamps value below MIN_ICON_SIZE to MIN_ICON_SIZE") {
                 val viewModel = buildViewModel(appInfo)
-                viewModel.onSizeChanged(0)
-                viewModel.state.value.size shouldBe 16
+                viewModel.onSizeChanged(MIN_ICON_SIZE - 1)
+                viewModel.state.value.size shouldBe MIN_ICON_SIZE
             }
 
-            should("onSizeChanged clamps value above 1024 to 1024") {
+            should("onSizeChanged clamps value above MAX_ICON_SIZE to MAX_ICON_SIZE") {
                 val viewModel = buildViewModel(appInfo)
-                viewModel.onSizeChanged(9999)
-                viewModel.state.value.size shouldBe 1024
+                viewModel.onSizeChanged(MAX_ICON_SIZE + 1)
+                viewModel.state.value.size shouldBe MAX_ICON_SIZE
             }
 
-            should("onSizeChanged accepts 16 and 1024 as boundary values") {
+            should("onSizeChanged accepts MIN_ICON_SIZE and MAX_ICON_SIZE as boundary values") {
                 val viewModel = buildViewModel(appInfo)
-                viewModel.onSizeChanged(16)
-                viewModel.state.value.size shouldBe 16
-                viewModel.onSizeChanged(1024)
-                viewModel.state.value.size shouldBe 1024
+                viewModel.onSizeChanged(MIN_ICON_SIZE)
+                viewModel.state.value.size shouldBe MIN_ICON_SIZE
+                viewModel.onSizeChanged(MAX_ICON_SIZE)
+                viewModel.state.value.size shouldBe MAX_ICON_SIZE
             }
 
             should("onForegroundColorChanged prepends color to recent list") {
@@ -224,6 +231,77 @@ class IconViewModelTest : ShouldSpec(
                     .also { it.isAccessible = true }
                     .invoke(viewModel)
                 tmpFile.exists() shouldBe false
+            }
+
+            should("isLoading is false after initial load completes") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.state.value.isLoading shouldBe false
+            }
+
+            should("isLoading is false after regenerateIcon completes") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onMaskChanged(false)
+                viewModel.state.value.isLoading shouldBe false
+            }
+
+            should("isLoading resets to false when regenerateIcon throws") {
+                val viewModel = buildViewModel(appInfo)
+                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("regen failed")
+                viewModel.onMaskChanged(false)
+                viewModel.state.value.isLoading shouldBe false
+            }
+
+            should("emit GenerateFailed when generateIcon throws in loadInitialState") {
+                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("load failed")
+                val viewModel = buildViewModel(appInfo)
+                viewModel.events.receiveAsFlow().test {
+                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
+            should("emit GenerateFailed when generateIcon throws in regenerateIcon") {
+                val viewModel = buildViewModel(appInfo)
+                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("regen failed")
+                viewModel.events.receiveAsFlow().test {
+                    viewModel.onMaskChanged(false)
+                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
+            should("buildFileName: mask=true color=false produces _mask suffix") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_mask"
+            }
+
+            should("buildFileName: mask=false color=false produces _default suffix") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onMaskChanged(false)
+                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_default"
+            }
+
+            should("buildFileName: mask=true color=true produces _mask_mono suffix") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onColorChanged(true)
+                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_mask_mono"
+            }
+
+            should("buildFileName: mask=false color=true produces _default_mono suffix") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onMaskChanged(false)
+                viewModel.onColorChanged(true)
+                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_default_mono"
+            }
+
+            should("onForegroundColorChanged caps recent colors to MAX_RECENT_COLORS") {
+                val viewModel = buildViewModel(appInfo)
+                repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onForegroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentForegroundColors.size shouldBe MAX_RECENT_COLORS
+            }
+
+            should("onBackgroundColorChanged caps recent colors to MAX_RECENT_COLORS") {
+                val viewModel = buildViewModel(appInfo)
+                repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
             }
         }
     },

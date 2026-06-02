@@ -21,6 +21,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
@@ -47,8 +48,12 @@ class MainViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val applicationInfo = processApk(uri)
-            events.send(if (applicationInfo != null) MainEvent.NavigateToIcon(applicationInfo) else MainEvent.ShowError)
+            val event =
+                when (val result = processApk(uri)) {
+                    is ApkProcessResult.Success -> MainEvent.NavigateToIcon(result.applicationInfo)
+                    is ApkProcessResult.InvalidApk, is ApkProcessResult.Error -> MainEvent.ShowError
+                }
+            events.send(event)
         }
     }
 }

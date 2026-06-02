@@ -24,6 +24,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
+import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -46,25 +49,27 @@ class UserSettingsRepository @Inject constructor(
                 it[KEY_ICON_SIZE] = newSettings.iconSize
                 it[KEY_MASK_ENABLED] = newSettings.maskEnabled
                 it[KEY_COLOR_ENABLED] = newSettings.colorEnabled
-                it[KEY_RECENT_BACKGROUND_COLORS] = newSettings.recentBackgroundColors.joinToString(",")
-                it[KEY_RECENT_FOREGROUND_COLORS] = newSettings.recentForegroundColors.joinToString(",")
+                it[KEY_RECENT_BACKGROUND_COLORS] = newSettings.recentBackgroundColors.take(UserSettings.MAX_RECENT_COLORS).joinToString(",")
+                it[KEY_RECENT_FOREGROUND_COLORS] = newSettings.recentForegroundColors.take(UserSettings.MAX_RECENT_COLORS).joinToString(",")
             }.let(::settingsFromPreferences)
 
     private fun settingsFromPreferences(prefs: Preferences) =
         UserSettings(
-            iconSize = prefs[KEY_ICON_SIZE] ?: 512,
+            iconSize = (prefs[KEY_ICON_SIZE] ?: DEFAULT_ICON_SIZE).coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE),
             maskEnabled = prefs[KEY_MASK_ENABLED] != false,
             colorEnabled = prefs[KEY_COLOR_ENABLED] == true,
             recentBackgroundColors =
                 prefs[KEY_RECENT_BACKGROUND_COLORS]
                     ?.split(",")
                     ?.mapNotNull { it.toIntOrNull() }
+                    ?.take(UserSettings.MAX_RECENT_COLORS)
                     ?.takeIf { it.isNotEmpty() }
                     ?: listOf(DEFAULT_BACKGROUND_COLOR),
             recentForegroundColors =
                 prefs[KEY_RECENT_FOREGROUND_COLORS]
                     ?.split(",")
                     ?.mapNotNull { it.toIntOrNull() }
+                    ?.take(UserSettings.MAX_RECENT_COLORS)
                     ?.takeIf { it.isNotEmpty() }
                     ?: listOf(DEFAULT_FOREGROUND_COLOR),
         )
@@ -94,5 +99,9 @@ data class UserSettings(
     companion object {
         const val DEFAULT_BACKGROUND_COLOR = 0xFF0381FE.toInt()
         const val DEFAULT_FOREGROUND_COLOR = -1
+        const val DEFAULT_ICON_SIZE = 512
+        const val MIN_ICON_SIZE = 16
+        const val MAX_ICON_SIZE = 1024
+        const val MAX_RECENT_COLORS = 6
     }
 }

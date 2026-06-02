@@ -24,32 +24,49 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.lemke.commonutils.di.IoDispatcher
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+
+sealed class ApkProcessResult {
+    data class Success(val applicationInfo: ApplicationInfo) : ApkProcessResult()
+
+    data object InvalidApk : ApkProcessResult()
+
+    data object Error : ApkProcessResult()
+}
 
 class ProcessApkUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
-    suspend operator fun invoke(uri: Uri): ApplicationInfo? =
+    @Suppress("TooGenericExceptionCaught")
+    suspend operator fun invoke(uri: Uri): ApkProcessResult =
         withContext(ioDispatcher) {
+            var tempFile: File? = null
             try {
-                val tempFile = File.createTempFile("extractIcon", ".apk", context.cacheDir)
-                context.contentResolver.openInputStream(uri).use { it?.copyTo(FileOutputStream(tempFile)) }
+                tempFile = File.createTempFile("extractIcon", ".apk", context.cacheDir)
+                val stream = context.contentResolver.openInputStream(uri)
+                if (stream == null) {
+                    tempFile.delete()
+                    return@withContext ApkProcessResult.Error
+                }
+                stream.use { FileOutputStream(tempFile).use { out -> it.copyTo(out) } }
                 val path = tempFile.absolutePath
                 val applicationInfo = context.packageManager.getPackageArchiveInfo(path, 0)?.applicationInfo
-                applicationInfo?.apply {
-                    sourceDir = path
-                    publicSourceDir = path
+                if (applicationInfo == null) {
+                    tempFile.delete()
+                    return@withContext ApkProcessResult.InvalidApk
                 }
-            } catch (e: IOException) {
+                applicationInfo.sourceDir = path
+                applicationInfo.publicSourceDir = path
+                ApkProcessResult.Success(applicationInfo)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                tempFile?.delete()
                 Log.e("ProcessApkUseCase", "Failed to process APK", e)
-                null
-            } catch (e: SecurityException) {
-                Log.e("ProcessApkUseCase", "Failed to process APK", e)
-                null
+                ApkProcessResult.Error
             }
         }
 }

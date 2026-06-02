@@ -9,6 +9,17 @@ processors:
 console-reports:
   active: true
 
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+  SleepInsteadOfDelay:
+    active: true
+  SuspendFunWithFlowReturnType:
+    active: true
+
 complexity:
   active: true
   LongParameterList:
@@ -24,7 +35,7 @@ style:
   active: true
   MagicNumber:
     active: true
-    ignoreNumbers: [ '-1', '0', '1', '2', '6', '16', '512', '1024', '0.5' ]
+    ignoreNumbers: [ '-1', '0', '1', '2', '0.5' ]
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
   MaxLineLength:
@@ -47,6 +58,23 @@ empty-blocks:
   EmptyFunctionBlock:
     active: true
     ignoreOverridden: true
+
+exceptions:
+  active: true
+  TooGenericExceptionThrown:
+    active: true
+    exceptionNames:
+      - Error
+      - Exception
+      - RuntimeException
+      - Throwable
+  SwallowedException:
+    active: true
+    ignoredExceptionTypes:
+      - InterruptedException
+      - MalformedURLException
+      - NumberFormatException
+      - ParseException
 
 potential-bugs:
   active: true
