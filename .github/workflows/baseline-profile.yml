@@ -11,7 +11,7 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -31,12 +31,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Generate baseline profile
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          arch: x86_64
-          profile: pixel_9
-          script: chmod +x ./gradlew && ./gradlew :baselineprofile:generateBaselineProfile --stacktrace
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:generateBaselineProfile \
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect --stacktrace
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
@@ -44,4 +42,4 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: baseline-profile
-          path: app/src/main/baseline-prof.txt
+          path: app/src/release/generated/baselineProfiles/baseline-prof.txt
