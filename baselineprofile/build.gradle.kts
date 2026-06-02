@@ -34,6 +34,14 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     targetProjectPath = ":app"
+    experimentalProperties["android.experimental.self-instrumenting"] = true
+    testOptions.managedDevices.localDevices {
+        create("pixel6Api34") {
+            device = "Pixel 6"
+            apiLevel = 34
+            systemImageSource = "aosp"
+        }
+    }
 }
 
 dependencies {
@@ -46,4 +54,7 @@ dependencies {
 baselineProfile {
     @Suppress("UnstableApiUsage")
     enableEmulatorDisplay = false
+    managedDevices.clear()
+    managedDevices += "pixel6Api34"
+    useConnectedDevices = false
 }
