@@ -37,9 +37,7 @@ fun UiDevice.flingElementDownUp(element: UiObject2) {
     element.fling(Direction.UP)
 }
 
-fun UiDevice.waitAndFindObject(selector: BySelector, timeout: Long): UiObject2 {
-    if (!wait(Until.hasObject(selector), timeout)) {
-        throw AssertionError("Element not found on screen in ${timeout}ms (selector=$selector)")
+fun UiDevice.waitAndFindObject(selector: BySelector, timeout: Long): UiObject2 =
+    checkNotNull(wait(Until.findObject(selector), timeout)) {
+        "Element not found on screen in ${timeout}ms (selector=$selector)"
     }
-    return checkNotNull(findObject(selector)) { "Element disappeared after wait (selector=$selector)" }
-}
