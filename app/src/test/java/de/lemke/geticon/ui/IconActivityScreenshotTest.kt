@@ -121,4 +121,15 @@ class IconActivityScreenshotTest {
             }
         }
     }
+
+    @Test
+    fun iconActivity_sizeSmall() {
+        runBlocking { updateUserSettings().invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) } }
+        launchIconActivity().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.window.decorView.captureRoboImage("icon_size_small.png")
+            }
+        }
+    }
 }
