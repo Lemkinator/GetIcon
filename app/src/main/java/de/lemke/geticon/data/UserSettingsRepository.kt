@@ -24,6 +24,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
+import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -52,11 +55,7 @@ class UserSettingsRepository @Inject constructor(
 
     private fun settingsFromPreferences(prefs: Preferences) =
         UserSettings(
-            iconSize =
-                (prefs[KEY_ICON_SIZE] ?: UserSettings.DEFAULT_ICON_SIZE).coerceIn(
-                    UserSettings.MIN_ICON_SIZE,
-                    UserSettings.MAX_ICON_SIZE,
-                ),
+            iconSize = (prefs[KEY_ICON_SIZE] ?: DEFAULT_ICON_SIZE).coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE),
             maskEnabled = prefs[KEY_MASK_ENABLED] != false,
             colorEnabled = prefs[KEY_COLOR_ENABLED] == true,
             recentBackgroundColors =
