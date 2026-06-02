@@ -56,7 +56,7 @@ class ScrollAppPickerBenchmark {
                 )
             },
         ) {
-            val picker = device.waitAndFindObject(By.res(PACKAGE_NAME, "appPicker"), TIMEOUT_MS)
+            val picker = checkNotNull(device.findObject(By.res(PACKAGE_NAME, "appPicker"))) { "appPicker not found" }
             device.flingElementDownUp(picker)
         }
 }
