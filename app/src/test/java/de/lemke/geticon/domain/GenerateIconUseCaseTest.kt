@@ -16,8 +16,13 @@
 
 package de.lemke.geticon.domain
 
+import android.annotation.SuppressLint
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.AdaptiveIconDrawable
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import androidx.test.core.app.ApplicationProvider
 import de.lemke.geticon.App
 import io.kotest.matchers.shouldBe
@@ -102,6 +107,33 @@ class GenerateIconUseCaseTest {
                     packageManager,
                 )
             result.bitmap shouldNotBe null
+        }
+
+    @SuppressLint("NewApi")
+    @Test
+    fun `colorEnabled applies tint to monochrome layer when icon has monochrome`() =
+        runTest {
+            val monochromeInfo =
+                object : ApplicationInfo() {
+                    override fun loadIcon(pm: PackageManager): Drawable =
+                        AdaptiveIconDrawable(
+                            ColorDrawable(Color.RED),
+                            ColorDrawable(Color.BLUE),
+                            ColorDrawable(Color.WHITE),
+                        )
+                }.apply { packageName = "de.lemke.geticon" }
+            val result =
+                useCase(
+                    monochromeInfo,
+                    128,
+                    maskEnabled = false,
+                    colorEnabled = true,
+                    foregroundColor = 0xFFFF0000.toInt(),
+                    backgroundColor = 0xFF0000FF.toInt(),
+                    packageManager,
+                )
+            result.bitmap shouldNotBe null
+            result.isAdaptiveIcon shouldBe true
         }
 
     @Test
