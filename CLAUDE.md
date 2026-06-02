@@ -34,7 +34,7 @@ Run macrobenchmarks manually (not CI-gated — numbers are advisory and device-s
 ```powershell
 # Startup: 4 compilation modes (None / Partial-Disable / Partial-Require / Full) + JIT/ClassInit metrics
 # Scroll: FrameTimingMetric on the app-picker RecyclerView
-./gradlew :baselineprofile:pixel9Api35BenchmarkReleaseAndroidTest
+./gradlew :benchmarks:pixel9Api35BenchmarkReleaseAndroidTest
 ```
 
 **4 compilation modes explained:**

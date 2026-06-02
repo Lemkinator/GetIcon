@@ -20,7 +20,7 @@ plugins {
 }
 
 android {
-    namespace = "de.lemke.geticon.baselineprofile"
+    namespace = "de.lemke.geticon.benchmarks"
     compileSdk =
         libs.versions.compileSdk
             .get()

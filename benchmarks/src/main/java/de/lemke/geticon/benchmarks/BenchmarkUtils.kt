@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.lemke.geticon.baselineprofile
+package de.lemke.geticon.benchmarks
 
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.uiautomator.BySelector

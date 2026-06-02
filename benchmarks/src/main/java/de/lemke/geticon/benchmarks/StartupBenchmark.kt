@@ -13,50 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.lemke.geticon.baselineprofile
+package de.lemke.geticon.benchmarks
 
+import androidx.benchmark.macro.BaselineProfileMode.Disable
+import androidx.benchmark.macro.BaselineProfileMode.Require
 import androidx.benchmark.macro.CompilationMode
-import androidx.benchmark.macro.FrameTimingMetric
-import androidx.benchmark.macro.StartupMode
+import androidx.benchmark.macro.StartupMode.COLD
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
-import androidx.test.uiautomator.By
-import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private const val TIMEOUT_MS = 5_000L
-
 @RunWith(AndroidJUnit4::class)
 @LargeTest
-class ScrollAppPickerBenchmark {
+class StartupBenchmark {
     @get:Rule
     val benchmarkRule = MacrobenchmarkRule()
 
     @Test
-    fun scrollAppPickerBaselineProfile() = scrollAppPicker(CompilationMode.Partial())
+    fun startupNoCompilation() = startup(CompilationMode.None())
 
-    private fun scrollAppPicker(compilationMode: CompilationMode) =
+    @Test
+    fun startupBaselineProfileDisabled() =
+        startup(CompilationMode.Partial(baselineProfileMode = Disable, warmupIterations = 1))
+
+    @Test
+    fun startupBaselineProfile() = startup(CompilationMode.Partial(baselineProfileMode = Require))
+
+    @Test
+    fun startupFullCompilation() = startup(CompilationMode.Full())
+
+    private fun startup(compilationMode: CompilationMode) =
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
-            metrics = listOf(FrameTimingMetric()),
+            metrics = BenchmarkMetrics.allMetrics,
             compilationMode = compilationMode,
-            iterations = 10,
-            startupMode = StartupMode.WARM,
-            setupBlock = {
-                pressHome()
-                startActivityAndSkipOnboarding()
-                device.wait(
-                    Until.hasObject(
-                        By.res(PACKAGE_NAME, "appPicker").hasDescendant(By.clazz("android.widget.TextView")),
-                    ),
-                    TIMEOUT_MS,
-                )
-            },
+            iterations = 15,
+            startupMode = COLD,
+            setupBlock = { pressHome() },
         ) {
-            val picker = checkNotNull(device.findObject(By.res(PACKAGE_NAME, "appPicker"))) { "appPicker not found" }
-            device.flingElementDownUp(picker)
+            startActivityAndSkipOnboarding()
         }
 }

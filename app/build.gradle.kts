@@ -149,7 +149,7 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.profileinstaller)
-    baselineProfile(project(":baselineprofile"))
+    baselineProfile(project(":benchmarks"))
 
     debugImplementation(libs.leakcanary)
 
