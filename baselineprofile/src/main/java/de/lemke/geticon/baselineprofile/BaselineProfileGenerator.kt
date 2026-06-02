@@ -25,11 +25,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private const val PACKAGE_NAME = "de.lemke.geticon"
 private const val TIMEOUT_MS = 5_000L
-
-// Must match de.lemke.commonutils.EXTRA_SKIP_ONBOARDING — cannot import from test module
-private const val EXTRA_SKIP_ONBOARDING = "commonUtilsSkipOnboarding"
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
@@ -46,7 +42,7 @@ class BaselineProfileGenerator {
             includeInStartupProfile = true,
         ) {
             pressHome()
-            startActivityAndWait { it.putExtra(EXTRA_SKIP_ONBOARDING, true) }
+            startActivityAndSkipOnboarding()
             navigateToIconAndBack()
         }
 }
