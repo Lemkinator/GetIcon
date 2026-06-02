@@ -51,6 +51,8 @@ import de.lemke.commonutils.setWindowTransparent
 import de.lemke.commonutils.shareBitmap
 import de.lemke.commonutils.toast
 import de.lemke.geticon.R
+import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.databinding.ActivityIconBinding
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
@@ -150,8 +152,8 @@ class IconActivity :
             hideSoftInput()
             true
         }
-        binding.sizeSeekbar.min = 16
-        binding.sizeSeekbar.max = 1024
+        binding.sizeSeekbar.min = MIN_ICON_SIZE
+        binding.sizeSeekbar.max = MAX_ICON_SIZE
         binding.sizeSeekbar.setOnSeekBarChangeListener(
             object : SeslSeekBar.OnSeekBarChangeListener {
                 override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
@@ -182,6 +184,7 @@ class IconActivity :
                     toast(commonutilsR.string.commonutils_error_app_not_found)
                     finishAfterTransition()
                 }
+
                 is IconEvent.GenerateFailed -> {
                     toast(R.string.error_icon_generation_failed)
                     finishAfterTransition()

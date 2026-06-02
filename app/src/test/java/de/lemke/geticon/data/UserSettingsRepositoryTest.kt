@@ -17,6 +17,9 @@
 package de.lemke.geticon.data
 
 import androidx.datastore.preferences.core.stringPreferencesKey
+import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 
@@ -28,7 +31,7 @@ class UserSettingsRepositoryTest : ShouldSpec(
 
         should("return defaults on fresh store") {
             val settings = repo.getSettings()
-            settings.iconSize shouldBe 512
+            settings.iconSize shouldBe DEFAULT_ICON_SIZE
             settings.maskEnabled shouldBe true
             settings.colorEnabled shouldBe false
             settings.recentForegroundColors shouldBe listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
@@ -36,8 +39,9 @@ class UserSettingsRepositoryTest : ShouldSpec(
         }
 
         should("persist iconSize round-trip") {
-            repo.updateSettings { it.copy(iconSize = 256) }
-            repo.getSettings().iconSize shouldBe 256
+            val mid = (MIN_ICON_SIZE + MAX_ICON_SIZE) / 2
+            repo.updateSettings { it.copy(iconSize = mid) }
+            repo.getSettings().iconSize shouldBe mid
         }
 
         should("persist maskEnabled = false") {
@@ -63,26 +67,26 @@ class UserSettingsRepositoryTest : ShouldSpec(
         }
 
         should("return updated settings from updateSettings") {
-            val result = repo.updateSettings { it.copy(iconSize = 128) }
-            result.iconSize shouldBe 128
+            val result = repo.updateSettings { it.copy(iconSize = MIN_ICON_SIZE * 2) }
+            result.iconSize shouldBe MIN_ICON_SIZE * 2
         }
 
         should("apply multiple sequential updates") {
-            repo.updateSettings { it.copy(iconSize = 64) }
+            repo.updateSettings { it.copy(iconSize = MIN_ICON_SIZE * 4) }
             repo.updateSettings { it.copy(maskEnabled = false) }
             val settings = repo.getSettings()
-            settings.iconSize shouldBe 64
+            settings.iconSize shouldBe MIN_ICON_SIZE * 4
             settings.maskEnabled shouldBe false
         }
 
-        should("iconSize clamped to min 16 when stored value is below range") {
-            repo.updateSettings { it.copy(iconSize = 5) }
-            repo.getSettings().iconSize shouldBe 16
+        should("iconSize clamped to min when stored value is below range") {
+            repo.updateSettings { it.copy(iconSize = MIN_ICON_SIZE - 1) }
+            repo.getSettings().iconSize shouldBe MIN_ICON_SIZE
         }
 
-        should("iconSize clamped to max 1024 when stored value is above range") {
-            repo.updateSettings { it.copy(iconSize = 9999) }
-            repo.getSettings().iconSize shouldBe 1024
+        should("iconSize clamped to max when stored value is above range") {
+            repo.updateSettings { it.copy(iconSize = MAX_ICON_SIZE + 1) }
+            repo.getSettings().iconSize shouldBe MAX_ICON_SIZE
         }
 
         should("recentBackgroundColors caps to 6 when more than 6 stored") {

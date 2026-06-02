@@ -52,7 +52,11 @@ class UserSettingsRepository @Inject constructor(
 
     private fun settingsFromPreferences(prefs: Preferences) =
         UserSettings(
-            iconSize = (prefs[KEY_ICON_SIZE] ?: 512).coerceIn(16, 1024),
+            iconSize =
+                (prefs[KEY_ICON_SIZE] ?: UserSettings.DEFAULT_ICON_SIZE).coerceIn(
+                    UserSettings.MIN_ICON_SIZE,
+                    UserSettings.MAX_ICON_SIZE,
+                ),
             maskEnabled = prefs[KEY_MASK_ENABLED] != false,
             colorEnabled = prefs[KEY_COLOR_ENABLED] == true,
             recentBackgroundColors =
@@ -94,5 +98,8 @@ data class UserSettings(
     companion object {
         const val DEFAULT_BACKGROUND_COLOR = 0xFF0381FE.toInt()
         const val DEFAULT_FOREGROUND_COLOR = -1
+        const val DEFAULT_ICON_SIZE = 512
+        const val MIN_ICON_SIZE = 16
+        const val MAX_ICON_SIZE = 1024
     }
 }

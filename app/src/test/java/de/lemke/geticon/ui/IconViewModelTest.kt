@@ -23,6 +23,9 @@ import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import de.lemke.geticon.data.UserSettings
+import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.IconResult
@@ -51,7 +54,7 @@ class IconViewModelTest : ShouldSpec(
 
         val defaultSettings =
             UserSettings(
-                iconSize = 512,
+                iconSize = DEFAULT_ICON_SIZE,
                 maskEnabled = true,
                 colorEnabled = false,
                 recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
@@ -144,24 +147,24 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.size shouldBe 300
             }
 
-            should("onSizeChanged clamps value below 16 to 16") {
+            should("onSizeChanged clamps value below MIN_ICON_SIZE to MIN_ICON_SIZE") {
                 val viewModel = buildViewModel(appInfo)
-                viewModel.onSizeChanged(0)
-                viewModel.state.value.size shouldBe 16
+                viewModel.onSizeChanged(MIN_ICON_SIZE - 1)
+                viewModel.state.value.size shouldBe MIN_ICON_SIZE
             }
 
-            should("onSizeChanged clamps value above 1024 to 1024") {
+            should("onSizeChanged clamps value above MAX_ICON_SIZE to MAX_ICON_SIZE") {
                 val viewModel = buildViewModel(appInfo)
-                viewModel.onSizeChanged(9999)
-                viewModel.state.value.size shouldBe 1024
+                viewModel.onSizeChanged(MAX_ICON_SIZE + 1)
+                viewModel.state.value.size shouldBe MAX_ICON_SIZE
             }
 
-            should("onSizeChanged accepts 16 and 1024 as boundary values") {
+            should("onSizeChanged accepts MIN_ICON_SIZE and MAX_ICON_SIZE as boundary values") {
                 val viewModel = buildViewModel(appInfo)
-                viewModel.onSizeChanged(16)
-                viewModel.state.value.size shouldBe 16
-                viewModel.onSizeChanged(1024)
-                viewModel.state.value.size shouldBe 1024
+                viewModel.onSizeChanged(MIN_ICON_SIZE)
+                viewModel.state.value.size shouldBe MIN_ICON_SIZE
+                viewModel.onSizeChanged(MAX_ICON_SIZE)
+                viewModel.state.value.size shouldBe MAX_ICON_SIZE
             }
 
             should("onForegroundColorChanged prepends color to recent list") {

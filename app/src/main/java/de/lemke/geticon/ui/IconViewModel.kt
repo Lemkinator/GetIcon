@@ -26,6 +26,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
+import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
@@ -136,7 +138,7 @@ class IconViewModel @Inject constructor(
     }
 
     fun onSizeChanged(size: Int) {
-        val clamped = size.coerceIn(16, 1024)
+        val clamped = size.coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE)
         viewModelScope.launch {
             updateUserSettings { it.copy(iconSize = clamped) }
             regenerateIcon(_state.value.copy(size = clamped))
