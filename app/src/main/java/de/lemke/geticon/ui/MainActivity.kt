@@ -221,7 +221,7 @@ class MainActivity :
             try {
                 val list =
                     withContext(Dispatchers.IO) {
-                        SeslAppInfoDataHelper(this@MainActivity, GridAppDataBuilder::class.java)
+                        SeslAppInfoDataHelper(applicationContext, GridAppDataBuilder::class.java)
                             .getPackages()
                             .onEach { it.subLabel = it.packageName }
                     }
