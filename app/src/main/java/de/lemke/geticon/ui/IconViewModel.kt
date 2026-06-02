@@ -27,6 +27,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
@@ -147,7 +148,7 @@ class IconViewModel @Inject constructor(
 
     fun onForegroundColorChanged(color: Int) {
         viewModelScope.launch {
-            val recentColors = (listOf(color) + _state.value.recentForegroundColors).distinct().take(6)
+            val recentColors = (listOf(color) + _state.value.recentForegroundColors).distinct().take(MAX_RECENT_COLORS)
             updateUserSettings { it.copy(recentForegroundColors = recentColors) }
             regenerateIcon(_state.value.copy(foregroundColor = color, recentForegroundColors = recentColors))
         }
@@ -155,7 +156,7 @@ class IconViewModel @Inject constructor(
 
     fun onBackgroundColorChanged(color: Int) {
         viewModelScope.launch {
-            val recentColors = (listOf(color) + _state.value.recentBackgroundColors).distinct().take(6)
+            val recentColors = (listOf(color) + _state.value.recentBackgroundColors).distinct().take(MAX_RECENT_COLORS)
             updateUserSettings { it.copy(recentBackgroundColors = recentColors) }
             regenerateIcon(_state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
         }

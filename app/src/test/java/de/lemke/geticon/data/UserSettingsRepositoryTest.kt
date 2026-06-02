@@ -19,6 +19,7 @@ package de.lemke.geticon.data
 import androidx.datastore.preferences.core.stringPreferencesKey
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -89,16 +90,16 @@ class UserSettingsRepositoryTest : ShouldSpec(
             repo.getSettings().iconSize shouldBe MAX_ICON_SIZE
         }
 
-        should("recentBackgroundColors caps to 6 when more than 6 stored") {
-            val colors = (1..7).map { 0xFF000000.toInt() + it }
+        should("recentBackgroundColors caps to MAX_RECENT_COLORS when more than MAX_RECENT_COLORS stored") {
+            val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
             repo.updateSettings { it.copy(recentBackgroundColors = colors) }
-            repo.getSettings().recentBackgroundColors.size shouldBe 6
+            repo.getSettings().recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
         }
 
-        should("recentForegroundColors caps to 6 when more than 6 stored") {
-            val colors = (1..7).map { 0xFF000000.toInt() + it }
+        should("recentForegroundColors caps to MAX_RECENT_COLORS when more than MAX_RECENT_COLORS stored") {
+            val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
             repo.updateSettings { it.copy(recentForegroundColors = colors) }
-            repo.getSettings().recentForegroundColors.size shouldBe 6
+            repo.getSettings().recentForegroundColors.size shouldBe MAX_RECENT_COLORS
         }
 
         should("recentBackgroundColors falls back to default when all stored values are invalid") {

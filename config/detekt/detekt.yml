@@ -24,7 +24,7 @@ style:
   active: true
   MagicNumber:
     active: true
-    ignoreNumbers: [ '-1', '0', '1', '2', '6', '16', '512', '1024', '0.5' ]
+    ignoreNumbers: [ '-1', '0', '1', '2', '0.5' ]
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
   MaxLineLength:

@@ -25,6 +25,7 @@ import app.cash.turbine.test
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
+import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
@@ -291,16 +292,16 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.fileName shouldBe "${appInfo.packageName}_default_mono"
             }
 
-            should("onForegroundColorChanged caps recent colors to 6") {
+            should("onForegroundColorChanged caps recent colors to MAX_RECENT_COLORS") {
                 val viewModel = buildViewModel(appInfo)
-                repeat(7) { i -> viewModel.onForegroundColorChanged(0xFF000000.toInt() + i + 1) }
-                viewModel.state.value.recentForegroundColors.size shouldBe 6
+                repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onForegroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentForegroundColors.size shouldBe MAX_RECENT_COLORS
             }
 
-            should("onBackgroundColorChanged caps recent colors to 6") {
+            should("onBackgroundColorChanged caps recent colors to MAX_RECENT_COLORS") {
                 val viewModel = buildViewModel(appInfo)
-                repeat(7) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
-                viewModel.state.value.recentBackgroundColors.size shouldBe 6
+                repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
             }
         }
     },

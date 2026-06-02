@@ -49,8 +49,8 @@ class UserSettingsRepository @Inject constructor(
                 it[KEY_ICON_SIZE] = newSettings.iconSize
                 it[KEY_MASK_ENABLED] = newSettings.maskEnabled
                 it[KEY_COLOR_ENABLED] = newSettings.colorEnabled
-                it[KEY_RECENT_BACKGROUND_COLORS] = newSettings.recentBackgroundColors.take(6).joinToString(",")
-                it[KEY_RECENT_FOREGROUND_COLORS] = newSettings.recentForegroundColors.take(6).joinToString(",")
+                it[KEY_RECENT_BACKGROUND_COLORS] = newSettings.recentBackgroundColors.take(UserSettings.MAX_RECENT_COLORS).joinToString(",")
+                it[KEY_RECENT_FOREGROUND_COLORS] = newSettings.recentForegroundColors.take(UserSettings.MAX_RECENT_COLORS).joinToString(",")
             }.let(::settingsFromPreferences)
 
     private fun settingsFromPreferences(prefs: Preferences) =
@@ -100,5 +100,6 @@ data class UserSettings(
         const val DEFAULT_ICON_SIZE = 512
         const val MIN_ICON_SIZE = 16
         const val MAX_ICON_SIZE = 1024
+        const val MAX_RECENT_COLORS = 6
     }
 }
