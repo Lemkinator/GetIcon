@@ -21,12 +21,19 @@ import android.os.Looper
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
-import de.lemke.geticon.App
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
+import dagger.hilt.components.SingletonComponent
+import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.geticon.data.UserSettings
-import de.lemke.geticon.di.UserSettingsEntryPoint
+import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -34,19 +41,33 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = App::class, sdk = [36])
+@Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IconActivityScreenshotTest {
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface SettingsEntryPoint {
+        fun updateUserSettings(): UpdateUserSettingsUseCase
+    }
+
     private fun updateUserSettings() =
         EntryPointAccessors
             .fromApplication(
                 ApplicationProvider.getApplicationContext(),
-                UserSettingsEntryPoint::class.java,
+                SettingsEntryPoint::class.java,
             ).updateUserSettings()
 
     @Before
     fun resetSettings() {
+        hiltRule.inject()
+        ApplicationProvider
+            .getApplicationContext<HiltTestApplication>()
+            .initCommonUtilsSettingsAndSetDarkMode()
         runBlocking {
             updateUserSettings().invoke {
                 UserSettings(
@@ -61,7 +82,7 @@ class IconActivityScreenshotTest {
     }
 
     private fun launchIconActivity(): ActivityScenario<IconActivity> {
-        val context = ApplicationProvider.getApplicationContext<App>()
+        val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
         val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
         val intent =
             Intent(context, IconActivity::class.java)
