@@ -59,7 +59,7 @@ class IconActivityScreenshotTest {
         launchIconActivity().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.findViewById<CompoundButton>(R.id.masked_checkbox)?.performClick()
+                requireNotNull(activity.findViewById<CompoundButton>(R.id.masked_checkbox)).performClick()
             }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
@@ -73,7 +73,7 @@ class IconActivityScreenshotTest {
         launchIconActivity().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.findViewById<CompoundButton>(R.id.color_checkbox)?.performClick()
+                requireNotNull(activity.findViewById<CompoundButton>(R.id.color_checkbox)).performClick()
             }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
