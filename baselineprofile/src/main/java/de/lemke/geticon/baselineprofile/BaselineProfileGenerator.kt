@@ -45,6 +45,7 @@ class BaselineProfileGenerator {
             maxIterations = 10,
             includeInStartupProfile = true,
         ) {
+            pressHome()
             startActivityAndWait { it.putExtra(EXTRA_SKIP_ONBOARDING, true) }
             navigateToIconAndBack()
         }
