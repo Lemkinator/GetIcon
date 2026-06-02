@@ -20,7 +20,7 @@ plugins {
 }
 
 android {
-    namespace = "de.lemke.geticon.baselineprofile"
+    namespace = "de.lemke.geticon.benchmarks"
     compileSdk =
         libs.versions.compileSdk
             .get()
@@ -34,6 +34,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     targetProjectPath = ":app"
+    experimentalProperties["android.experimental.self-instrumenting"] = true
+    testOptions.managedDevices.localDevices {
+        create("pixel9Api35") {
+            device = "Pixel 9"
+            apiLevel = 35
+            systemImageSource = "aosp"
+            testedAbi = "x86_64"
+        }
+    }
 }
 
 dependencies {
@@ -46,4 +55,7 @@ dependencies {
 baselineProfile {
     @Suppress("UnstableApiUsage")
     enableEmulatorDisplay = false
+    managedDevices.clear()
+    managedDevices += "pixel9Api35"
+    useConnectedDevices = false
 }

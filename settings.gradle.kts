@@ -13,4 +13,4 @@ plugins {
 
 rootProject.name = "Get Icon"
 include(":app")
-include(":baselineprofile")
+include(":benchmarks")

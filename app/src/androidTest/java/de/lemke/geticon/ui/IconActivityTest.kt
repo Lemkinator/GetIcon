@@ -18,13 +18,10 @@ package de.lemke.geticon.ui
 
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.view.View
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
-import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
@@ -65,7 +62,12 @@ class IconActivityTest {
                     .putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo),
             ).use { scenario ->
                 scenario.state.isAtLeast(Lifecycle.State.CREATED) shouldBe true
-                onView(withId(R.id.icon)).check(matches(isDisplayed()))
+                // setWindowTransparent(true) makes the window translucent on API 30+, which
+                // causes Espresso's RootViewPicker to never get window focus. Check visibility
+                // directly on the activity thread instead.
+                scenario.onActivity { activity ->
+                    activity.findViewById<View>(R.id.icon).isShown shouldBe true
+                }
             }
     }
 }
