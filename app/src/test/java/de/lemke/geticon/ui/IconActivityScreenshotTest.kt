@@ -17,31 +17,104 @@
 package de.lemke.geticon.ui
 
 import android.content.Intent
+import android.os.Looper
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
-import de.lemke.geticon.App
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
+import dagger.hilt.components.SingletonComponent
+import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
+import de.lemke.geticon.data.UserSettings
+import de.lemke.geticon.domain.UpdateUserSettingsUseCase
+import kotlinx.coroutines.runBlocking
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = App::class, sdk = [36])
+@Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IconActivityScreenshotTest {
-    @Test
-    fun iconActivity_default() {
-        val context = ApplicationProvider.getApplicationContext<App>()
-        val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
-        val intent =
-            Intent(context, IconActivity::class.java)
-                .putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
-        ActivityScenario.launch<IconActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("icon_default.png")
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface SettingsEntryPoint {
+        fun updateUserSettings(): UpdateUserSettingsUseCase
+    }
+
+    private val updateUserSettings by lazy {
+        EntryPointAccessors
+            .fromApplication(
+                ApplicationProvider.getApplicationContext(),
+                SettingsEntryPoint::class.java,
+            ).updateUserSettings()
+    }
+
+    @Before
+    fun resetSettings() {
+        hiltRule.inject()
+        ApplicationProvider
+            .getApplicationContext<HiltTestApplication>()
+            .initCommonUtilsSettingsAndSetDarkMode()
+        runBlocking {
+            updateUserSettings.invoke {
+                UserSettings(
+                    iconSize = UserSettings.DEFAULT_ICON_SIZE,
+                    maskEnabled = true,
+                    colorEnabled = false,
+                    recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
+                    recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
+                )
             }
         }
+    }
+
+    private fun captureIconScreenshot(
+        fileName: String,
+        preSetup: (suspend () -> Unit)? = null,
+    ) {
+        preSetup?.let { runBlocking { it() } }
+        val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
+        val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
+        val intent = Intent(context, IconActivity::class.java).putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
+        ActivityScenario.launch<IconActivity>(intent).use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.window.decorView.captureRoboImage(fileName)
+            }
+        }
+    }
+
+    @Test
+    fun iconActivity_default() {
+        captureIconScreenshot("icon_default.png")
+    }
+
+    @Test
+    fun iconActivity_maskDisabled() {
+        captureIconScreenshot("icon_mask_disabled.png") { updateUserSettings.invoke { it.copy(maskEnabled = false) } }
+    }
+
+    @Test
+    fun iconActivity_colorEnabled() {
+        captureIconScreenshot("icon_color_enabled.png") { updateUserSettings.invoke { it.copy(colorEnabled = true) } }
+    }
+
+    @Test
+    fun iconActivity_sizeSmall() {
+        captureIconScreenshot("icon_size_small.png") { updateUserSettings.invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) } }
     }
 }

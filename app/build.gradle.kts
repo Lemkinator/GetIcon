@@ -232,6 +232,7 @@ kover {
                     "*Hilt_*",
                     "*_HiltModules*",
                     "*_Factory",
+                    "*_Provide*",
                     "*_MembersInjector",
                     "dagger.hilt.*",
                     "hilt_aggregated_deps.*",
@@ -240,13 +241,14 @@ kover {
                     "*Activity$*",
                     "*Fragment",
                     "*Fragment$*",
+                    "*DebugTools*",
                 )
             }
         }
         variant("debug") {
             verify {
                 rule {
-                    minBound(80)
+                    minBound(99)
                 }
             }
         }
