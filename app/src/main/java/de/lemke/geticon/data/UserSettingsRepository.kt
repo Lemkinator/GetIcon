@@ -62,12 +62,14 @@ class UserSettingsRepository @Inject constructor(
                 prefs[KEY_RECENT_BACKGROUND_COLORS]
                     ?.split(",")
                     ?.mapNotNull { it.toIntOrNull() }
+                    ?.take(UserSettings.MAX_RECENT_COLORS)
                     ?.takeIf { it.isNotEmpty() }
                     ?: listOf(DEFAULT_BACKGROUND_COLOR),
             recentForegroundColors =
                 prefs[KEY_RECENT_FOREGROUND_COLORS]
                     ?.split(",")
                     ?.mapNotNull { it.toIntOrNull() }
+                    ?.take(UserSettings.MAX_RECENT_COLORS)
                     ?.takeIf { it.isNotEmpty() }
                     ?: listOf(DEFAULT_FOREGROUND_COLOR),
         )

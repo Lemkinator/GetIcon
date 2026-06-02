@@ -108,10 +108,10 @@ class GenerateIconUseCaseTest {
     fun `loadIcon failure falls back to placeholder bitmap`() =
         runTest {
             val badAppInfo =
-                ApplicationInfo().apply {
+                object : ApplicationInfo() {
+                    override fun loadIcon(pm: PackageManager) = throw IllegalStateException("forced failure")
+                }.apply {
                     packageName = "com.does.not.exist"
-                    sourceDir = ""
-                    publicSourceDir = ""
                 }
             val result = useCase(badAppInfo, 128, maskEnabled = false, colorEnabled = false, 0, 0, packageManager)
             result.bitmap shouldNotBe null

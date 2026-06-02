@@ -191,6 +191,7 @@ class MainActivity :
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun initAppPicker() {
         binding.appPicker.apply {
             appListOrder = ORDER_ASCENDING
@@ -217,13 +218,17 @@ class MainActivity :
             }
         }
         lifecycleScope.launch {
-            val list =
-                withContext(Dispatchers.IO) {
-                    SeslAppInfoDataHelper(this@MainActivity, GridAppDataBuilder::class.java)
-                        .getPackages()
-                        .onEach { it.subLabel = it.packageName }
-                }
-            binding.appPicker.submitList(list)
+            try {
+                val list =
+                    withContext(Dispatchers.IO) {
+                        SeslAppInfoDataHelper(this@MainActivity, GridAppDataBuilder::class.java)
+                            .getPackages()
+                            .onEach { it.subLabel = it.packageName }
+                    }
+                binding.appPicker.submitList(list)
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Failed to load package list", e)
+            }
         }
     }
 }

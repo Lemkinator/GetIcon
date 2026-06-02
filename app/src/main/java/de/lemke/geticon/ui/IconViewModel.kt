@@ -34,6 +34,7 @@ import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import java.io.File
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -120,6 +121,7 @@ class IconViewModel @Inject constructor(
                     isLoading = false,
                 )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             events.send(IconEvent.GenerateFailed(e))
         }
     }
@@ -187,6 +189,7 @@ class IconViewModel @Inject constructor(
                 )
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             _state.update { it.copy(isLoading = false) }
             events.send(IconEvent.GenerateFailed(e))
         }
