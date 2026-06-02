@@ -23,6 +23,7 @@ import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 
 const val PACKAGE_NAME = "de.lemke.geticon"
+const val TIMEOUT_MS = 5_000L
 
 // Must match de.lemke.commonutils.EXTRA_SKIP_ONBOARDING — cannot import from test module
 const val EXTRA_SKIP_ONBOARDING = "commonUtilsSkipOnboarding"

@@ -26,7 +26,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private const val TIMEOUT_MS = 5_000L
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
