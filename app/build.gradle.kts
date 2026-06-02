@@ -128,12 +128,14 @@ android {
 }
 
 androidComponents {
-    onVariants(selector().withBuildType("nonMinifiedRelease")) { variant ->
-        variant.buildConfigFields!!.put(
-            "FIRST_RUN_SKIPPABLE",
-            com.android.build.api.variant
-                .BuildConfigField("boolean", "true", "Allow benchmarks to skip the first-run chain"),
-        )
+    listOf("nonMinifiedRelease", "benchmarkRelease").forEach { buildType ->
+        onVariants(selector().withBuildType(buildType)) { variant ->
+            variant.buildConfigFields!!.put(
+                "FIRST_RUN_SKIPPABLE",
+                com.android.build.api.variant
+                    .BuildConfigField("boolean", "true", "Allow benchmarks to skip the first-run chain"),
+            )
+        }
     }
 }
 
