@@ -87,7 +87,7 @@ class IconActivity :
         try {
             if (result?.resultCode == RESULT_OK) {
                 saveBitmapToUri(result.data?.data, icon)
-            } else {
+            } else if (result?.resultCode != RESULT_CANCELED) {
                 toast(commonutilsR.string.commonutils_error_saving_image)
             }
         } catch (e: Exception) {
