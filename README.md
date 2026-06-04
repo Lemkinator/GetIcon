@@ -9,7 +9,7 @@ href='https://play.google.com/store/apps/details?id=de.lemke.geticon&pcampaignid
 src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png'/>
 </a>
 
-[![Release](https://img.shields.io/github/v/release/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon/releases)
+[![Release](https://badgen.net/github/release/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon/releases)
 [![API Level](https://img.shields.io/badge/API-26%2B-brightgreen.svg)](https://android-arsenal.com/api?level=26)
 [![Kotlin](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLemkinator%2FGetIcon%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions.kotlin&label=kotlin&color=7F52FF&logo=kotlin)](https://kotlinlang.org/)
 [![Website](https://img.shields.io/website?down_color=red&down_message=offline&up_color=blue&up_message=online&url=https%3A%2F%2Fwww.leonard-lemke.com)](https://www.leonard-lemke.com/rr)
