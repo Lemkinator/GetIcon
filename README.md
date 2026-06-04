@@ -25,10 +25,11 @@ src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web
 
 An app to extract and save app icons.
 
-<img loading="lazy" src="img/mobile1.png" height="350" alt="Mobile 1"/>
-<img loading="lazy" src="img/mobile2.png" height="350" alt="Mobile 2"/>
-<img loading="lazy" src="img/mobile3.png" height="350" alt="Mobile 3"/>
-<img loading="lazy" src="img/mobile4.png" height="350" alt="Mobile 4"/>
+<img loading="lazy" src="app/src/test/screenshots/main_default_dark.png" height="350" alt="App list"/>
+<img loading="lazy" src="app/src/test/screenshots/icon_default_dark.png" height="350" alt="Icon preview masked"/>
+<img loading="lazy" src="app/src/test/screenshots/icon_mask_disabled_dark.png" height="350" alt="Icon preview unmasked"/>
+<img loading="lazy" src="app/src/test/screenshots/icon_color_enabled_dark.png" height="350" alt="Icon preview custom color"/>
+<img loading="lazy" src="app/src/test/screenshots/settings_default_dark.png" height="350" alt="Settings"/>
 
 <br><br>
 

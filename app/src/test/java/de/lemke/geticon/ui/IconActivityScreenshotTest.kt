@@ -100,21 +100,57 @@ class IconActivityScreenshotTest {
 
     @Test
     fun iconActivity_default() {
-        captureIconScreenshot("icon_default.png")
+        captureIconScreenshot("src/test/screenshots/icon_default.png")
     }
 
     @Test
     fun iconActivity_maskDisabled() {
-        captureIconScreenshot("icon_mask_disabled.png") { updateUserSettings.invoke { it.copy(maskEnabled = false) } }
+        captureIconScreenshot("src/test/screenshots/icon_mask_disabled.png") {
+            updateUserSettings.invoke { it.copy(maskEnabled = false) }
+        }
     }
 
     @Test
     fun iconActivity_colorEnabled() {
-        captureIconScreenshot("icon_color_enabled.png") { updateUserSettings.invoke { it.copy(colorEnabled = true) } }
+        captureIconScreenshot("src/test/screenshots/icon_color_enabled.png") {
+            updateUserSettings.invoke { it.copy(colorEnabled = true) }
+        }
     }
 
     @Test
     fun iconActivity_sizeSmall() {
-        captureIconScreenshot("icon_size_small.png") { updateUserSettings.invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) } }
+        captureIconScreenshot("src/test/screenshots/icon_size_small.png") {
+            updateUserSettings.invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun iconActivity_default_dark() {
+        captureIconScreenshot("src/test/screenshots/icon_default_dark.png")
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun iconActivity_maskDisabled_dark() {
+        captureIconScreenshot("src/test/screenshots/icon_mask_disabled_dark.png") {
+            updateUserSettings.invoke { it.copy(maskEnabled = false) }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun iconActivity_colorEnabled_dark() {
+        captureIconScreenshot("src/test/screenshots/icon_color_enabled_dark.png") {
+            updateUserSettings.invoke { it.copy(colorEnabled = true) }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun iconActivity_sizeSmall_dark() {
+        captureIconScreenshot("src/test/screenshots/icon_size_small_dark.png") {
+            updateUserSettings.invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) }
+        }
     }
 }
