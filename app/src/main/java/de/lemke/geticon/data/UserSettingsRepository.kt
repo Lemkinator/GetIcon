@@ -58,21 +58,18 @@ class UserSettingsRepository @Inject constructor(
             iconSize = (prefs[KEY_ICON_SIZE] ?: DEFAULT_ICON_SIZE).coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE),
             maskEnabled = prefs[KEY_MASK_ENABLED] != false,
             colorEnabled = prefs[KEY_COLOR_ENABLED] == true,
-            recentBackgroundColors =
-                prefs[KEY_RECENT_BACKGROUND_COLORS]
-                    ?.split(",")
-                    ?.mapNotNull { it.toIntOrNull() }
-                    ?.take(UserSettings.MAX_RECENT_COLORS)
-                    ?.takeIf { it.isNotEmpty() }
-                    ?: listOf(DEFAULT_BACKGROUND_COLOR),
-            recentForegroundColors =
-                prefs[KEY_RECENT_FOREGROUND_COLORS]
-                    ?.split(",")
-                    ?.mapNotNull { it.toIntOrNull() }
-                    ?.take(UserSettings.MAX_RECENT_COLORS)
-                    ?.takeIf { it.isNotEmpty() }
-                    ?: listOf(DEFAULT_FOREGROUND_COLOR),
+            recentBackgroundColors = parseColors(prefs[KEY_RECENT_BACKGROUND_COLORS], DEFAULT_BACKGROUND_COLOR),
+            recentForegroundColors = parseColors(prefs[KEY_RECENT_FOREGROUND_COLORS], DEFAULT_FOREGROUND_COLOR),
         )
+
+    private fun parseColors(
+        raw: String?,
+        default: Int,
+    ): List<Int> {
+        if (raw == null) return listOf(default)
+        val colors = raw.split(",").mapNotNull { it.toIntOrNull() }.take(UserSettings.MAX_RECENT_COLORS)
+        return colors.takeIf { it.isNotEmpty() } ?: listOf(default)
+    }
 
     private companion object {
         private val KEY_ICON_SIZE = intPreferencesKey("iconSize")

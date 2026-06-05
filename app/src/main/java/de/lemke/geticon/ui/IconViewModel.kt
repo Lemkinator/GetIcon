@@ -80,16 +80,16 @@ class IconViewModel @Inject constructor(
     val events = Channel<IconEvent>(Channel.BUFFERED)
 
     init {
-        if (applicationInfo == null) {
+        val appInfo = applicationInfo
+        if (appInfo == null) {
             viewModelScope.launch { events.send(IconEvent.Finish) }
         } else {
-            viewModelScope.launch { loadInitialState() }
+            viewModelScope.launch { loadInitialState(appInfo) }
         }
     }
 
     @Suppress("TooGenericExceptionCaught")
-    private suspend fun loadInitialState() {
-        val appInfo = applicationInfo ?: return
+    private suspend fun loadInitialState(appInfo: ApplicationInfo) {
         try {
             val userSettings = getUserSettings()
             val fg = userSettings.recentForegroundColors.first()

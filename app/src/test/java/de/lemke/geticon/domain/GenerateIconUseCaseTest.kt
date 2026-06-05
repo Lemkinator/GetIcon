@@ -23,10 +23,14 @@ import android.graphics.Color
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import androidx.reflect.app.SeslApplicationPackageManagerReflector
 import androidx.test.core.app.ApplicationProvider
 import de.lemke.geticon.App
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -134,6 +138,107 @@ class GenerateIconUseCaseTest {
                 )
             result.bitmap shouldNotBe null
             result.isAdaptiveIcon shouldBe true
+        }
+
+    @Test
+    fun `AdaptiveIconDrawable with null background falls through to else branch`() =
+        runTest {
+            val nullBgInfo =
+                object : ApplicationInfo() {
+                    override fun loadIcon(pm: PackageManager): Drawable = AdaptiveIconDrawable(null, ColorDrawable(Color.BLUE))
+                }.apply { packageName = "de.lemke.geticon" }
+            val result = useCase(nullBgInfo, 128, maskEnabled = false, colorEnabled = false, 0, 0, packageManager)
+            result.bitmap shouldNotBe null
+            result.isAdaptiveIcon shouldBe true
+        }
+
+    @Test
+    fun `AdaptiveIconDrawable with null foreground falls through to else branch`() =
+        runTest {
+            val nullFgInfo =
+                object : ApplicationInfo() {
+                    override fun loadIcon(pm: PackageManager): Drawable = AdaptiveIconDrawable(ColorDrawable(Color.RED), null)
+                }.apply { packageName = "de.lemke.geticon" }
+            val result = useCase(nullFgInfo, 128, maskEnabled = false, colorEnabled = false, 0, 0, packageManager)
+            result.bitmap shouldNotBe null
+            result.isAdaptiveIcon shouldBe true
+        }
+
+    @Test
+    fun `non-adaptive icon with maskEnabled true and no maskedAppIcon uses drawable toBitmap`() =
+        runTest {
+            val nonAdaptiveInfo =
+                object : ApplicationInfo() {
+                    override fun loadIcon(pm: PackageManager): Drawable = ColorDrawable(Color.RED)
+                }.apply { packageName = "de.lemke.geticon" }
+            val result = useCase(nonAdaptiveInfo, 128, maskEnabled = true, colorEnabled = false, 0, 0, packageManager)
+            result.bitmap shouldNotBe null
+            result.isAdaptiveIcon shouldBe false
+        }
+
+    @Config(sdk = [32])
+    @Test
+    fun `colorEnabled on SDK below TIRAMISU skips monochrome path`() =
+        runTest {
+            val adaptiveInfo =
+                object : ApplicationInfo() {
+                    override fun loadIcon(pm: PackageManager): Drawable =
+                        AdaptiveIconDrawable(ColorDrawable(Color.RED), ColorDrawable(Color.BLUE))
+                }.apply { packageName = "de.lemke.geticon" }
+            val result =
+                useCase(
+                    adaptiveInfo,
+                    128,
+                    maskEnabled = false,
+                    colorEnabled = true,
+                    foregroundColor = 0xFFFF0000.toInt(),
+                    backgroundColor = 0xFF0000FF.toInt(),
+                    packageManager,
+                )
+            result.bitmap shouldNotBe null
+        }
+
+    @SuppressLint("NewApi")
+    @Test
+    fun `colorEnabled on API 33+ with no monochrome layer skips monochrome assignment`() =
+        runTest {
+            val noMonochromeInfo =
+                object : ApplicationInfo() {
+                    override fun loadIcon(pm: PackageManager): Drawable =
+                        AdaptiveIconDrawable(ColorDrawable(Color.RED), ColorDrawable(Color.BLUE))
+                }.apply { packageName = "de.lemke.geticon" }
+            val result =
+                useCase(
+                    noMonochromeInfo,
+                    128,
+                    maskEnabled = false,
+                    colorEnabled = true,
+                    foregroundColor = 0xFFFF0000.toInt(),
+                    backgroundColor = 0xFF0000FF.toInt(),
+                    packageManager,
+                )
+            result.bitmap shouldNotBe null
+        }
+
+    @Test
+    fun `non-adaptive icon with maskEnabled and non-null maskedAppIcon uses maskedAppIcon bitmap`() =
+        runTest {
+            mockkStatic(SeslApplicationPackageManagerReflector::class)
+            try {
+                val maskedDrawable = ColorDrawable(Color.GREEN)
+                every {
+                    SeslApplicationPackageManagerReflector.semGetApplicationIconForIconTray(any(), any(), any())
+                } returns maskedDrawable
+                val nonAdaptiveInfo =
+                    object : ApplicationInfo() {
+                        override fun loadIcon(pm: PackageManager): Drawable = ColorDrawable(Color.RED)
+                    }.apply { packageName = "de.lemke.geticon" }
+                val result = useCase(nonAdaptiveInfo, 128, maskEnabled = true, colorEnabled = false, 0, 0, packageManager)
+                result.bitmap shouldNotBe null
+                result.hasMaskedAppIcon shouldBe true
+            } finally {
+                unmockkStatic(SeslApplicationPackageManagerReflector::class)
+            }
         }
 
     @Test
