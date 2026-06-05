@@ -165,6 +165,17 @@ class GenerateIconUseCaseTest {
         }
 
     @Test
+    fun `AdaptiveIconDrawable with null background and maskEnabled uses appIcon fallback`() =
+        runTest {
+            val nullBgInfo =
+                object : ApplicationInfo() {
+                    override fun loadIcon(pm: PackageManager): Drawable = AdaptiveIconDrawable(null, ColorDrawable(Color.BLUE))
+                }.apply { packageName = "de.lemke.geticon" }
+            val result = useCase(nullBgInfo, 128, maskEnabled = true, colorEnabled = false, 0, 0, packageManager)
+            result.bitmap shouldNotBe null
+        }
+
+    @Test
     fun `non-adaptive icon with maskEnabled true and no maskedAppIcon uses drawable toBitmap`() =
         runTest {
             val nonAdaptiveInfo =
