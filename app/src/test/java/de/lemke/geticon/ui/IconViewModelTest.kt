@@ -16,12 +16,13 @@
 
 package de.lemke.geticon.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
@@ -43,12 +44,12 @@ import io.mockk.every
 import io.mockk.mockk
 import java.io.File
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 
-private fun ViewModel.triggerOnCleared() {
-    javaClass.getDeclaredMethod("onCleared").also { it.isAccessible = true }.invoke(this)
+@SuppressLint("RestrictedApi")
+private fun IconViewModel.triggerOnCleared() {
+    ViewModelStore().also { it.put("vm", this) }.clear()
 }
 
 class IconViewModelTest : ShouldSpec(
@@ -114,8 +115,7 @@ class IconViewModelTest : ShouldSpec(
 
             should("onCleared does nothing when sourceDir is null") {
                 val infoWithNullSourceDir =
-                    android.content.pm
-                        .ApplicationInfo()
+                    ApplicationInfo()
                         .also { it.packageName = "com.example.test" }
                 buildViewModel(appInfo = infoWithNullSourceDir).triggerOnCleared()
             }
@@ -141,7 +141,7 @@ class IconViewModelTest : ShouldSpec(
                 val viewModel = buildViewModel(appInfo)
                 // StateFlow.filter{}.first() returns immediately if predicate matches current value;
                 // suspends until a matching emission arrives otherwise. Robust for sync or async init.
-                viewModel.state.filter { it.isAdaptiveIcon }.first()
+                viewModel.state.first { it.isAdaptiveIcon }
             }
 
             should("set recentForegroundColors from settings") {
