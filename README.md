@@ -55,8 +55,6 @@ More Information: <a target="_blank" href='https://www.leonard-lemke.com/apps/ge
 
 <br>
 
-## Star History
-
 <picture>
     <!--suppress HtmlUnknownTarget -->
     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Lemkinator/GetIcon&type=Date&theme=dark" />
