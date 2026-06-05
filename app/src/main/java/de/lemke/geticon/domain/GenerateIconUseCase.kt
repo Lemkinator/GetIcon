@@ -88,7 +88,7 @@ class GenerateIconUseCase @Inject constructor(
                 foreground.draw(canvas)
             } else {
                 bitmap =
-                    if (maskEnabled && maskedAppIcon != null) {
+                    if (maskEnabled && hasMaskedAppIcon) {
                         maskedAppIcon.toBitmap(size, size)
                     } else {
                         drawable.toBitmap(size, size)
