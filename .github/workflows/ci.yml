@@ -87,6 +87,12 @@ jobs:
         with:
           files: app/build/reports/kover/reportDebug.xml
           flags: unittests
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: app/build/test-results/testDebugUnitTest/*.xml
+          flags: unittests
       - name: Upload coverage report on failure
         if: failure()
         uses: actions/upload-artifact@v7

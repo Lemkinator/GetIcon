@@ -36,6 +36,7 @@ android {
     targetProjectPath = ":app"
     experimentalProperties["android.experimental.self-instrumenting"] = true
     testOptions.managedDevices.localDevices {
+        @Suppress("UnstableApiUsage")
         create("pixel9Api35") {
             device = "Pixel 9"
             apiLevel = 35

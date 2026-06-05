@@ -29,6 +29,7 @@ import io.mockk.every
 import io.mockk.mockk
 import java.io.File
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
@@ -109,6 +110,19 @@ class ProcessApkUseCaseTest : ShouldSpec(
             every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } throws RuntimeException("parse error")
             useCase(uri)
             cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
+        }
+
+        should("rethrow CancellationException instead of returning Error") {
+            every { contentResolver.openInputStream(any()) } throws CancellationException("cancelled")
+            val exception = runCatching { useCase(uri) }.exceptionOrNull()
+            exception.shouldBeInstanceOf<CancellationException>()
+        }
+
+        should("return Error and handle null tempFile when createTempFile throws IOException") {
+            val notADir = File(cacheDir, "notADir").also { it.createNewFile() }
+            every { context.cacheDir } returns notADir
+            val result = useCase(uri)
+            result shouldBe ApkProcessResult.Error
         }
 
         should("return Success with sourceDir set when applicationInfo is non-null") {

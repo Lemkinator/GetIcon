@@ -35,6 +35,7 @@ import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,22 +75,24 @@ class IconViewModel @Inject constructor(
 ) : ViewModel() {
     private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
 
+    private var regenerateJob: Job? = null
+
     private val _state = MutableStateFlow(IconUiState())
     val state: StateFlow<IconUiState> = _state.asStateFlow()
 
     val events = Channel<IconEvent>(Channel.BUFFERED)
 
     init {
-        if (applicationInfo == null) {
-            viewModelScope.launch { events.send(IconEvent.Finish) }
+        val appInfo = applicationInfo
+        if (appInfo == null) {
+            events.trySend(IconEvent.Finish)
         } else {
-            viewModelScope.launch { loadInitialState() }
+            viewModelScope.launch { loadInitialState(appInfo) }
         }
     }
 
     @Suppress("TooGenericExceptionCaught")
-    private suspend fun loadInitialState() {
-        val appInfo = applicationInfo ?: return
+    private suspend fun loadInitialState(appInfo: ApplicationInfo) {
         try {
             val userSettings = getUserSettings()
             val fg = userSettings.recentForegroundColors.first()
@@ -127,72 +130,66 @@ class IconViewModel @Inject constructor(
     }
 
     fun onMaskChanged(enabled: Boolean) {
-        viewModelScope.launch {
-            updateUserSettings { it.copy(maskEnabled = enabled) }
-            regenerateIcon(_state.value.copy(maskEnabled = enabled))
-        }
+        viewModelScope.launch { updateUserSettings { it.copy(maskEnabled = enabled) } }
+        regenerateIcon(_state.value.copy(maskEnabled = enabled))
     }
 
     fun onColorChanged(enabled: Boolean) {
-        viewModelScope.launch {
-            updateUserSettings { it.copy(colorEnabled = enabled) }
-            regenerateIcon(_state.value.copy(colorEnabled = enabled))
-        }
+        viewModelScope.launch { updateUserSettings { it.copy(colorEnabled = enabled) } }
+        regenerateIcon(_state.value.copy(colorEnabled = enabled))
     }
 
     fun onSizeChanged(size: Int) {
         val clamped = size.coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE)
-        viewModelScope.launch {
-            updateUserSettings { it.copy(iconSize = clamped) }
-            regenerateIcon(_state.value.copy(size = clamped))
-        }
+        viewModelScope.launch { updateUserSettings { it.copy(iconSize = clamped) } }
+        regenerateIcon(_state.value.copy(size = clamped))
     }
 
     fun onForegroundColorChanged(color: Int) {
-        viewModelScope.launch {
-            val recentColors = (listOf(color) + _state.value.recentForegroundColors).distinct().take(MAX_RECENT_COLORS)
-            updateUserSettings { it.copy(recentForegroundColors = recentColors) }
-            regenerateIcon(_state.value.copy(foregroundColor = color, recentForegroundColors = recentColors))
-        }
+        val recentColors = (listOf(color) + _state.value.recentForegroundColors).distinct().take(MAX_RECENT_COLORS)
+        viewModelScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
+        regenerateIcon(_state.value.copy(foregroundColor = color, recentForegroundColors = recentColors))
     }
 
     fun onBackgroundColorChanged(color: Int) {
-        viewModelScope.launch {
-            val recentColors = (listOf(color) + _state.value.recentBackgroundColors).distinct().take(MAX_RECENT_COLORS)
-            updateUserSettings { it.copy(recentBackgroundColors = recentColors) }
-            regenerateIcon(_state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
-        }
+        val recentColors = (listOf(color) + _state.value.recentBackgroundColors).distinct().take(MAX_RECENT_COLORS)
+        viewModelScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
+        regenerateIcon(_state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
     }
 
     @Suppress("TooGenericExceptionCaught")
-    private suspend fun regenerateIcon(newState: IconUiState) {
+    private fun regenerateIcon(newState: IconUiState) {
         val appInfo = applicationInfo ?: return
+        regenerateJob?.cancel()
         _state.value = newState.copy(isLoading = true)
-        try {
-            val result =
-                generateIcon(
-                    appInfo,
-                    newState.size,
-                    newState.maskEnabled,
-                    newState.colorEnabled,
-                    newState.foregroundColor,
-                    newState.backgroundColor,
-                    context.packageManager,
-                )
-            _state.update {
-                it.copy(
-                    icon = result.bitmap,
-                    isAdaptiveIcon = result.isAdaptiveIcon,
-                    hasMaskedAppIcon = result.hasMaskedAppIcon,
-                    fileName = buildFileName(appInfo.packageName, it.maskEnabled, it.colorEnabled),
-                    isLoading = false,
-                )
+        regenerateJob =
+            viewModelScope.launch {
+                try {
+                    val result =
+                        generateIcon(
+                            appInfo,
+                            newState.size,
+                            newState.maskEnabled,
+                            newState.colorEnabled,
+                            newState.foregroundColor,
+                            newState.backgroundColor,
+                            context.packageManager,
+                        )
+                    _state.update {
+                        it.copy(
+                            icon = result.bitmap,
+                            isAdaptiveIcon = result.isAdaptiveIcon,
+                            hasMaskedAppIcon = result.hasMaskedAppIcon,
+                            fileName = buildFileName(appInfo.packageName, it.maskEnabled, it.colorEnabled),
+                            isLoading = false,
+                        )
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    _state.update { it.copy(isLoading = false) }
+                    events.send(IconEvent.GenerateFailed(e))
+                }
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            _state.update { it.copy(isLoading = false) }
-            events.send(IconEvent.GenerateFailed(e))
-        }
     }
 
     override fun onCleared() {

@@ -21,6 +21,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
@@ -41,9 +42,13 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import java.io.File
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
+
+private fun IconViewModel.triggerOnCleared() {
+    ViewModelStore().also { it.put("vm", this) }.clear()
+}
 
 class IconViewModelTest : ShouldSpec(
     {
@@ -95,6 +100,16 @@ class IconViewModelTest : ShouldSpec(
                 buildViewModel(appInfo = null)
                 coVerify(exactly = 0) { getUserSettings() }
             }
+
+            should("onMaskChanged does not call generateIcon when applicationInfo is null") {
+                val viewModel = buildViewModel(appInfo = null)
+                viewModel.onMaskChanged(false)
+                coVerify(exactly = 0) { generateIcon(any(), any(), any(), any(), any(), any(), any()) }
+            }
+
+            should("onCleared does nothing when applicationInfo is null") {
+                buildViewModel(appInfo = null).triggerOnCleared()
+            }
         }
 
         context("valid applicationInfo") {
@@ -117,7 +132,7 @@ class IconViewModelTest : ShouldSpec(
                 val viewModel = buildViewModel(appInfo)
                 // StateFlow.filter{}.first() returns immediately if predicate matches current value;
                 // suspends until a matching emission arrives otherwise. Robust for sync or async init.
-                viewModel.state.filter { it.isAdaptiveIcon }.first()
+                viewModel.state.first { it.isAdaptiveIcon }
             }
 
             should("set recentForegroundColors from settings") {
@@ -212,24 +227,21 @@ class IconViewModelTest : ShouldSpec(
                 coVerify(atLeast = 1) { updateUserSettings(any()) }
             }
 
+            should("onCleared does nothing when sourceDir is null") {
+                val infoWithNullSourceDir = ApplicationInfo().also { it.packageName = "com.example.test" }
+                buildViewModel(appInfo = infoWithNullSourceDir).triggerOnCleared()
+            }
+
             should("onCleared skips file deletion when sourceDir is not in cacheDir") {
                 appInfo.sourceDir = "/data/app/com.example.test.apk"
-                val viewModel = buildViewModel(appInfo)
-                viewModel.javaClass
-                    .getDeclaredMethod("onCleared")
-                    .also { it.isAccessible = true }
-                    .invoke(viewModel)
+                buildViewModel(appInfo).triggerOnCleared()
             }
 
             should("onCleared deletes temp file when sourceDir is in cacheDir") {
                 val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
                 val tmpFile = File(tmpDir, "test_icon.apk").also { it.createNewFile() }
                 appInfo.sourceDir = tmpFile.absolutePath
-                val viewModel = buildViewModel(appInfo)
-                viewModel.javaClass
-                    .getDeclaredMethod("onCleared")
-                    .also { it.isAccessible = true }
-                    .invoke(viewModel)
+                buildViewModel(appInfo).triggerOnCleared()
                 tmpFile.exists() shouldBe false
             }
 
@@ -266,6 +278,19 @@ class IconViewModelTest : ShouldSpec(
                     viewModel.onMaskChanged(false)
                     awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
                 }
+            }
+
+            should("does not emit GenerateFailed when getUserSettings throws CancellationException") {
+                coEvery { getUserSettings() } throws CancellationException("cancelled")
+                val viewModel = buildViewModel(appInfo)
+                viewModel.events.tryReceive().getOrNull() shouldBe null
+            }
+
+            should("does not emit GenerateFailed when generateIcon throws CancellationException in regenerateIcon") {
+                val viewModel = buildViewModel(appInfo)
+                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws CancellationException("cancelled")
+                viewModel.onMaskChanged(false)
+                viewModel.events.tryReceive().getOrNull() shouldBe null
             }
 
             should("buildFileName: mask=true color=false produces _mask suffix") {

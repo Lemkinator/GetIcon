@@ -116,6 +116,32 @@ class UserSettingsRepositoryTest : ShouldSpec(
             r.getSettings().recentForegroundColors shouldBe listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
         }
 
+        should("recentBackgroundColors falls back to default on empty string") {
+            val ds = FakeDataStore()
+            ds.updateData { it.toMutablePreferences().also { m -> m[stringPreferencesKey("recentBackgroundColors")] = "" } }
+            val r = UserSettingsRepository(ds)
+            r.getSettings().recentBackgroundColors shouldBe listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
+        }
+
+        should("recentForegroundColors falls back to default when all stored values are invalid") {
+            val ds = FakeDataStore()
+            ds.updateData { it.toMutablePreferences().also { m -> m[stringPreferencesKey("recentForegroundColors")] = "abc,,xyz" } }
+            val r = UserSettingsRepository(ds)
+            r.getSettings().recentForegroundColors shouldBe listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
+        }
+
+        should("recentForegroundColors keeps only valid integers from mixed input") {
+            val ds = FakeDataStore()
+            val validColor = 0xFF0381FE.toInt()
+            ds.updateData {
+                it.toMutablePreferences().also { m ->
+                    m[stringPreferencesKey("recentForegroundColors")] = "abc,$validColor"
+                }
+            }
+            val r = UserSettingsRepository(ds)
+            r.getSettings().recentForegroundColors shouldBe listOf(validColor)
+        }
+
         should("recentBackgroundColors keeps only valid integers from mixed input") {
             val ds = FakeDataStore()
             val validColor = 0xFF0381FE.toInt()
