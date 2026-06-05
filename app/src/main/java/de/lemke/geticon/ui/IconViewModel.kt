@@ -87,7 +87,7 @@ class IconViewModel @Inject constructor(
         if (appInfo == null) {
             events.trySend(IconEvent.Finish)
         } else {
-            regenerateJob = viewModelScope.launch { loadInitialState(appInfo) }
+            viewModelScope.launch { loadInitialState(appInfo) }
         }
     }
 
