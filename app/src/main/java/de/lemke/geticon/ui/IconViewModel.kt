@@ -82,7 +82,7 @@ class IconViewModel @Inject constructor(
     init {
         val appInfo = applicationInfo
         if (appInfo == null) {
-            viewModelScope.launch { events.send(IconEvent.Finish) }
+            events.trySend(IconEvent.Finish)
         } else {
             viewModelScope.launch { loadInitialState(appInfo) }
         }
