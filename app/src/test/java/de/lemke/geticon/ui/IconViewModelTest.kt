@@ -21,6 +21,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
 import app.cash.turbine.test
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
@@ -45,6 +46,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
+
+private fun ViewModel.triggerOnCleared() {
+    javaClass.getDeclaredMethod("onCleared").also { it.isAccessible = true }.invoke(this)
+}
 
 class IconViewModelTest : ShouldSpec(
     {
@@ -104,11 +109,7 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("onCleared does nothing when applicationInfo is null") {
-                val viewModel = buildViewModel(appInfo = null)
-                viewModel.javaClass
-                    .getDeclaredMethod("onCleared")
-                    .also { it.isAccessible = true }
-                    .invoke(viewModel)
+                buildViewModel(appInfo = null).triggerOnCleared()
             }
 
             should("onCleared does nothing when sourceDir is null") {
@@ -116,11 +117,7 @@ class IconViewModelTest : ShouldSpec(
                     android.content.pm
                         .ApplicationInfo()
                         .also { it.packageName = "com.example.test" }
-                val viewModel = buildViewModel(appInfo = infoWithNullSourceDir)
-                viewModel.javaClass
-                    .getDeclaredMethod("onCleared")
-                    .also { it.isAccessible = true }
-                    .invoke(viewModel)
+                buildViewModel(appInfo = infoWithNullSourceDir).triggerOnCleared()
             }
         }
 
@@ -241,22 +238,14 @@ class IconViewModelTest : ShouldSpec(
 
             should("onCleared skips file deletion when sourceDir is not in cacheDir") {
                 appInfo.sourceDir = "/data/app/com.example.test.apk"
-                val viewModel = buildViewModel(appInfo)
-                viewModel.javaClass
-                    .getDeclaredMethod("onCleared")
-                    .also { it.isAccessible = true }
-                    .invoke(viewModel)
+                buildViewModel(appInfo).triggerOnCleared()
             }
 
             should("onCleared deletes temp file when sourceDir is in cacheDir") {
                 val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
                 val tmpFile = File(tmpDir, "test_icon.apk").also { it.createNewFile() }
                 appInfo.sourceDir = tmpFile.absolutePath
-                val viewModel = buildViewModel(appInfo)
-                viewModel.javaClass
-                    .getDeclaredMethod("onCleared")
-                    .also { it.isAccessible = true }
-                    .invoke(viewModel)
+                buildViewModel(appInfo).triggerOnCleared()
                 tmpFile.exists() shouldBe false
             }
 
