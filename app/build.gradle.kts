@@ -150,19 +150,17 @@ dependencies {
 
     implementation(libs.profileinstaller)
     baselineProfile(project(":benchmarks"))
-
     debugImplementation(libs.leakcanary)
 
-    testImplementation(libs.bundles.unit.test)
-    testImplementation(libs.junit.jupiter.api)
-    testRuntimeOnly(libs.junit.jupiter.engine)
-    testImplementation(libs.konsist)
-
-    testImplementation(libs.bundles.robolectric.test)
-    testImplementation(libs.junit4)
-    testRuntimeOnly(libs.junit.vintage.engine)
     testImplementation(libs.arch.core.testing)
+    testImplementation(libs.bundles.unit.test)
+    testImplementation(libs.bundles.robolectric.test)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.konsist)
+    testImplementation(libs.junit.jupiter.api)
+    testImplementation(libs.junit4)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+    testRuntimeOnly(libs.junit.vintage.engine)
     kspTest(libs.hilt.compiler)
 
     androidTestImplementation(libs.bundles.android.test)
