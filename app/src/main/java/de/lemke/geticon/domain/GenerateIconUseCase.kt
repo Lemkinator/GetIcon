@@ -27,6 +27,7 @@ import android.graphics.drawable.Drawable
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.TIRAMISU
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.reflect.app.SeslApplicationPackageManagerReflector.semGetApplicationIconForIconTray
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -69,7 +70,7 @@ class GenerateIconUseCase @Inject constructor(
             val drawable = appIcon.mutate()
             val bitmap: Bitmap
             if (drawable is AdaptiveIconDrawable && drawable.foreground != null && drawable.background != null) {
-                bitmap = drawable.toBitmap(size, size)
+                bitmap = createBitmap(size, size)
                 drawable.setBounds(0, 0, size, size)
                 val background = drawable.background.mutate()
                 var foreground = drawable.foreground.mutate()
