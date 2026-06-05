@@ -114,9 +114,7 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("onCleared does nothing when sourceDir is null") {
-                val infoWithNullSourceDir =
-                    ApplicationInfo()
-                        .also { it.packageName = "com.example.test" }
+                val infoWithNullSourceDir = ApplicationInfo().also { it.packageName = "com.example.test" }
                 buildViewModel(appInfo = infoWithNullSourceDir).triggerOnCleared()
             }
         }
