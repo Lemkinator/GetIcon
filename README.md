@@ -45,6 +45,10 @@ More Information: <a target="_blank" href='https://www.leonard-lemke.com/apps/ge
 
 <br>
 
+[![Coverage Sunburst](https://codecov.io/gh/Lemkinator/GetIcon/graphs/sunburst.svg)](https://codecov.io/gh/Lemkinator/GetIcon)
+
+<br>
+
 <picture>
     <!--suppress HtmlUnknownTarget -->
     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Lemkinator/GetIcon&type=Date&theme=dark" />
