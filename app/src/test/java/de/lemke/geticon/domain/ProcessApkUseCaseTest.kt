@@ -27,8 +27,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -121,14 +119,10 @@ class ProcessApkUseCaseTest : ShouldSpec(
         }
 
         should("return Error and handle null tempFile when createTempFile throws IOException") {
-            mockkStatic(File::class)
-            try {
-                every { File.createTempFile(any(), any(), any<File>()) } throws IOException("disk full")
-                val result = useCase(uri)
-                result shouldBe ApkProcessResult.Error
-            } finally {
-                unmockkStatic(File::class)
-            }
+            val notADir = File(cacheDir, "notADir").also { it.createNewFile() }
+            every { context.cacheDir } returns notADir
+            val result = useCase(uri)
+            result shouldBe ApkProcessResult.Error
         }
 
         should("return Success with sourceDir set when applicationInfo is non-null") {
