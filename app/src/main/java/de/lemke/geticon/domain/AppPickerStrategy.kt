@@ -23,7 +23,6 @@ import androidx.picker.model.AppData
 import androidx.picker.model.viewdata.AppInfoViewData
 import androidx.picker.model.viewdata.ViewData
 
-@Suppress("unused")
 @Keep
 class AppPickerStrategy(
     appPickerContext: AppPickerContext,

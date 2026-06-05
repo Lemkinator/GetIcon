@@ -16,7 +16,6 @@
 
 package de.lemke.geticon.ui
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -47,7 +46,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 
-@SuppressLint("RestrictedApi")
 private fun IconViewModel.triggerOnCleared() {
     ViewModelStore().also { it.put("vm", this) }.clear()
 }
