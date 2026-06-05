@@ -48,8 +48,8 @@ android {
             libs.versions.targetSdk
                 .get()
                 .toInt()
-        versionCode = 33
-        versionName = "1.5.0"
+        versionCode = 32
+        versionName = "1.4.2"
         testInstrumentationRunner = "de.lemke.geticon.HiltTestRunner"
         buildConfigField("boolean", "FIRST_RUN_SKIPPABLE", "false")
     }
