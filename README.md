@@ -21,7 +21,7 @@ src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web
 [![Repo Size](https://img.shields.io/github/repo-size/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon)
 [![Lines of Code](https://sloc.xyz/github/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon)
 [![CodeFactor](https://www.codefactor.io/repository/github/lemkinator/geticon/badge)](https://www.codefactor.io/repository/github/lemkinator/geticon)
-[![codecov](https://codecov.io/github/Lemkinator/GetIcon/graph/badge.svg)](https://app.codecov.io/github/Lemkinator/GetIcon)
+[![codecov](https://codecov.io/gh/Lemkinator/GetIcon/graph/badge.svg)](https://codecov.io/gh/Lemkinator/GetIcon)
 
 # Get Icon
 
