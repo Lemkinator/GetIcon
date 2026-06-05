@@ -250,7 +250,7 @@ kover {
         variant("debug") {
             verify {
                 rule {
-                    minBound(99)
+                    minBound(100)
                 }
             }
         }
