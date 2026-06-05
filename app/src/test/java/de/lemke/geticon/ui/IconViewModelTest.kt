@@ -110,11 +110,6 @@ class IconViewModelTest : ShouldSpec(
             should("onCleared does nothing when applicationInfo is null") {
                 buildViewModel(appInfo = null).triggerOnCleared()
             }
-
-            should("onCleared does nothing when sourceDir is null") {
-                val infoWithNullSourceDir = ApplicationInfo().also { it.packageName = "com.example.test" }
-                buildViewModel(appInfo = infoWithNullSourceDir).triggerOnCleared()
-            }
         }
 
         context("valid applicationInfo") {
@@ -230,6 +225,11 @@ class IconViewModelTest : ShouldSpec(
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onSizeChanged(256)
                 coVerify(atLeast = 1) { updateUserSettings(any()) }
+            }
+
+            should("onCleared does nothing when sourceDir is null") {
+                val infoWithNullSourceDir = ApplicationInfo().also { it.packageName = "com.example.test" }
+                buildViewModel(appInfo = infoWithNullSourceDir).triggerOnCleared()
             }
 
             should("onCleared skips file deletion when sourceDir is not in cacheDir") {

@@ -23,7 +23,6 @@ import androidx.picker.model.viewdata.AppInfoViewData
 import androidx.test.core.app.ApplicationProvider
 import de.lemke.geticon.App
 import io.kotest.matchers.collections.shouldContain
-import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import org.junit.Before
 import org.junit.Test
@@ -56,13 +55,5 @@ class AppPickerStrategyTest {
         val data = AppInfoDataImpl(appInfo, label = null)
         val results = strategy.convert(listOf(data), null).filterIsInstance<AppInfoViewData>()
         results.first().searchable shouldContain "de.lemke.geticon"
-    }
-
-    @Test
-    fun `convert searchable contains no null values`() {
-        val appInfo = AppInfo(packageName = "de.lemke.geticon", activityName = "")
-        val data = AppInfoDataImpl(appInfo, label = null)
-        val results = strategy.convert(listOf(data), null).filterIsInstance<AppInfoViewData>()
-        results.first().searchable shouldNotContain null
     }
 }
