@@ -87,7 +87,6 @@ jobs:
         with:
           files: app/build/reports/kover/reportDebug.xml
           flags: unittests
-          fail_ci_if_error: true
       - name: Upload coverage report on failure
         if: failure()
         uses: actions/upload-artifact@v7
