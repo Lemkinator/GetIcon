@@ -247,6 +247,7 @@ class GenerateIconUseCaseTest {
                 val result = useCase(nonAdaptiveInfo, 128, maskEnabled = true, colorEnabled = false, 0, 0, packageManager)
                 result.bitmap shouldNotBe null
                 result.hasMaskedAppIcon shouldBe true
+                result.bitmap.getPixel(0, 0) shouldBe Color.GREEN
             } finally {
                 unmockkStatic(SeslApplicationPackageManagerReflector::class)
             }
