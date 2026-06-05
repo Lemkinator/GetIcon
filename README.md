@@ -14,10 +14,12 @@ src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web
 [![License](https://badgen.net/badge/license/Apache%202.0/blue)](https://opensource.org/licenses/Apache-2.0)
 [![API Level](https://badgen.net/badge/API/26%2B/green)](https://android-arsenal.com/api?level=26)
 [![Kotlin](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FLemkinator%2FGetIcon%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions.kotlin&label=kotlin&color=7F52FF&logo=kotlin)](https://kotlinlang.org/)
+
 [![Last Commit](https://badgen.net/github/last-commit/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon/commits/)
 [![Issues](https://badgen.net/github/open-issues/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon/issues)
 [![Pull Requests](https://badgen.net/github/open-prs/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon/pulls)
 [![Contributors](https://badgen.net/github/contributors/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon/graphs/contributors)
+
 [![Repo Size](https://img.shields.io/github/repo-size/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon)
 [![Lines of Code](https://sloc.xyz/github/Lemkinator/GetIcon)](https://github.com/Lemkinator/GetIcon)
 [![CodeFactor](https://www.codefactor.io/repository/github/lemkinator/geticon/badge)](https://www.codefactor.io/repository/github/lemkinator/geticon)
@@ -41,13 +43,19 @@ More Information: <a target="_blank" href='https://www.leonard-lemke.com/apps/ge
 
 <br><br>
 
+## Stats
+
 ![Alt](https://repobeats.axiom.co/api/embed/e036d9142181fc91f90663653abc32c087e7aef6.svg "Repobeats analytics image")
 
 <br>
 
+## Code Coverage
+
 [![Coverage Sunburst](https://codecov.io/gh/Lemkinator/GetIcon/graphs/sunburst.svg)](https://codecov.io/gh/Lemkinator/GetIcon)
 
 <br>
+
+## Star History
 
 <picture>
     <!--suppress HtmlUnknownTarget -->
