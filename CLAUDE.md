@@ -39,12 +39,12 @@ Run macrobenchmarks manually (not CI-gated — numbers are advisory and device-s
 
 **4 compilation modes explained:**
 
-| Mode | Meaning |
-| ---- | ------- |
-| `None()` | Pure JIT — worst case baseline |
-| `Partial(Disable, warmupIterations=1)` | Partial AOT, profile disabled |
-| `Partial(Require)` | Our shipped state — profile must be present |
-| `Full()` | Everything AOT — upper bound |
+| Mode                                   | Meaning                                     |
+|----------------------------------------|---------------------------------------------|
+| `None()`                               | Pure JIT — worst case baseline              |
+| `Partial(Disable, warmupIterations=1)` | Partial AOT, profile disabled               |
+| `Partial(Require)`                     | Our shipped state — profile must be present |
+| `Full()`                               | Everything AOT — upper bound                |
 
 `startupBaselineProfile` should be within ~10% of `Full()` and clearly below `None()`.
 When the profile is applied, near-zero JIT/ClassInit metrics indicate the profile is working.
@@ -152,6 +152,15 @@ The hook runs `spotlessCheck` and exits 1 with a
 `./gradlew spotlessApply` reminder on failure. It also fails fast with a
 targeted message if `core.autocrlf=true` is detected.
 
+**After any change** — run the full local CI suite before declaring work done:
+
+```powershell
+./gradlew spotlessCheck detekt lintDebug testDebugUnitTest koverVerifyDebug verifyRoborazziDebug
+```
+
+If `spotlessCheck` fails, fix with `./gradlew spotlessApply` then re-run. Screenshot test failures (`verifyRoborazziDebug`) mean the code
+change broke a visual — do not analyze screenshots, ask the user to verify the changes.
+
 **Dependency analysis** — manual hygiene tool (not in CI). Invoke with:
 
 ```powershell
@@ -189,13 +198,6 @@ plugin mode is changed to `MANUAL`, this breaks — keep `DISTRACT_FREE`.
 When upgrading ktlint: run `./gradlew spotlessApply` after the bump,
 check for new IDE diagnostics, and add `.editorconfig` overrides for any
 newly misbehaving rules.
-
-## Version Policy
-
-After touching `libs.versions.toml` or any `build.gradle.kts` dep
-block: run `./gradlew lintDebug` before pushing (catches
-`NewerVersionAvailable`). The pre-commit hook only runs
-`spotlessCheck` — lint is manual.
 
 ## Finding Code
 
