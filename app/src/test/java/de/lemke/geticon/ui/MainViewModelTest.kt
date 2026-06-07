@@ -26,7 +26,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.mockk
-import kotlinx.coroutines.flow.receiveAsFlow
 
 class MainViewModelTest : ShouldSpec(
     {
@@ -36,7 +35,7 @@ class MainViewModelTest : ShouldSpec(
         beforeEach { viewModel = MainViewModel(processApk) }
 
         should("emit ShowError when uri is null") {
-            viewModel.events.receiveAsFlow().test {
+            viewModel.events.test {
                 viewModel.onApkPicked(null)
                 awaitItem() shouldBe MainEvent.ShowError
             }
@@ -46,7 +45,7 @@ class MainViewModelTest : ShouldSpec(
             val uri = mockk<Uri>()
             coEvery { processApk(uri) } returns ApkProcessResult.InvalidApk
 
-            viewModel.events.receiveAsFlow().test {
+            viewModel.events.test {
                 viewModel.onApkPicked(uri)
                 awaitItem() shouldBe MainEvent.ShowError
             }
@@ -56,7 +55,7 @@ class MainViewModelTest : ShouldSpec(
             val uri = mockk<Uri>()
             coEvery { processApk(uri) } returns ApkProcessResult.Error
 
-            viewModel.events.receiveAsFlow().test {
+            viewModel.events.test {
                 viewModel.onApkPicked(uri)
                 awaitItem() shouldBe MainEvent.ShowError
             }
@@ -67,7 +66,7 @@ class MainViewModelTest : ShouldSpec(
             val appInfo = mockk<ApplicationInfo>()
             coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
 
-            viewModel.events.receiveAsFlow().test {
+            viewModel.events.test {
                 viewModel.onApkPicked(uri)
                 awaitItem().shouldBeInstanceOf<MainEvent.NavigateToIcon>()
             }
@@ -78,7 +77,7 @@ class MainViewModelTest : ShouldSpec(
             val appInfo = mockk<ApplicationInfo>()
             coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
 
-            viewModel.events.receiveAsFlow().test {
+            viewModel.events.test {
                 viewModel.onApkPicked(uri)
                 val event = awaitItem() as MainEvent.NavigateToIcon
                 event.applicationInfo shouldBe appInfo

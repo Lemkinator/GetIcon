@@ -37,9 +37,11 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -80,12 +82,13 @@ class IconViewModel @Inject constructor(
     private val _state = MutableStateFlow(IconUiState())
     val state: StateFlow<IconUiState> = _state.asStateFlow()
 
-    val events = Channel<IconEvent>(Channel.BUFFERED)
+    private val _events = Channel<IconEvent>(Channel.BUFFERED)
+    val events: Flow<IconEvent> = _events.receiveAsFlow()
 
     init {
         val appInfo = applicationInfo
         if (appInfo == null) {
-            events.trySend(IconEvent.Finish)
+            _events.trySend(IconEvent.Finish)
         } else {
             viewModelScope.launch { loadInitialState(appInfo) }
         }
@@ -125,7 +128,7 @@ class IconViewModel @Inject constructor(
                 )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            events.send(IconEvent.GenerateFailed(e))
+            _events.send(IconEvent.GenerateFailed(e))
         }
     }
 
@@ -187,7 +190,7 @@ class IconViewModel @Inject constructor(
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     _state.update { it.copy(isLoading = false) }
-                    events.send(IconEvent.GenerateFailed(e))
+                    _events.send(IconEvent.GenerateFailed(e))
                 }
             }
     }

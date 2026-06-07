@@ -26,6 +26,8 @@ import de.lemke.geticon.domain.ProcessApkUseCase
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 sealed class MainEvent {
@@ -40,11 +42,12 @@ sealed class MainEvent {
 class MainViewModel @Inject constructor(
     private val processApk: ProcessApkUseCase,
 ) : ViewModel() {
-    val events = Channel<MainEvent>(BUFFERED)
+    private val _events = Channel<MainEvent>(BUFFERED)
+    val events: Flow<MainEvent> = _events.receiveAsFlow()
 
     fun onApkPicked(uri: Uri?) {
         if (uri == null) {
-            viewModelScope.launch { events.send(MainEvent.ShowError) }
+            viewModelScope.launch { _events.send(MainEvent.ShowError) }
             return
         }
         viewModelScope.launch {
@@ -53,7 +56,7 @@ class MainViewModel @Inject constructor(
                     is ApkProcessResult.Success -> MainEvent.NavigateToIcon(result.applicationInfo)
                     is ApkProcessResult.InvalidApk, is ApkProcessResult.Error -> MainEvent.ShowError
                 }
-            events.send(event)
+            _events.send(event)
         }
     }
 }

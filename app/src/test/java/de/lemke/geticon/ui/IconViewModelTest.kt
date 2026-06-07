@@ -44,7 +44,6 @@ import io.mockk.mockk
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.receiveAsFlow
 
 private fun IconViewModel.triggerOnCleared() {
     ViewModelStore().also { it.put("vm", this) }.clear()
@@ -93,7 +92,7 @@ class IconViewModelTest : ShouldSpec(
         context("null applicationInfo") {
             should("emit Finish event immediately") {
                 val viewModel = buildViewModel(appInfo = null)
-                viewModel.events.tryReceive().getOrNull() shouldBe IconEvent.Finish
+                viewModel.events.test { awaitItem() shouldBe IconEvent.Finish }
             }
 
             should("not call getUserSettings") {
@@ -266,7 +265,7 @@ class IconViewModelTest : ShouldSpec(
             should("emit GenerateFailed when generateIcon throws in loadInitialState") {
                 coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("load failed")
                 val viewModel = buildViewModel(appInfo)
-                viewModel.events.receiveAsFlow().test {
+                viewModel.events.test {
                     awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
                 }
             }
@@ -274,7 +273,7 @@ class IconViewModelTest : ShouldSpec(
             should("emit GenerateFailed when generateIcon throws in regenerateIcon") {
                 val viewModel = buildViewModel(appInfo)
                 coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("regen failed")
-                viewModel.events.receiveAsFlow().test {
+                viewModel.events.test {
                     viewModel.onMaskChanged(false)
                     awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
                 }
@@ -283,14 +282,14 @@ class IconViewModelTest : ShouldSpec(
             should("does not emit GenerateFailed when getUserSettings throws CancellationException") {
                 coEvery { getUserSettings() } throws CancellationException("cancelled")
                 val viewModel = buildViewModel(appInfo)
-                viewModel.events.tryReceive().getOrNull() shouldBe null
+                viewModel.events.test { expectNoEvents() }
             }
 
             should("does not emit GenerateFailed when generateIcon throws CancellationException in regenerateIcon") {
                 val viewModel = buildViewModel(appInfo)
                 coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws CancellationException("cancelled")
                 viewModel.onMaskChanged(false)
-                viewModel.events.tryReceive().getOrNull() shouldBe null
+                viewModel.events.test { expectNoEvents() }
             }
 
             should("buildFileName: mask=true color=false produces _mask suffix") {
