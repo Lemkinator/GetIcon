@@ -27,7 +27,6 @@ build/
 .externalNativeBuild
 .cxx
 
-/local.properties
 local.properties
 keystore.properties
 github.properties
@@ -35,6 +34,7 @@ github.properties
 # Keystore and Firebase credentials
 *.jks
 *.keystore
+*.p12
 google-services.json
 
 # Crashlytics plugin (for Android Studio and IntelliJ)

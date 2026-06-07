@@ -31,7 +31,7 @@ kover = "0.9.8"
 ksp = "2.3.9"
 # Used via spotless { kotlin { ktlint(libs.versions.ktlint.get()) } } — version-only ref, no library/plugin alias
 #noinspection UnusedVersionCatalogEntry
-ktlint = "1.7.1"
+ktlint = "1.8.0"
 leakcanary = "2.14"
 mockk = "1.14.11"
 oneui-design = "0.9.12+oneui8"
