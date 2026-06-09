@@ -33,16 +33,15 @@ import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import java.io.File
+import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class IconUiState(
@@ -77,8 +76,6 @@ class IconViewModel @Inject constructor(
 ) : ViewModel() {
     private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
 
-    private var regenerateJob: Job? = null
-
     private val _state = MutableStateFlow(IconUiState())
     val state: StateFlow<IconUiState> = _state.asStateFlow()
 
@@ -94,7 +91,6 @@ class IconViewModel @Inject constructor(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private suspend fun loadInitialState(appInfo: ApplicationInfo) {
         try {
             val userSettings = getUserSettings()
@@ -126,8 +122,11 @@ class IconViewModel @Inject constructor(
                     recentBackgroundColors = userSettings.recentBackgroundColors,
                     isLoading = false,
                 )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            _events.send(IconEvent.GenerateFailed(e))
+        } catch (e: OutOfMemoryError) {
             _events.send(IconEvent.GenerateFailed(e))
         }
     }
@@ -160,39 +159,30 @@ class IconViewModel @Inject constructor(
         regenerateIcon(_state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun regenerateIcon(newState: IconUiState) {
         val appInfo = applicationInfo ?: return
-        regenerateJob?.cancel()
-        _state.value = newState.copy(isLoading = true)
-        regenerateJob =
-            viewModelScope.launch {
-                try {
-                    val result =
-                        generateIcon(
-                            appInfo,
-                            newState.size,
-                            newState.maskEnabled,
-                            newState.colorEnabled,
-                            newState.foregroundColor,
-                            newState.backgroundColor,
-                            context.packageManager,
-                        )
-                    _state.update {
-                        it.copy(
-                            icon = result.bitmap,
-                            isAdaptiveIcon = result.isAdaptiveIcon,
-                            hasMaskedAppIcon = result.hasMaskedAppIcon,
-                            fileName = buildFileName(appInfo.packageName, it.maskEnabled, it.colorEnabled),
-                            isLoading = false,
-                        )
-                    }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    _state.update { it.copy(isLoading = false) }
-                    _events.send(IconEvent.GenerateFailed(e))
-                }
-            }
+        try {
+            val result =
+                generateIcon(
+                    appInfo,
+                    newState.size,
+                    newState.maskEnabled,
+                    newState.colorEnabled,
+                    newState.foregroundColor,
+                    newState.backgroundColor,
+                    context.packageManager,
+                )
+            _state.value =
+                newState.copy(
+                    icon = result.bitmap,
+                    isAdaptiveIcon = result.isAdaptiveIcon,
+                    hasMaskedAppIcon = result.hasMaskedAppIcon,
+                    fileName = buildFileName(appInfo.packageName, newState.maskEnabled, newState.colorEnabled),
+                    isLoading = false,
+                )
+        } catch (e: OutOfMemoryError) {
+            _events.trySend(IconEvent.GenerateFailed(e))
+        }
     }
 
     override fun onCleared() {

@@ -41,7 +41,9 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
@@ -72,7 +74,7 @@ class IconViewModelTest : ShouldSpec(
             every { mockContext.packageManager } returns mockPackageManager
             every { mockContext.cacheDir } returns File(System.getProperty("java.io.tmpdir") ?: "/tmp")
             coEvery { getUserSettings() } returns defaultSettings
-            coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } returns mockIconResult
+            every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } returns mockIconResult
             coEvery { updateUserSettings(any()) } answers {
                 val transform = firstArg<(UserSettings) -> UserSettings>()
                 transform(defaultSettings)
@@ -103,7 +105,7 @@ class IconViewModelTest : ShouldSpec(
             should("onMaskChanged does not call generateIcon when applicationInfo is null") {
                 val viewModel = buildViewModel(appInfo = null)
                 viewModel.onMaskChanged(false)
-                coVerify(exactly = 0) { generateIcon(any(), any(), any(), any(), any(), any(), any()) }
+                verify(exactly = 0) { generateIcon(any(), any(), any(), any(), any(), any(), any()) }
             }
 
             should("onCleared does nothing when applicationInfo is null") {
@@ -255,24 +257,32 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.isLoading shouldBe false
             }
 
-            should("isLoading resets to false when regenerateIcon throws") {
+            should("isLoading is false when regenerateIcon throws OutOfMemoryError") {
                 val viewModel = buildViewModel(appInfo)
-                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("regen failed")
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
                 viewModel.onMaskChanged(false)
                 viewModel.state.value.isLoading shouldBe false
             }
 
-            should("emit GenerateFailed when generateIcon throws in loadInitialState") {
-                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("load failed")
+            should("emit GenerateFailed when getUserSettings throws IOException") {
+                coEvery { getUserSettings() } throws IOException("io error")
                 val viewModel = buildViewModel(appInfo)
                 viewModel.events.test {
                     awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
                 }
             }
 
-            should("emit GenerateFailed when generateIcon throws in regenerateIcon") {
+            should("emit GenerateFailed when generateIcon throws OutOfMemoryError in loadInitialState") {
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
                 val viewModel = buildViewModel(appInfo)
-                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("regen failed")
+                viewModel.events.test {
+                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
+            should("emit GenerateFailed when generateIcon throws OutOfMemoryError in regenerateIcon") {
+                val viewModel = buildViewModel(appInfo)
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
                 viewModel.events.test {
                     viewModel.onMaskChanged(false)
                     awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
@@ -282,13 +292,6 @@ class IconViewModelTest : ShouldSpec(
             should("does not emit GenerateFailed when getUserSettings throws CancellationException") {
                 coEvery { getUserSettings() } throws CancellationException("cancelled")
                 val viewModel = buildViewModel(appInfo)
-                viewModel.events.test { expectNoEvents() }
-            }
-
-            should("does not emit GenerateFailed when generateIcon throws CancellationException in regenerateIcon") {
-                val viewModel = buildViewModel(appInfo)
-                coEvery { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws CancellationException("cancelled")
-                viewModel.onMaskChanged(false)
                 viewModel.events.test { expectNoEvents() }
             }
 
