@@ -31,8 +31,6 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -41,7 +39,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(application = App::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -53,7 +50,7 @@ class GenerateIconUseCaseTest {
     @Before
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<App>()
-        useCase = GenerateIconUseCase(context, UnconfinedTestDispatcher())
+        useCase = GenerateIconUseCase(context)
         packageManager = context.packageManager
         appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
     }

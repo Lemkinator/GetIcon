@@ -31,10 +31,7 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.reflect.app.SeslApplicationPackageManagerReflector.semGetApplicationIconForIconTray
 import dagger.hilt.android.qualifiers.ApplicationContext
-import de.lemke.commonutils.di.DefaultDispatcher
 import javax.inject.Inject
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.withContext
 
 data class IconResult(
     val bitmap: Bitmap,
@@ -44,10 +41,9 @@ data class IconResult(
 
 class GenerateIconUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) {
     @SuppressLint("RestrictedApi")
-    suspend operator fun invoke(
+    operator fun invoke(
         applicationInfo: ApplicationInfo,
         size: Int,
         maskEnabled: Boolean,
@@ -55,45 +51,44 @@ class GenerateIconUseCase @Inject constructor(
         foregroundColor: Int,
         backgroundColor: Int,
         packageManager: PackageManager,
-    ): IconResult =
-        withContext(defaultDispatcher) {
-            val appIcon: Drawable =
-                try {
-                    applicationInfo.loadIcon(packageManager)
-                } catch (_: Exception) {
-                    AppCompatResources.getDrawable(context, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)!!
-                }
-            val maskedAppIcon = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
-            val isAdaptiveIcon = appIcon is AdaptiveIconDrawable
-            val hasMaskedAppIcon = isAdaptiveIcon || maskedAppIcon != null
-
-            val drawable = appIcon.mutate()
-            val bitmap: Bitmap
-            if (drawable is AdaptiveIconDrawable && drawable.foreground != null && drawable.background != null) {
-                bitmap = createBitmap(size, size)
-                drawable.setBounds(0, 0, size, size)
-                val background = drawable.background.mutate()
-                var foreground = drawable.foreground.mutate()
-                if (colorEnabled) {
-                    if (SDK_INT >= TIRAMISU) {
-                        val monochrome = drawable.monochrome
-                        if (monochrome != null) foreground = monochrome.mutate()
-                    }
-                    background.setTint(backgroundColor)
-                    foreground.setTint(foregroundColor)
-                }
-                val canvas = Canvas(bitmap)
-                if (maskEnabled) canvas.clipPath(drawable.iconMask)
-                background.draw(canvas)
-                foreground.draw(canvas)
-            } else {
-                bitmap =
-                    if (maskEnabled && maskedAppIcon != null) {
-                        maskedAppIcon.toBitmap(size, size)
-                    } else {
-                        drawable.toBitmap(size, size)
-                    }
+    ): IconResult {
+        val appIcon: Drawable =
+            try {
+                applicationInfo.loadIcon(packageManager)
+            } catch (_: Exception) {
+                AppCompatResources.getDrawable(context, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)!!
             }
-            IconResult(bitmap, isAdaptiveIcon, hasMaskedAppIcon)
+        val maskedAppIcon = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
+        val isAdaptiveIcon = appIcon is AdaptiveIconDrawable
+        val hasMaskedAppIcon = isAdaptiveIcon || maskedAppIcon != null
+
+        val drawable = appIcon.mutate()
+        val bitmap: Bitmap
+        if (drawable is AdaptiveIconDrawable && drawable.foreground != null && drawable.background != null) {
+            bitmap = createBitmap(size, size)
+            drawable.setBounds(0, 0, size, size)
+            val background = drawable.background.mutate()
+            var foreground = drawable.foreground.mutate()
+            if (colorEnabled) {
+                if (SDK_INT >= TIRAMISU) {
+                    val monochrome = drawable.monochrome
+                    if (monochrome != null) foreground = monochrome.mutate()
+                }
+                background.setTint(backgroundColor)
+                foreground.setTint(foregroundColor)
+            }
+            val canvas = Canvas(bitmap)
+            if (maskEnabled) canvas.clipPath(drawable.iconMask)
+            background.draw(canvas)
+            foreground.draw(canvas)
+        } else {
+            bitmap =
+                if (maskEnabled && maskedAppIcon != null) {
+                    maskedAppIcon.toBitmap(size, size)
+                } else {
+                    drawable.toBitmap(size, size)
+                }
         }
+        return IconResult(bitmap, isAdaptiveIcon, hasMaskedAppIcon)
+    }
 }
