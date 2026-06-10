@@ -39,12 +39,12 @@ Run macrobenchmarks manually (not CI-gated — numbers are advisory and device-s
 
 **4 compilation modes explained:**
 
-| Mode                                   | Meaning                                     |
-|----------------------------------------|---------------------------------------------|
-| `None()`                               | Pure JIT — worst case baseline              |
-| `Partial(Disable, warmupIterations=1)` | Partial AOT, profile disabled               |
-| `Partial(Require)`                     | Our shipped state — profile must be present |
-| `Full()`                               | Everything AOT — upper bound                |
+| Mode | Meaning |
+| --- | --- |
+| `None()` | Pure JIT — worst case baseline |
+| `Partial(Disable, warmupIterations=1)` | Partial AOT, profile disabled |
+| `Partial(Require)` | Our shipped state — profile must be present |
+| `Full()` | Everything AOT — upper bound |
 
 `startupBaselineProfile` should be within ~10% of `Full()` and clearly below `None()`.
 When the profile is applied, near-zero JIT/ClassInit metrics indicate the profile is working.
@@ -198,6 +198,14 @@ plugin mode is changed to `MANUAL`, this breaks — keep `DISTRACT_FREE`.
 When upgrading ktlint: run `./gradlew spotlessApply` after the bump,
 check for new IDE diagnostics, and add `.editorconfig` overrides for any
 newly misbehaving rules.
+
+## Robolectric + JUnit 5
+
+**Do not migrate Robolectric tests to JUnit 5.** `org.robolectric.junit.jupiter.RobolectricExtension` does not exist — Robolectric has no
+native JUnit 5 support ([issue #3477](https://github.com/robolectric/robolectric/issues/3477)). The community extension
+`tech.apter.junit5.jupiter:robolectric-extension` only targets Robolectric 4.14.1, is pre-release, and has no Hilt/Roborazzi support.
+
+`@RunWith(RobolectricTestRunner::class)` + `junit-vintage-engine` is correct. Keep until Robolectric ships native JUnit 5.
 
 ## Finding Code
 
