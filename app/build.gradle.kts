@@ -241,7 +241,6 @@ kover {
                     "*Activity$*",
                     "*Fragment",
                     "*Fragment$*",
-                    "*DebugTools*",
                 )
             }
         }
