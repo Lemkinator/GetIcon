@@ -14,6 +14,8 @@
 !/.idea/ktlint-plugin.xml
 !/.idea/misc.xml
 !/.idea/vcs.xml
+!/.idea/runConfigurations/
+!/.idea/runConfigurations/**
 
 *.iml
 .gradle
