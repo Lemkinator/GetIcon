@@ -195,10 +195,6 @@ result → final output matches `spotlessApply` exactly. IntelliJ never
 "learns" ktlint rules; ktlint just fixes IntelliJ's output. If the
 plugin mode is changed to `MANUAL`, this breaks — keep `DISTRACT_FREE`.
 
-When upgrading ktlint: run `./gradlew spotlessApply` after the bump,
-check for new IDE diagnostics, and add `.editorconfig` overrides for any
-newly misbehaving rules.
-
 ## Robolectric + JUnit 5
 
 **Do not migrate Robolectric tests to JUnit 5.** `org.robolectric.junit.jupiter.RobolectricExtension` does not exist — Robolectric has no
