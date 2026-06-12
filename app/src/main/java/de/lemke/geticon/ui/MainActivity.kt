@@ -225,9 +225,9 @@ class MainActivity :
         appInfo: AppInfo,
     ): Boolean =
         try {
+            hideSoftInput()
             val appInfo2 = packageManager.getApplicationInfo(appInfo.packageName, 0)
             val intent = Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, appInfo2)
-            hideSoftInput()
             view?.transformToActivity(intent)
             true
         } catch (e: NameNotFoundException) {
