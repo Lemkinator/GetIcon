@@ -30,6 +30,7 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.graphics.toColor
@@ -75,7 +76,24 @@ class IconActivity :
     private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
-    private fun onExportBitmapResult(result: ActivityResult?) {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal val seekbarChangeListener =
+        object : SeslSeekBar.OnSeekBarChangeListener {
+            override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
+
+            override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
+
+            override fun onProgressChanged(
+                seekBar: SeslSeekBar,
+                progress: Int,
+                fromUser: Boolean,
+            ) {
+                if (fromUser) viewModel.onSizeChanged(progress)
+            }
+        }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun onExportBitmapResult(result: ActivityResult?) {
         val icon = viewModel.state.value.icon ?: return
         saveIconToUri(result, icon)
     }
@@ -144,21 +162,7 @@ class IconActivity :
         }
         binding.sizeSeekbar.min = MIN_ICON_SIZE
         binding.sizeSeekbar.max = MAX_ICON_SIZE
-        binding.sizeSeekbar.setOnSeekBarChangeListener(
-            object : SeslSeekBar.OnSeekBarChangeListener {
-                override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
-
-                override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
-
-                override fun onProgressChanged(
-                    seekBar: SeslSeekBar,
-                    progress: Int,
-                    fromUser: Boolean,
-                ) {
-                    if (fromUser) viewModel.onSizeChanged(progress)
-                }
-            },
-        )
+        binding.sizeSeekbar.setOnSeekBarChangeListener(seekbarChangeListener)
         binding.colorButtonBackground.setOnClickListener { showColorPicker(isBackground = true) }
         binding.colorButtonForeground.setOnClickListener { showColorPicker(isBackground = false) }
     }
@@ -226,7 +230,8 @@ class IconActivity :
         }
     }
 
-    private fun onColorPicked(
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun onColorPicked(
         color: Int,
         isBackground: Boolean,
     ) {
@@ -237,7 +242,8 @@ class IconActivity :
         }
     }
 
-    private fun showColorPicker(isBackground: Boolean) {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun showColorPicker(isBackground: Boolean) {
         val state = viewModel.state.value
         val currentColor = if (isBackground) state.backgroundColor else state.foregroundColor
         val recentColors = if (isBackground) state.recentBackgroundColors else state.recentForegroundColors

@@ -28,6 +28,7 @@ import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
@@ -79,7 +80,9 @@ class MainActivity :
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
-    private var isUIReady = false
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal var isUIReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -121,7 +124,7 @@ class MainActivity :
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        if (!this::binding.isInitialized) return
+        if (!isUIReady) return
         outState.saveSearchAndActionMode(isSearchMode = binding.drawerLayout.isSearchMode)
     }
 
@@ -138,7 +141,8 @@ class MainActivity :
             else -> super.onOptionsItemSelected(item)
         }
 
-    private fun applyFilter(query: String = "") {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun applyFilter(query: String = "") {
         binding.appPicker.setSearchFilter(query) { binding.noEntryView.updateVisibility(it <= 0, binding.appPicker) }
     }
 
@@ -159,38 +163,24 @@ class MainActivity :
 
     private fun initDrawer() {
         binding.navigationView.findMenuItem(R.id.leaks_dest)?.isVisible = BuildConfig.DEBUG
-        binding.navigationView.onNavigationSingleClick { item ->
-            when (item.itemId) {
-                R.id.extract_icon_from_apk_dest -> {
-                    pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
-                }
-
-                R.id.commonutils_about_dest -> {
-                    transformToActivity<CommonUtilsAboutActivity>(R.id.commonutils_about_dest)
-                }
-
-                R.id.commonutils_about_me_dest -> {
-                    transformToActivity<CommonUtilsAboutMeActivity>(R.id.commonutils_about_me_dest)
-                }
-
-                R.id.commonutils_settings_dest -> {
-                    transformToActivity<CommonUtilsSettingsActivity>(R.id.commonutils_settings_dest)
-                }
-
-                R.id.leaks_dest -> {
-                    openLeakCanary(this)
-                }
-
-                else -> {
-                    return@onNavigationSingleClick false
-                }
-            }
-            true
-        }
+        binding.navigationView.onNavigationSingleClick { item -> onNavigationItemSelected(item) }
         binding.drawerLayout.setTitle(getString(R.string.app_name))
         binding.drawerLayout.setupHeaderAndNavRail(getString(R.string.about_app))
         binding.drawerLayout.isImmersiveScroll = true
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun onNavigationItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
+            R.id.commonutils_about_dest -> transformToActivity<CommonUtilsAboutActivity>(R.id.commonutils_about_dest)
+            R.id.commonutils_about_me_dest -> transformToActivity<CommonUtilsAboutMeActivity>(R.id.commonutils_about_me_dest)
+            R.id.commonutils_settings_dest -> transformToActivity<CommonUtilsSettingsActivity>(R.id.commonutils_settings_dest)
+            R.id.leaks_dest -> openLeakCanary(this)
+            else -> return false
+        }
+        return true
     }
 
     private fun initAppPicker() {
@@ -224,7 +214,8 @@ class MainActivity :
         }
     }
 
-    private fun onAppPickerItemClick(
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun onAppPickerItemClick(
         view: View?,
         appInfo: AppInfo,
     ): Boolean =
