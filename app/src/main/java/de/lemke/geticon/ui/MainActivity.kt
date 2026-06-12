@@ -25,6 +25,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +35,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppData.GridAppDataBuilder
+import androidx.picker.model.AppInfo
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.collectEvents
@@ -201,20 +203,7 @@ class MainActivity :
             }
             hideSoftInputOnScroll()
             if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
-            setOnItemClickEventListener { view, appInfo ->
-                try {
-                    hideSoftInput()
-                    view?.transformToActivity(
-                        Intent(this@MainActivity, IconActivity::class.java)
-                            .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(appInfo.packageName, 0)),
-                    )
-                    true
-                } catch (e: NameNotFoundException) {
-                    Log.e("MainActivity", "App not found: ${appInfo.packageName}", e)
-                    toast(commonutilsR.string.commonutils_error_app_not_found)
-                    false
-                }
-            }
+            setOnItemClickEventListener { view, appInfo -> onAppPickerItemClick(view, appInfo) }
         }
         lifecycleScope.launch {
             try {
@@ -230,4 +219,20 @@ class MainActivity :
             }
         }
     }
+
+    private fun onAppPickerItemClick(
+        view: View?,
+        appInfo: AppInfo,
+    ): Boolean =
+        try {
+            val appInfo2 = packageManager.getApplicationInfo(appInfo.packageName, 0)
+            val intent = Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, appInfo2)
+            hideSoftInput()
+            view?.transformToActivity(intent)
+            true
+        } catch (e: NameNotFoundException) {
+            Log.e("MainActivity", "App not found: ${appInfo.packageName}", e)
+            toast(commonutilsR.string.commonutils_error_app_not_found)
+            false
+        }
 }

@@ -23,7 +23,6 @@ import android.graphics.Bitmap
 import android.graphics.Color.BLACK
 import android.graphics.Color.WHITE
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.CompoundButton
@@ -74,24 +73,20 @@ class IconActivity :
     private var suggestViewSet = false
 
     private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
-        registerForActivityResult(StartActivityForResult()) { result: ActivityResult? ->
-            val icon = viewModel.state.value.icon ?: return@registerForActivityResult
-            saveIconToUri(result, icon)
-        }
+        registerForActivityResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
-    @Suppress("TooGenericExceptionCaught")
+    private fun onExportBitmapResult(result: ActivityResult?) {
+        val icon = viewModel.state.value.icon ?: return
+        saveIconToUri(result, icon)
+    }
+
     private fun saveIconToUri(
         result: ActivityResult?,
         icon: Bitmap,
     ) {
-        try {
-            if (result?.resultCode == RESULT_OK) {
-                saveBitmapToUri(result.data?.data, icon)
-            } else if (result?.resultCode != RESULT_CANCELED) {
-                toast(commonutilsR.string.commonutils_error_saving_image)
-            }
-        } catch (e: Exception) {
-            Log.e("IconActivity", "Failed to save bitmap to URI", e)
+        if (result?.resultCode == RESULT_OK) {
+            saveBitmapToUri(result.data?.data, icon)
+        } else if (result?.resultCode != RESULT_CANCELED) {
             toast(commonutilsR.string.commonutils_error_saving_image)
         }
     }
@@ -236,6 +231,17 @@ class IconActivity :
         }
     }
 
+    private fun onColorPicked(
+        color: Int,
+        isBackground: Boolean,
+    ) {
+        if (isBackground) {
+            viewModel.onBackgroundColorChanged(color)
+        } else {
+            viewModel.onForegroundColorChanged(color)
+        }
+    }
+
     private fun showColorPicker(isBackground: Boolean) {
         val state = viewModel.state.value
         val currentColor = if (isBackground) state.backgroundColor else state.foregroundColor
@@ -243,19 +249,18 @@ class IconActivity :
         val dialog =
             SeslColorPickerDialog(
                 this,
-                { color: Int ->
-                    if (isBackground) {
-                        viewModel.onBackgroundColorChanged(color)
-                    } else {
-                        viewModel.onForegroundColorChanged(color)
-                    }
-                },
+                { color: Int -> onColorPicked(color, isBackground) },
                 currentColor,
                 recentColors.toIntArray(),
                 true,
             )
         dialog.setTransparencyControlEnabled(true)
         dialog.show()
+    }
+
+    private fun onCopyButtonClick() {
+        viewModel.state.value.icon
+            ?.copyToClipboard(this, "icon", "icon.png")
     }
 
     private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> =
@@ -268,10 +273,7 @@ class IconActivity :
                     arrayListOf(
                         ButtonModel(
                             text = getString(R.string.copy_icon),
-                            clickListener = { _, _ ->
-                                viewModel.state.value.icon
-                                    ?.copyToClipboard(this@IconActivity, "icon", "icon.png")
-                            },
+                            clickListener = { _, _ -> onCopyButtonClick() },
                         ),
                     ),
                 )
