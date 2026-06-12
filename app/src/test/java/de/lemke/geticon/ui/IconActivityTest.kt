@@ -226,6 +226,17 @@ class IconActivityTest {
     }
 
     @Test
+    fun seekbar_progressChanged_fromUser_updatesSizeViaViewModel() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val seekbar = activity.findViewById<SeslSeekBar>(R.id.size_seekbar)
+                activity.seekbarChangeListener.onProgressChanged(seekbar, 100, true)
+            }
+        }
+    }
+
+    @Test
     fun colorButtons_click_showColorPicker() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
@@ -262,6 +273,26 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_CANCELED, null))
+            }
+        }
+    }
+
+    @Test
+    fun onExportBitmapResult_nullResult_showsErrorToast() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onExportBitmapResult(null)
+            }
+        }
+    }
+
+    @Test
+    fun onExportBitmapResult_resultOkNullData_callsSaveWithNullUri() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, null))
             }
         }
     }
