@@ -49,6 +49,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import java.io.IOException
+import java.lang.reflect.InvocationTargetException
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -65,9 +66,6 @@ import org.robolectric.annotation.GraphicsMode
 class IconActivityTest {
     @get:Rule
     val hiltRule = HiltAndroidRule(this)
-
-    private val testBitmap: Bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
-    private val testIconResult = IconResult(bitmap = testBitmap, isAdaptiveIcon = true, hasMaskedAppIcon = true)
 
     @BindValue
     @JvmField
@@ -106,7 +104,7 @@ class IconActivityTest {
 
     @Test
     fun collectEvents_finish_whenNoAppInfo() {
-        launchWithoutAppInfo().use { scenario ->
+        launchWithoutAppInfo().use { _ ->
             shadowOf(Looper.getMainLooper()).idle()
         }
     }
@@ -124,7 +122,7 @@ class IconActivityTest {
                 any<PackageManager>(),
             )
         } throws IOException("test")
-        launchWithAppInfo().use { scenario ->
+        launchWithAppInfo().use { _ ->
             shadowOf(Looper.getMainLooper()).idle()
         }
     }
@@ -175,7 +173,7 @@ class IconActivityTest {
 
     @Test
     fun maskedCheckbox_click_togglesMask() {
-        launchWithAppInfo().use { scenario ->
+        launchWithAppInfo().use { _ ->
             shadowOf(Looper.getMainLooper()).idle()
             onView(withId(R.id.masked_checkbox)).perform(click())
             shadowOf(Looper.getMainLooper()).idle()
@@ -184,7 +182,7 @@ class IconActivityTest {
 
     @Test
     fun colorCheckbox_click_togglesColor() {
-        launchWithAppInfo().use { scenario ->
+        launchWithAppInfo().use { _ ->
             shadowOf(Looper.getMainLooper()).idle()
             onView(withId(R.id.color_checkbox)).perform(click())
             shadowOf(Looper.getMainLooper()).idle()
@@ -209,7 +207,7 @@ class IconActivityTest {
 
     @Test
     fun sizeEdittext_editorAction_updatesSizeAndHidesKeyboard() {
-        launchWithAppInfo().use { scenario ->
+        launchWithAppInfo().use { _ ->
             shadowOf(Looper.getMainLooper()).idle()
             onView(withId(R.id.size_edittext)).perform(replaceText("256"), pressImeActionButton())
             shadowOf(Looper.getMainLooper()).idle()
@@ -230,7 +228,7 @@ class IconActivityTest {
 
     @Test
     fun colorButtons_click_showColorPicker() {
-        launchWithAppInfo().use { scenario ->
+        launchWithAppInfo().use { _ ->
             shadowOf(Looper.getMainLooper()).idle()
             // Enable color mode (fakeGenerateIcon returns isAdaptiveIcon=true)
             onView(withId(R.id.color_checkbox)).perform(click())
@@ -303,14 +301,13 @@ class IconActivityTest {
     @Test
     fun onCopyButtonClick_nullIcon_noOp() {
         launchWithAppInfo().use { scenario ->
-            // icon null before idle — safe call is a no-op but the line is still covered
+            // icon null before idle — safe call is a no-op, but the line is still covered
             scenario.onActivity { activity ->
                 invokePrivateOnCopyButtonClick(activity)
             }
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun invokePrivateSaveIconToUri(
         activity: IconActivity,
         result: ActivityResult?,
@@ -324,12 +321,13 @@ class IconActivityTest {
                 )
             method.isAccessible = true
             method.invoke(activity, result, testBitmap)
-        } catch (_: Exception) {
-            // reflection may fail if method signature changes
+        } catch (e: InvocationTargetException) {
+            throw e.cause ?: e
+        } catch (_: ReflectiveOperationException) {
+            // method signature changed
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun invokePrivateOnExportBitmapResult(
         activity: IconActivity,
         result: ActivityResult?,
@@ -338,11 +336,12 @@ class IconActivityTest {
             val method = IconActivity::class.java.getDeclaredMethod("onExportBitmapResult", ActivityResult::class.java)
             method.isAccessible = true
             method.invoke(activity, result)
-        } catch (_: Exception) {
+        } catch (e: InvocationTargetException) {
+            throw e.cause ?: e
+        } catch (_: ReflectiveOperationException) {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun invokePrivateOnColorPicked(
         activity: IconActivity,
         color: Int,
@@ -352,7 +351,9 @@ class IconActivityTest {
             val method = IconActivity::class.java.getDeclaredMethod("onColorPicked", Int::class.java, Boolean::class.java)
             method.isAccessible = true
             method.invoke(activity, color, isBackground)
-        } catch (_: Exception) {
+        } catch (e: InvocationTargetException) {
+            throw e.cause ?: e
+        } catch (_: ReflectiveOperationException) {
         }
     }
 
@@ -367,17 +368,17 @@ class IconActivityTest {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun invokePrivateOnCopyButtonClick(activity: IconActivity) {
         try {
             val method = IconActivity::class.java.getDeclaredMethod("onCopyButtonClick")
             method.isAccessible = true
             method.invoke(activity)
-        } catch (_: Exception) {
+        } catch (e: InvocationTargetException) {
+            throw e.cause ?: e
+        } catch (_: ReflectiveOperationException) {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun invokePrivateShowColorPicker(
         activity: IconActivity,
         isBackground: Boolean,
@@ -386,7 +387,14 @@ class IconActivityTest {
             val method = IconActivity::class.java.getDeclaredMethod("showColorPicker", Boolean::class.java)
             method.isAccessible = true
             method.invoke(activity, isBackground)
-        } catch (_: Exception) {
+        } catch (e: InvocationTargetException) {
+            throw e.cause ?: e
+        } catch (_: ReflectiveOperationException) {
         }
+    }
+
+    companion object {
+        private val testBitmap: Bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+        private val testIconResult = IconResult(bitmap = testBitmap, isAdaptiveIcon = true, hasMaskedAppIcon = true)
     }
 }

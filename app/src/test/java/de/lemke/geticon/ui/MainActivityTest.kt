@@ -60,6 +60,10 @@ import org.robolectric.annotation.GraphicsMode
 @Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class MainActivityTest {
+    companion object {
+        private var appWatcherInstalled = false
+    }
+
     @get:Rule
     val hiltRule = HiltAndroidRule(this)
 
@@ -73,11 +77,9 @@ class MainActivityTest {
         ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
         commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
         commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
-        @Suppress("TooGenericExceptionCaught")
-        try {
+        if (!appWatcherInstalled) {
             AppWatcher.manualInstall(ApplicationProvider.getApplicationContext<HiltTestApplication>())
-        } catch (_: Exception) {
-            // Already installed in a previous test method
+            appWatcherInstalled = true
         }
     }
 
@@ -278,7 +280,6 @@ class MainActivityTest {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun invokePrivateOnAppPickerItemClick(
         activity: MainActivity,
         view: View?,
@@ -293,7 +294,9 @@ class MainActivityTest {
                 )
             method.isAccessible = true
             method.invoke(activity, view, appInfo)
-        } catch (_: Exception) {
+        } catch (e: java.lang.reflect.InvocationTargetException) {
+            throw e.cause ?: e
+        } catch (_: ReflectiveOperationException) {
         }
     }
 }
