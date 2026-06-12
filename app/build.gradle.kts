@@ -237,10 +237,6 @@ kover {
                     "dagger.hilt.*",
                     "hilt_aggregated_deps.*",
                     "*.di.*",
-                    "*Activity",
-                    "*Activity$*",
-                    "*Fragment",
-                    "*Fragment$*",
                 )
             }
         }
