@@ -31,6 +31,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.graphics.toColor
@@ -76,7 +77,7 @@ class IconActivity :
     private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @VisibleForTesting(otherwise = PRIVATE)
     internal val seekbarChangeListener =
         object : SeslSeekBar.OnSeekBarChangeListener {
             override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
@@ -92,7 +93,7 @@ class IconActivity :
             }
         }
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @VisibleForTesting(otherwise = PRIVATE)
     internal fun onExportBitmapResult(result: ActivityResult?) {
         val icon = viewModel.state.value.icon ?: return
         saveIconToUri(result, icon)
@@ -230,7 +231,7 @@ class IconActivity :
         }
     }
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @VisibleForTesting(otherwise = PRIVATE)
     internal fun onColorPicked(
         color: Int,
         isBackground: Boolean,
@@ -242,7 +243,7 @@ class IconActivity :
         }
     }
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @VisibleForTesting(otherwise = PRIVATE)
     internal fun showColorPicker(isBackground: Boolean) {
         val state = viewModel.state.value
         val currentColor = if (isBackground) state.backgroundColor else state.foregroundColor

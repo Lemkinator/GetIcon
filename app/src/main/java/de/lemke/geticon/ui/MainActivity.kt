@@ -29,6 +29,7 @@ import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
@@ -81,7 +82,7 @@ class MainActivity :
     private val viewModel: MainViewModel by viewModels()
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @VisibleForTesting(otherwise = PRIVATE)
     internal var isUIReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,7 +142,7 @@ class MainActivity :
             else -> super.onOptionsItemSelected(item)
         }
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @VisibleForTesting(otherwise = PRIVATE)
     internal fun applyFilter(query: String = "") {
         binding.appPicker.setSearchFilter(query) { binding.noEntryView.updateVisibility(it <= 0, binding.appPicker) }
     }
@@ -170,7 +171,7 @@ class MainActivity :
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @VisibleForTesting(otherwise = PRIVATE)
     internal fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
@@ -214,7 +215,7 @@ class MainActivity :
         }
     }
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @VisibleForTesting(otherwise = PRIVATE)
     internal fun onAppPickerItemClick(
         view: View?,
         appInfo: AppInfo,
