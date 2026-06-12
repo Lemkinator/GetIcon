@@ -66,6 +66,7 @@ import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISM
 import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -192,7 +193,6 @@ class MainActivity :
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun initAppPicker() {
         binding.appPicker.apply {
             appListOrder = ORDER_ASCENDING
@@ -205,18 +205,22 @@ class MainActivity :
             if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
             setOnItemClickEventListener { view, appInfo -> onAppPickerItemClick(view, appInfo) }
         }
-        lifecycleScope.launch {
-            try {
-                val list =
-                    withContext(Dispatchers.IO) {
-                        SeslAppInfoDataHelper(applicationContext, GridAppDataBuilder::class.java)
-                            .getPackages()
-                            .onEach { it.subLabel = it.packageName }
-                    }
-                binding.appPicker.submitList(list)
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Failed to load package list", e)
-            }
+        lifecycleScope.launch { loadPackageList() }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun loadPackageList() {
+        try {
+            val list =
+                withContext(Dispatchers.IO) {
+                    SeslAppInfoDataHelper(applicationContext, GridAppDataBuilder::class.java)
+                        .getPackages()
+                        .onEach { it.subLabel = it.packageName }
+                }
+            binding.appPicker.submitList(list)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("MainActivity", "Failed to load package list", e)
         }
     }
 
