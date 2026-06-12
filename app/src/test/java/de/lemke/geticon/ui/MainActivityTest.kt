@@ -60,10 +60,6 @@ import org.robolectric.annotation.GraphicsMode
 @Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class MainActivityTest {
-    companion object {
-        private var appWatcherInstalled = false
-    }
-
     @get:Rule
     val hiltRule = HiltAndroidRule(this)
 
@@ -77,9 +73,8 @@ class MainActivityTest {
         ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
         commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
         commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
-        if (!appWatcherInstalled) {
+        if (!AppWatcher.isInstalled) {
             AppWatcher.manualInstall(ApplicationProvider.getApplicationContext<HiltTestApplication>())
-            appWatcherInstalled = true
         }
     }
 

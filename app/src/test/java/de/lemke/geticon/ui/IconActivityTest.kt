@@ -299,12 +299,17 @@ class IconActivityTest {
     }
 
     @Test
-    fun onCopyButtonClick_nullIcon_noOp() {
-        launchWithAppInfo().use { scenario ->
-            // icon null before idle — safe call is a no-op, but the line is still covered
-            scenario.onActivity { activity ->
-                invokePrivateOnCopyButtonClick(activity)
+    fun onCopyButtonClick_withIcon_copiesClipboard() {
+        mockkStatic(FileProvider::class)
+        every { FileProvider.getUriForFile(any(), any(), any()) } returns Uri.parse("content://test/icon.png")
+        try {
+            launchWithAppInfo().use { scenario ->
+                scenario.onActivity { activity ->
+                    invokePrivateOnCopyButtonClick(activity)
+                }
             }
+        } finally {
+            unmockkStatic(FileProvider::class)
         }
     }
 
