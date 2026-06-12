@@ -32,10 +32,8 @@ class DebugToolsTest {
     @Test
     fun openLeakCanary_startsActivity() {
         val app = ApplicationProvider.getApplicationContext<Application>()
-        try {
+        if (!AppWatcher.isInstalled) {
             AppWatcher.manualInstall(app)
-        } catch (_: RuntimeException) {
-            // already installed by another test class in the same JVM
         }
         openLeakCanary(app)
         assertNotNull(shadowOf(app).nextStartedActivity)
