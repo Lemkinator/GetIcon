@@ -21,13 +21,11 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Looper
 import android.view.MenuItem
-import android.view.View
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppInfo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import com.google.android.material.navigation.NavigationView
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -38,18 +36,18 @@ import de.lemke.geticon.R
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
-import dev.oneuiproject.oneui.layout.ToolbarLayout
-import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.unmockkConstructor
+import kotlinx.coroutines.CancellationException
 import leakcanary.AppWatcher
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -79,24 +77,28 @@ class MainActivityTest {
     }
 
     @Test
-    fun onSaveInstanceState_withInitializedBinding() {
+    fun onSaveInstanceState_ready_savesState() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.recreate()
         }
     }
 
     @Test
-    fun onNewIntent_actionSearch_setsQuery() {
+    fun onSaveInstanceState_notReady_returnsEarly() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                @Suppress("TooGenericExceptionCaught")
-                try {
-                    val method = MainActivity::class.java.getDeclaredMethod("onNewIntent", Intent::class.java)
-                    method.isAccessible = true
-                    method.invoke(activity, Intent(Intent.ACTION_SEARCH))
-                } catch (_: Exception) {
-                }
-            }
+            scenario.onActivity { activity -> activity.isUIReady = false }
+            scenario.recreate()
+        }
+    }
+
+    @Test
+    fun onNewIntent_actionSearch_setsQuery() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            controller.newIntent(Intent(Intent.ACTION_SEARCH))
+            shadowOf(Looper.getMainLooper()).idle()
+        } finally {
+            controller.destroy()
         }
     }
 
@@ -123,22 +125,10 @@ class MainActivityTest {
     }
 
     @Test
-    fun applyFilter_viaSearchModeQueryListener() {
+    fun applyFilter_direct_callsSetSearchFilter() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_search }
-                activity.onOptionsItemSelected(item)
-                // Trigger onQuery lambda → applyFilter(query)
-                val drawerLayout = activity.findViewById<NavDrawerLayout>(R.id.drawerLayout)
-                @Suppress("TooGenericExceptionCaught")
-                try {
-                    val field = ToolbarLayout::class.java.getDeclaredField("searchModeListener")
-                    field.isAccessible = true
-                    val listener = field.get(drawerLayout) as? ToolbarLayout.SearchModeListener
-                    listener?.onQueryTextChange("test")
-                } catch (_: Exception) {
-                    // Reflection may fail if field name changes; endSearchMode covers onEnd
-                }
+                activity.applyFilter("test")
             }
         }
     }
@@ -166,79 +156,57 @@ class MainActivityTest {
         }
     }
 
-    // --- Navigation drawer item tests via reflection ---
-
-    private fun ActivityScenario<MainActivity>.simulateNavItem(itemId: Int) {
-        onActivity { activity ->
-            val navView = activity.findViewById<DrawerNavigationView>(R.id.navigationView)
-            @Suppress("TooGenericExceptionCaught")
-            try {
-                val field = DrawerNavigationView::class.java.getDeclaredField("navigationItemSelectedListener")
-                field.isAccessible = true
-                val listener = field.get(navView) as? NavigationView.OnNavigationItemSelectedListener
-                val item = navView.findMenuItem(itemId) ?: return@onActivity
-                listener?.onNavigationItemSelected(item)
-            } catch (_: Exception) {
-                // no-op if reflection unavailable
-            }
-        }
-    }
-
-    private fun ActivityScenario<MainActivity>.simulateUnknownNavItem() {
-        onActivity { activity ->
-            val navView = activity.findViewById<DrawerNavigationView>(R.id.navigationView)
-            @Suppress("TooGenericExceptionCaught")
-            try {
-                val field = DrawerNavigationView::class.java.getDeclaredField("navigationItemSelectedListener")
-                field.isAccessible = true
-                val listener = field.get(navView) as? NavigationView.OnNavigationItemSelectedListener
-                val unknownItem = mockk<MenuItem> { every { itemId } returns -1 }
-                listener?.onNavigationItemSelected(unknownItem)
-            } catch (_: Exception) {
-                // no-op if reflection unavailable
-            }
-        }
-    }
-
     @Test
     fun navItem_extractApk_launchesFilePicker() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.simulateNavItem(R.id.extract_icon_from_apk_dest)
+            scenario.onActivity { activity ->
+                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.extract_icon_from_apk_dest })
+            }
         }
     }
 
     @Test
     fun navItem_about_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.simulateNavItem(R.id.commonutils_about_dest)
+            scenario.onActivity { activity ->
+                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_about_dest })
+            }
         }
     }
 
     @Test
     fun navItem_aboutMe_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.simulateNavItem(R.id.commonutils_about_me_dest)
+            scenario.onActivity { activity ->
+                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_about_me_dest })
+            }
         }
     }
 
     @Test
     fun navItem_settings_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.simulateNavItem(R.id.commonutils_settings_dest)
+            scenario.onActivity { activity ->
+                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_settings_dest })
+            }
         }
     }
 
     @Test
     fun navItem_leaks_opensLeakCanary() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.simulateNavItem(R.id.leaks_dest)
+            scenario.onActivity { activity ->
+                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.leaks_dest })
+            }
         }
     }
 
     @Test
     fun navItem_unknown_returnsFalse() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.simulateUnknownNavItem()
+            scenario.onActivity { activity ->
+                activity.onNavigationItemSelected(mockk { every { itemId } returns -1 })
+            }
         }
     }
 
@@ -247,7 +215,7 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                invokePrivateOnAppPickerItemClick(activity, appInfo)
+                activity.onAppPickerItemClick(null, appInfo)
             }
         }
     }
@@ -257,7 +225,7 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
-                invokePrivateOnAppPickerItemClick(activity, appInfo)
+                activity.onAppPickerItemClick(null, appInfo)
             }
         }
     }
@@ -275,22 +243,16 @@ class MainActivityTest {
         }
     }
 
-    private fun invokePrivateOnAppPickerItemClick(
-        activity: MainActivity,
-        appInfo: AppInfo,
-    ) {
+    @Test
+    fun loadPackageList_cancellationException_rethrows() {
+        mockkConstructor(SeslAppInfoDataHelper::class)
+        every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws CancellationException("cancelled")
         try {
-            val method =
-                MainActivity::class.java.getDeclaredMethod(
-                    "onAppPickerItemClick",
-                    View::class.java,
-                    AppInfo::class.java,
-                )
-            method.isAccessible = true
-            method.invoke(activity, null, appInfo)
-        } catch (e: java.lang.reflect.InvocationTargetException) {
-            throw e.cause ?: e
-        } catch (_: ReflectiveOperationException) {
+            ActivityScenario.launch(MainActivity::class.java).use { _ ->
+                shadowOf(Looper.getMainLooper()).idle()
+            }
+        } finally {
+            unmockkConstructor(SeslAppInfoDataHelper::class)
         }
     }
 }

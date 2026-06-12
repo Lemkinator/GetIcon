@@ -49,7 +49,6 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import java.io.IOException
-import java.lang.reflect.InvocationTargetException
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -220,60 +219,59 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 val seekbar = activity.findViewById<SeslSeekBar>(R.id.size_seekbar)
-                seekbar.onStartTrackingTouch()
-                seekbar.onStopTrackingTouch()
+                activity.seekbarChangeListener.onStartTrackingTouch(seekbar)
+                activity.seekbarChangeListener.onStopTrackingTouch(seekbar)
             }
         }
     }
 
     @Test
     fun colorButtons_click_showColorPicker() {
-        launchWithAppInfo().use { _ ->
-            shadowOf(Looper.getMainLooper()).idle()
-            // Enable color mode (fakeGenerateIcon returns isAdaptiveIcon=true)
-            onView(withId(R.id.color_checkbox)).perform(click())
-            shadowOf(Looper.getMainLooper()).idle()
-            onView(withId(R.id.colorButtonBackground)).perform(click())
-            onView(withId(R.id.colorButtonForeground)).perform(click())
-        }
-    }
-
-    @Test
-    fun saveIconToUri_resultOk_callsSaveBitmapToUri() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                invokePrivateSaveIconToUri(activity, ActivityResult(Activity.RESULT_OK, Intent()))
-            }
-        }
-    }
-
-    @Test
-    fun saveIconToUri_otherResultCode_showsErrorToast() {
-        launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                invokePrivateSaveIconToUri(activity, ActivityResult(99, null))
+                activity.showColorPicker(isBackground = true)
+                activity.showColorPicker(isBackground = false)
             }
         }
     }
 
     @Test
     fun onExportBitmapResult_nullIcon_returnsEarly() {
+        // icon still null before looper idles
         launchWithAppInfo().use { scenario ->
-            // icon still null before looper idles
             scenario.onActivity { activity ->
-                invokePrivateOnExportBitmapResult(activity, ActivityResult(Activity.RESULT_OK, Intent()))
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
             }
         }
     }
 
     @Test
-    fun onExportBitmapResult_withIcon_callsSave() {
+    fun onExportBitmapResult_resultOk_callsSave() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                invokePrivateOnExportBitmapResult(activity, ActivityResult(Activity.RESULT_OK, Intent()))
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
+            }
+        }
+    }
+
+    @Test
+    fun onExportBitmapResult_resultCanceled_doesNothing() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_CANCELED, null))
+            }
+        }
+    }
+
+    @Test
+    fun onExportBitmapResult_otherCode_showsErrorToast() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onExportBitmapResult(ActivityResult(99, null))
             }
         }
     }
@@ -283,7 +281,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                invokePrivateOnColorPicked(activity, Color.RED, true)
+                activity.onColorPicked(Color.RED, true)
             }
         }
     }
@@ -293,108 +291,8 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                invokePrivateOnColorPicked(activity, Color.BLUE, false)
+                activity.onColorPicked(Color.BLUE, false)
             }
-        }
-    }
-
-    @Test
-    fun onCopyButtonClick_withIcon_copiesClipboard() {
-        mockkStatic(FileProvider::class)
-        every { FileProvider.getUriForFile(any(), any(), any()) } returns Uri.parse("content://test/icon.png")
-        try {
-            launchWithAppInfo().use { scenario ->
-                scenario.onActivity { activity ->
-                    invokePrivateOnCopyButtonClick(activity)
-                }
-            }
-        } finally {
-            unmockkStatic(FileProvider::class)
-        }
-    }
-
-    private fun invokePrivateSaveIconToUri(
-        activity: IconActivity,
-        result: ActivityResult?,
-    ) {
-        try {
-            val method =
-                IconActivity::class.java.getDeclaredMethod(
-                    "saveIconToUri",
-                    ActivityResult::class.java,
-                    Bitmap::class.java,
-                )
-            method.isAccessible = true
-            method.invoke(activity, result, testBitmap)
-        } catch (e: InvocationTargetException) {
-            throw e.cause ?: e
-        } catch (_: ReflectiveOperationException) {
-            // method signature changed
-        }
-    }
-
-    private fun invokePrivateOnExportBitmapResult(
-        activity: IconActivity,
-        result: ActivityResult?,
-    ) {
-        try {
-            val method = IconActivity::class.java.getDeclaredMethod("onExportBitmapResult", ActivityResult::class.java)
-            method.isAccessible = true
-            method.invoke(activity, result)
-        } catch (e: InvocationTargetException) {
-            throw e.cause ?: e
-        } catch (_: ReflectiveOperationException) {
-        }
-    }
-
-    private fun invokePrivateOnColorPicked(
-        activity: IconActivity,
-        color: Int,
-        isBackground: Boolean,
-    ) {
-        try {
-            val method = IconActivity::class.java.getDeclaredMethod("onColorPicked", Int::class.java, Boolean::class.java)
-            method.isAccessible = true
-            method.invoke(activity, color, isBackground)
-        } catch (e: InvocationTargetException) {
-            throw e.cause ?: e
-        } catch (_: ReflectiveOperationException) {
-        }
-    }
-
-    @Test
-    fun showColorPicker_bothVariants_showDialog() {
-        launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                invokePrivateShowColorPicker(activity, true)
-                invokePrivateShowColorPicker(activity, false)
-            }
-        }
-    }
-
-    private fun invokePrivateOnCopyButtonClick(activity: IconActivity) {
-        try {
-            val method = IconActivity::class.java.getDeclaredMethod("onCopyButtonClick")
-            method.isAccessible = true
-            method.invoke(activity)
-        } catch (e: InvocationTargetException) {
-            throw e.cause ?: e
-        } catch (_: ReflectiveOperationException) {
-        }
-    }
-
-    private fun invokePrivateShowColorPicker(
-        activity: IconActivity,
-        isBackground: Boolean,
-    ) {
-        try {
-            val method = IconActivity::class.java.getDeclaredMethod("showColorPicker", Boolean::class.java)
-            method.isAccessible = true
-            method.invoke(activity, isBackground)
-        } catch (e: InvocationTargetException) {
-            throw e.cause ?: e
-        } catch (_: ReflectiveOperationException) {
         }
     }
 
