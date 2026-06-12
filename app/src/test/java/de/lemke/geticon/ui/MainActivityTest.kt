@@ -247,7 +247,7 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                invokePrivateOnAppPickerItemClick(activity, null, appInfo)
+                invokePrivateOnAppPickerItemClick(activity, appInfo)
             }
         }
     }
@@ -257,7 +257,7 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
-                invokePrivateOnAppPickerItemClick(activity, null, appInfo)
+                invokePrivateOnAppPickerItemClick(activity, appInfo)
             }
         }
     }
@@ -267,7 +267,7 @@ class MainActivityTest {
         mockkConstructor(SeslAppInfoDataHelper::class)
         every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws RuntimeException("test")
         try {
-            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            ActivityScenario.launch(MainActivity::class.java).use { _ ->
                 shadowOf(Looper.getMainLooper()).idle()
             }
         } finally {
@@ -277,7 +277,6 @@ class MainActivityTest {
 
     private fun invokePrivateOnAppPickerItemClick(
         activity: MainActivity,
-        view: View?,
         appInfo: AppInfo,
     ) {
         try {
@@ -288,7 +287,7 @@ class MainActivityTest {
                     AppInfo::class.java,
                 )
             method.isAccessible = true
-            method.invoke(activity, view, appInfo)
+            method.invoke(activity, null, appInfo)
         } catch (e: java.lang.reflect.InvocationTargetException) {
             throw e.cause ?: e
         } catch (_: ReflectiveOperationException) {
