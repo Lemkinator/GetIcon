@@ -166,15 +166,15 @@ class MainActivity :
                 }
 
                 R.id.commonutils_about_dest -> {
-                    transformToActivity(R.id.commonutils_about_dest, CommonUtilsAboutActivity::class.java)
+                    transformToActivity<CommonUtilsAboutActivity>(R.id.commonutils_about_dest)
                 }
 
                 R.id.commonutils_about_me_dest -> {
-                    transformToActivity(R.id.commonutils_about_me_dest, CommonUtilsAboutMeActivity::class.java)
+                    transformToActivity<CommonUtilsAboutMeActivity>(R.id.commonutils_about_me_dest)
                 }
 
                 R.id.commonutils_settings_dest -> {
-                    transformToActivity(R.id.commonutils_settings_dest, CommonUtilsSettingsActivity::class.java)
+                    transformToActivity<CommonUtilsSettingsActivity>(R.id.commonutils_settings_dest)
                 }
 
                 R.id.leaks_dest -> {
@@ -232,7 +232,7 @@ class MainActivity :
             hideSoftInput()
             val appInfo2 = packageManager.getApplicationInfo(appInfo.packageName, 0)
             val intent = Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, appInfo2)
-            view?.transformToActivity(intent)
+            transformToActivity(view, intent)
             true
         } catch (e: NameNotFoundException) {
             Log.e("MainActivity", "App not found: ${appInfo.packageName}", e)
