@@ -129,7 +129,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(512)
+                activity.onSeekbarProgressChanged(256)
                 val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_save_as_image }
                 activity.onOptionsItemSelected(item)
             }
@@ -141,7 +141,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(512)
+                activity.onSeekbarProgressChanged(256)
                 val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_share }
                 activity.onOptionsItemSelected(item)
             }
@@ -164,7 +164,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(512)
+                activity.onSeekbarProgressChanged(256)
                 val item = mockk<MenuItem> { every { itemId } returns android.R.id.home }
                 activity.onOptionsItemSelected(item)
             }
@@ -236,7 +236,7 @@ class IconActivityTest {
             launchWithAppInfo().use { scenario ->
                 shadowOf(Looper.getMainLooper()).idle()
                 scenario.onActivity { activity ->
-                    activity.onSeekbarProgressChanged(512)
+                    activity.onSeekbarProgressChanged(256)
                     activity.findViewById<ImageView>(R.id.icon).performLongClick()
                 }
             }
@@ -264,11 +264,12 @@ class IconActivityTest {
     }
 
     @Test
-    fun seekbar_progressChanged_fromUser_updatesSizeViaViewModel() {
+    fun seekbar_progressChanged_updatesSizeViaViewModel() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(100)
+                activity.onSeekbarProgressChanged(100) // same size → early return (no-op)
             }
         }
     }
@@ -299,7 +300,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(512)
+                activity.onSeekbarProgressChanged(256)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
             }
         }
@@ -310,7 +311,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(512)
+                activity.onSeekbarProgressChanged(256)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_CANCELED, null))
             }
         }
@@ -321,7 +322,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(512)
+                activity.onSeekbarProgressChanged(256)
                 activity.onExportBitmapResult(null)
             }
         }
@@ -332,7 +333,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(512)
+                activity.onSeekbarProgressChanged(256)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, null))
             }
         }
@@ -343,7 +344,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(512)
+                activity.onSeekbarProgressChanged(256)
                 activity.onExportBitmapResult(ActivityResult(99, null))
             }
         }
