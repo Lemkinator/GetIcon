@@ -130,12 +130,16 @@ modules from subprojects to prevent duplicate packaging. Check
 
 Four tools run as part of `./gradlew build`:
 
-- **Spotless** — enforces formatting via ktlint 1.7.1 (sole ktlint driver;
+- **Spotless** — enforces formatting via ktlint (sole ktlint driver;
   Detekt has no ktlint wrapper). Fix violations with
   `./gradlew spotlessApply`.
 - **Detekt** — static analysis; config at `config/detekt/detekt.yml`.
   `autoCorrect = false` so fixes are manual.
 - **Kover** — coverage; verify threshold with `./gradlew koverVerifyDebug`.
+  Enforces 100% INSTRUCTION and BRANCH coverage. INSTRUCTION is more precise than LINE
+  and correctly handles empty-body interface methods (`{}`) — zero instructions, neutral
+  in the count. BRANCH catches untested conditionals that INSTRUCTION misses when branch
+  bodies are empty. A passing `koverVerifyDebug` guarantees Codecov patch coverage passes too.
 - **Konsist** — architecture rules in
   `app/src/test/java/de/lemke/geticon/ArchitectureTest.kt`. Enforces
   `data/domain/ui` layering. Runs as part of `./gradlew test`.

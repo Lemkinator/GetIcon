@@ -32,7 +32,9 @@ class DebugToolsTest {
     @Test
     fun openLeakCanary_startsActivity() {
         val app = ApplicationProvider.getApplicationContext<Application>()
-        AppWatcher.manualInstall(app)
+        if (!AppWatcher.isInstalled) {
+            AppWatcher.manualInstall(app)
+        }
         openLeakCanary(app)
         assertNotNull(shadowOf(app).nextStartedActivity)
     }

@@ -25,8 +25,11 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
+import androidx.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
@@ -34,6 +37,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppData.GridAppDataBuilder
+import androidx.picker.model.AppInfo
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.collectEvents
@@ -64,6 +68,7 @@ import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISM
 import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -76,7 +81,9 @@ class MainActivity :
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
-    private var isUIReady = false
+
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal var isUIReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -118,7 +125,7 @@ class MainActivity :
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        if (!this::binding.isInitialized) return
+        if (!isUIReady) return
         outState.saveSearchAndActionMode(isSearchMode = binding.drawerLayout.isSearchMode)
     }
 
@@ -135,7 +142,8 @@ class MainActivity :
             else -> super.onOptionsItemSelected(item)
         }
 
-    private fun applyFilter(query: String = "") {
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun applyFilter(query: String = "") {
         binding.appPicker.setSearchFilter(query) { binding.noEntryView.updateVisibility(it <= 0, binding.appPicker) }
     }
 
@@ -155,42 +163,32 @@ class MainActivity :
         )
 
     private fun initDrawer() {
-        binding.navigationView.findMenuItem(R.id.leaks_dest)?.isVisible = BuildConfig.DEBUG
-        binding.navigationView.onNavigationSingleClick { item ->
-            when (item.itemId) {
-                R.id.extract_icon_from_apk_dest -> {
-                    pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
-                }
-
-                R.id.commonutils_about_dest -> {
-                    transformToActivity(R.id.commonutils_about_dest, CommonUtilsAboutActivity::class.java)
-                }
-
-                R.id.commonutils_about_me_dest -> {
-                    transformToActivity(R.id.commonutils_about_me_dest, CommonUtilsAboutMeActivity::class.java)
-                }
-
-                R.id.commonutils_settings_dest -> {
-                    transformToActivity(R.id.commonutils_settings_dest, CommonUtilsSettingsActivity::class.java)
-                }
-
-                R.id.leaks_dest -> {
-                    openLeakCanary(this)
-                }
-
-                else -> {
-                    return@onNavigationSingleClick false
-                }
-            }
-            true
-        }
+        setLeaksMenuItemVisibility(binding.navigationView.findMenuItem(R.id.leaks_dest))
+        binding.navigationView.onNavigationSingleClick { item -> onNavigationItemSelected(item) }
         binding.drawerLayout.setTitle(getString(R.string.app_name))
         binding.drawerLayout.setupHeaderAndNavRail(getString(R.string.about_app))
         binding.drawerLayout.isImmersiveScroll = true
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
-    @Suppress("TooGenericExceptionCaught")
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun setLeaksMenuItemVisibility(item: MenuItem?) {
+        item?.isVisible = BuildConfig.DEBUG
+    }
+
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun onNavigationItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
+            R.id.commonutils_about_dest -> transformToActivity<CommonUtilsAboutActivity>(R.id.commonutils_about_dest)
+            R.id.commonutils_about_me_dest -> transformToActivity<CommonUtilsAboutMeActivity>(R.id.commonutils_about_me_dest)
+            R.id.commonutils_settings_dest -> transformToActivity<CommonUtilsSettingsActivity>(R.id.commonutils_settings_dest)
+            R.id.leaks_dest -> openLeakCanary(this)
+            else -> return false
+        }
+        return true
+    }
+
     private fun initAppPicker() {
         binding.appPicker.apply {
             appListOrder = ORDER_ASCENDING
@@ -201,33 +199,41 @@ class MainActivity :
             }
             hideSoftInputOnScroll()
             if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
-            setOnItemClickEventListener { view, appInfo ->
-                try {
-                    hideSoftInput()
-                    view?.transformToActivity(
-                        Intent(this@MainActivity, IconActivity::class.java)
-                            .putExtra(KEY_APPLICATION_INFO, packageManager.getApplicationInfo(appInfo.packageName, 0)),
-                    )
-                    true
-                } catch (e: NameNotFoundException) {
-                    Log.e("MainActivity", "App not found: ${appInfo.packageName}", e)
-                    toast(commonutilsR.string.commonutils_error_app_not_found)
-                    false
-                }
-            }
+            setOnItemClickEventListener { view, appInfo -> onAppPickerItemClick(view, appInfo) }
         }
-        lifecycleScope.launch {
-            try {
-                val list =
-                    withContext(Dispatchers.IO) {
-                        SeslAppInfoDataHelper(applicationContext, GridAppDataBuilder::class.java)
-                            .getPackages()
-                            .onEach { it.subLabel = it.packageName }
-                    }
-                binding.appPicker.submitList(list)
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Failed to load package list", e)
-            }
+        lifecycleScope.launch { loadPackageList() }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun loadPackageList() {
+        try {
+            val list =
+                withContext(Dispatchers.IO) {
+                    SeslAppInfoDataHelper(applicationContext, GridAppDataBuilder::class.java)
+                        .getPackages()
+                        .onEach { it.subLabel = it.packageName }
+                }
+            binding.appPicker.submitList(list)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("MainActivity", "Failed to load package list", e)
         }
     }
+
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun onAppPickerItemClick(
+        view: View?,
+        appInfo: AppInfo,
+    ): Boolean =
+        try {
+            hideSoftInput()
+            val appInfo2 = packageManager.getApplicationInfo(appInfo.packageName, 0)
+            val intent = Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, appInfo2)
+            transformToActivity(view, intent)
+            true
+        } catch (e: NameNotFoundException) {
+            Log.e("MainActivity", "App not found: ${appInfo.packageName}", e)
+            toast(commonutilsR.string.commonutils_error_app_not_found)
+            false
+        }
 }

@@ -143,6 +143,7 @@ class IconViewModel @Inject constructor(
 
     fun onSizeChanged(size: Int) {
         val clamped = size.coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE)
+        if (clamped == _state.value.size) return
         viewModelScope.launch { updateUserSettings { it.copy(iconSize = clamped) } }
         regenerateIcon(_state.value.copy(size = clamped))
     }

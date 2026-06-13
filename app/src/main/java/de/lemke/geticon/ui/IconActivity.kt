@@ -23,7 +23,6 @@ import android.graphics.Bitmap
 import android.graphics.Color.BLACK
 import android.graphics.Color.WHITE
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.CompoundButton
@@ -31,8 +30,9 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
+import androidx.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.graphics.toColor
 import androidx.picker3.app.SeslColorPickerDialog
 import com.google.android.material.appbar.model.ButtonModel
@@ -57,6 +57,7 @@ import de.lemke.geticon.databinding.ActivityIconBinding
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
+import dev.oneuiproject.oneui.ktx.onProgressChanged
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
@@ -74,24 +75,21 @@ class IconActivity :
     private var suggestViewSet = false
 
     private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
-        registerForActivityResult(StartActivityForResult()) { result: ActivityResult? ->
-            val icon = viewModel.state.value.icon ?: return@registerForActivityResult
-            saveIconToUri(result, icon)
-        }
+        registerForActivityResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
-    @Suppress("TooGenericExceptionCaught")
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun onExportBitmapResult(result: ActivityResult?) {
+        val icon = viewModel.state.value.icon ?: return
+        saveIconToUri(result, icon)
+    }
+
     private fun saveIconToUri(
         result: ActivityResult?,
         icon: Bitmap,
     ) {
-        try {
-            if (result?.resultCode == RESULT_OK) {
-                saveBitmapToUri(result.data?.data, icon)
-            } else if (result?.resultCode != RESULT_CANCELED) {
-                toast(commonutilsR.string.commonutils_error_saving_image)
-            }
-        } catch (e: Exception) {
-            Log.e("IconActivity", "Failed to save bitmap to URI", e)
+        if (result?.resultCode == RESULT_OK) {
+            saveBitmapToUri(result.data?.data, icon)
+        } else if (result?.resultCode != RESULT_CANCELED) {
             toast(commonutilsR.string.commonutils_error_saving_image)
         }
     }
@@ -132,12 +130,7 @@ class IconActivity :
     private fun initViews() {
         setCustomBackAnimation(binding.root, showInAppReviewIfPossible = true)
         binding.icon.translateYWithAppBar(binding.root.appBarLayout, this)
-        binding.icon.setOnLongClickListener {
-            viewModel.state.value.icon?.let {
-                it.copyToClipboard(this, "icon", "icon.png")
-                true
-            } ?: false
-        }
+        binding.icon.setOnLongClickListener { onCopyButtonClick() }
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (!isRendering) viewModel.onMaskChanged(isChecked)
         }
@@ -154,21 +147,7 @@ class IconActivity :
         }
         binding.sizeSeekbar.min = MIN_ICON_SIZE
         binding.sizeSeekbar.max = MAX_ICON_SIZE
-        binding.sizeSeekbar.setOnSeekBarChangeListener(
-            object : SeslSeekBar.OnSeekBarChangeListener {
-                override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
-
-                override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
-
-                override fun onProgressChanged(
-                    seekBar: SeslSeekBar,
-                    progress: Int,
-                    fromUser: Boolean,
-                ) {
-                    if (fromUser) viewModel.onSizeChanged(progress)
-                }
-            },
-        )
+        binding.sizeSeekbar.onProgressChanged { onSeekbarProgressChanged(it) }
         binding.colorButtonBackground.setOnClickListener { showColorPicker(isBackground = true) }
         binding.colorButtonForeground.setOnClickListener { showColorPicker(isBackground = false) }
     }
@@ -236,20 +215,32 @@ class IconActivity :
         }
     }
 
-    private fun showColorPicker(isBackground: Boolean) {
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun onSeekbarProgressChanged(progress: Int) {
+        viewModel.onSizeChanged(progress)
+    }
+
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun onColorPicked(
+        color: Int,
+        isBackground: Boolean,
+    ) {
+        if (isBackground) {
+            viewModel.onBackgroundColorChanged(color)
+        } else {
+            viewModel.onForegroundColorChanged(color)
+        }
+    }
+
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun showColorPicker(isBackground: Boolean) {
         val state = viewModel.state.value
         val currentColor = if (isBackground) state.backgroundColor else state.foregroundColor
         val recentColors = if (isBackground) state.recentBackgroundColors else state.recentForegroundColors
         val dialog =
             SeslColorPickerDialog(
                 this,
-                { color: Int ->
-                    if (isBackground) {
-                        viewModel.onBackgroundColorChanged(color)
-                    } else {
-                        viewModel.onForegroundColorChanged(color)
-                    }
-                },
+                { color: Int -> onColorPicked(color, isBackground) },
                 currentColor,
                 recentColors.toIntArray(),
                 true,
@@ -257,6 +248,10 @@ class IconActivity :
         dialog.setTransparencyControlEnabled(true)
         dialog.show()
     }
+
+    private fun onCopyButtonClick(): Boolean =
+        viewModel.state.value.icon
+            ?.copyToClipboard(this, "icon", "icon.png") ?: false
 
     private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> =
         SuggestAppBarModel
@@ -268,10 +263,7 @@ class IconActivity :
                     arrayListOf(
                         ButtonModel(
                             text = getString(R.string.copy_icon),
-                            clickListener = { _, _ ->
-                                viewModel.state.value.icon
-                                    ?.copyToClipboard(this@IconActivity, "icon", "icon.png")
-                            },
+                            clickListener = { _, _ -> onCopyButtonClick() },
                         ),
                     ),
                 )
