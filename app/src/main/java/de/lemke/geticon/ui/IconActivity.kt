@@ -19,7 +19,6 @@ package de.lemke.geticon.ui
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.ColorStateList.valueOf
-import android.graphics.Bitmap
 import android.graphics.Color.BLACK
 import android.graphics.Color.WHITE
 import android.os.Bundle
@@ -78,23 +77,8 @@ class IconActivity :
         registerForActivityResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
     @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onSeekbarProgressChanged(
-        progress: Int,
-        fromUser: Boolean = true,
-    ) {
-        if (fromUser) viewModel.onSizeChanged(progress)
-    }
-
-    @VisibleForTesting(otherwise = PRIVATE)
     internal fun onExportBitmapResult(result: ActivityResult?) {
         val icon = viewModel.state.value.icon ?: return
-        saveIconToUri(result, icon)
-    }
-
-    private fun saveIconToUri(
-        result: ActivityResult?,
-        icon: Bitmap,
-    ) {
         if (result?.resultCode == RESULT_OK) {
             saveBitmapToUri(result.data?.data, icon)
         } else if (result?.resultCode != RESULT_CANCELED) {
@@ -235,6 +219,14 @@ class IconActivity :
             binding.colorButtonForeground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
             binding.colorButtonForeground.backgroundTintList = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
         }
+    }
+
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun onSeekbarProgressChanged(
+        progress: Int,
+        fromUser: Boolean = true,
+    ) {
+        if (fromUser) viewModel.onSizeChanged(progress)
     }
 
     @VisibleForTesting(otherwise = PRIVATE)
