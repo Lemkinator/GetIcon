@@ -17,6 +17,7 @@
 @file:OptIn(ExperimentalRoborazziApi::class)
 
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
 
 plugins {
     alias(libs.plugins.android.application)
@@ -237,14 +238,13 @@ kover {
                     "dagger.hilt.*",
                     "hilt_aggregated_deps.*",
                     "*.di.*",
-                    "*\$SeekBarChangeListener",
                 )
             }
         }
         variant("debug") {
             verify {
                 rule {
-                    minBound(100)
+                    minBound(100, coverageUnits = CoverageUnit.INSTRUCTION)
                 }
             }
         }
