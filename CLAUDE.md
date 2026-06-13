@@ -136,9 +136,10 @@ Four tools run as part of `./gradlew build`:
 - **Detekt** — static analysis; config at `config/detekt/detekt.yml`.
   `autoCorrect = false` so fixes are manual.
 - **Kover** — coverage; verify threshold with `./gradlew koverVerifyDebug`.
-  `minBound(100, coverageUnits = CoverageUnit.INSTRUCTION)` enforces 100% full-project
-  INSTRUCTION coverage. INSTRUCTION metric is more precise than LINE and correctly handles
-  empty-body interface methods (`{}`) which have zero instructions and are neutral in the count.
+  Enforces 100% INSTRUCTION and BRANCH coverage. INSTRUCTION is more precise than LINE
+  and correctly handles empty-body interface methods (`{}`) — zero instructions, neutral
+  in the count. BRANCH catches untested conditionals that INSTRUCTION misses when branch
+  bodies are empty. A passing `koverVerifyDebug` guarantees Codecov patch coverage passes too.
 - **Konsist** — architecture rules in
   `app/src/test/java/de/lemke/geticon/ArchitectureTest.kt`. Enforces
   `data/domain/ui` layering. Runs as part of `./gradlew test`.
