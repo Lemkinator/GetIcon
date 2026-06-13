@@ -28,7 +28,6 @@ import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.ImageView
 import androidx.activity.result.ActivityResult
-import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.content.FileProvider
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -130,7 +129,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
+                activity.onSeekbarProgressChanged(512)
                 val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_save_as_image }
                 activity.onOptionsItemSelected(item)
             }
@@ -142,7 +141,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
+                activity.onSeekbarProgressChanged(512)
                 val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_share }
                 activity.onOptionsItemSelected(item)
             }
@@ -165,7 +164,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
+                activity.onSeekbarProgressChanged(512)
                 val item = mockk<MenuItem> { every { itemId } returns android.R.id.home }
                 activity.onOptionsItemSelected(item)
             }
@@ -237,7 +236,7 @@ class IconActivityTest {
             launchWithAppInfo().use { scenario ->
                 shadowOf(Looper.getMainLooper()).idle()
                 scenario.onActivity { activity ->
-                    activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
+                    activity.onSeekbarProgressChanged(512)
                     activity.findViewById<ImageView>(R.id.icon).performLongClick()
                 }
             }
@@ -265,24 +264,11 @@ class IconActivityTest {
     }
 
     @Test
-    fun seekbar_trackingTouch_invokesListenerMethods() {
-        launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                val seekbar = activity.findViewById<SeslSeekBar>(R.id.size_seekbar)
-                activity.seekbarChangeListener.onStartTrackingTouch(seekbar)
-                activity.seekbarChangeListener.onStopTrackingTouch(seekbar)
-            }
-        }
-    }
-
-    @Test
     fun seekbar_progressChanged_fromUser_updatesSizeViaViewModel() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                val seekbar = activity.findViewById<SeslSeekBar>(R.id.size_seekbar)
-                activity.seekbarChangeListener.onProgressChanged(seekbar, 100, true)
+                activity.onSeekbarProgressChanged(100)
             }
         }
     }
@@ -313,7 +299,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
+                activity.onSeekbarProgressChanged(512)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
             }
         }
@@ -324,7 +310,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
+                activity.onSeekbarProgressChanged(512)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_CANCELED, null))
             }
         }
@@ -335,7 +321,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
+                activity.onSeekbarProgressChanged(512)
                 activity.onExportBitmapResult(null)
             }
         }
@@ -346,7 +332,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
+                activity.onSeekbarProgressChanged(512)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, null))
             }
         }
@@ -357,7 +343,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
+                activity.onSeekbarProgressChanged(512)
                 activity.onExportBitmapResult(ActivityResult(99, null))
             }
         }

@@ -78,20 +78,12 @@ class IconActivity :
         registerForActivityResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
     @VisibleForTesting(otherwise = PRIVATE)
-    internal val seekbarChangeListener =
-        object : SeslSeekBar.OnSeekBarChangeListener {
-            override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
-
-            override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
-
-            override fun onProgressChanged(
-                seekBar: SeslSeekBar,
-                progress: Int,
-                fromUser: Boolean,
-            ) {
-                if (fromUser) viewModel.onSizeChanged(progress)
-            }
-        }
+    internal fun onSeekbarProgressChanged(
+        progress: Int,
+        fromUser: Boolean = true,
+    ) {
+        if (fromUser) viewModel.onSizeChanged(progress)
+    }
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun onExportBitmapResult(result: ActivityResult?) {
@@ -163,7 +155,7 @@ class IconActivity :
         }
         binding.sizeSeekbar.min = MIN_ICON_SIZE
         binding.sizeSeekbar.max = MAX_ICON_SIZE
-        binding.sizeSeekbar.setOnSeekBarChangeListener(seekbarChangeListener)
+        binding.sizeSeekbar.setOnSeekBarChangeListener(SeekBarChangeListener())
         binding.colorButtonBackground.setOnClickListener { showColorPicker(isBackground = true) }
         binding.colorButtonForeground.setOnClickListener { showColorPicker(isBackground = false) }
     }
@@ -279,4 +271,18 @@ class IconActivity :
                     ),
                 )
             }.build()
+
+    private inner class SeekBarChangeListener : SeslSeekBar.OnSeekBarChangeListener {
+        override fun onStartTrackingTouch(seekBar: SeslSeekBar) = Unit
+
+        override fun onStopTrackingTouch(seekBar: SeslSeekBar) = Unit
+
+        override fun onProgressChanged(
+            seekBar: SeslSeekBar,
+            progress: Int,
+            fromUser: Boolean,
+        ) {
+            onSeekbarProgressChanged(progress, fromUser)
+        }
+    }
 }

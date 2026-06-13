@@ -237,6 +237,7 @@ kover {
                     "dagger.hilt.*",
                     "hilt_aggregated_deps.*",
                     "*.di.*",
+                    "*\$SeekBarChangeListener",
                 )
             }
         }
