@@ -33,7 +33,6 @@ import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.graphics.toColor
 import androidx.picker3.app.SeslColorPickerDialog
 import com.google.android.material.appbar.model.ButtonModel
@@ -58,6 +57,7 @@ import de.lemke.geticon.databinding.ActivityIconBinding
 import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
+import dev.oneuiproject.oneui.ktx.onProgressChanged
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
@@ -147,21 +147,7 @@ class IconActivity :
         }
         binding.sizeSeekbar.min = MIN_ICON_SIZE
         binding.sizeSeekbar.max = MAX_ICON_SIZE
-        binding.sizeSeekbar.setOnSeekBarChangeListener(
-            object : SeslSeekBar.OnSeekBarChangeListener {
-                override fun onStartTrackingTouch(seekBar: SeslSeekBar) {}
-
-                override fun onStopTrackingTouch(seekBar: SeslSeekBar) {}
-
-                override fun onProgressChanged(
-                    seekBar: SeslSeekBar,
-                    progress: Int,
-                    fromUser: Boolean,
-                ) {
-                    onSeekbarProgressChanged(progress, fromUser)
-                }
-            },
-        )
+        binding.sizeSeekbar.onProgressChanged { onSeekbarProgressChanged(it) }
         binding.colorButtonBackground.setOnClickListener { showColorPicker(isBackground = true) }
         binding.colorButtonForeground.setOnClickListener { showColorPicker(isBackground = false) }
     }
@@ -230,11 +216,8 @@ class IconActivity :
     }
 
     @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onSeekbarProgressChanged(
-        progress: Int,
-        fromUser: Boolean = true,
-    ) {
-        if (fromUser) viewModel.onSizeChanged(progress)
+    internal fun onSeekbarProgressChanged(progress: Int) {
+        viewModel.onSizeChanged(progress)
     }
 
     @VisibleForTesting(otherwise = PRIVATE)
