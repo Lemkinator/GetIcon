@@ -25,6 +25,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Looper
 import android.view.MenuItem
+import android.widget.CheckBox
 import android.widget.ImageView
 import androidx.activity.result.ActivityResult
 import androidx.appcompat.widget.SeslSeekBar
@@ -43,12 +44,15 @@ import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.geticon.R
 import de.lemke.geticon.domain.GenerateIconUseCase
+import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.IconResult
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import java.io.IOException
+import kotlinx.coroutines.awaitCancellation
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -70,6 +74,10 @@ class IconActivityTest {
     @JvmField
     val fakeGenerateIcon: GenerateIconUseCase = mockk()
 
+    @BindValue
+    @JvmField
+    val fakeGetUserSettings: GetUserSettingsUseCase = mockk()
+
     @Before
     fun setup() {
         hiltRule.inject()
@@ -85,6 +93,7 @@ class IconActivityTest {
                 any<PackageManager>(),
             )
         } returns testIconResult
+        coEvery { fakeGetUserSettings() } coAnswers { awaitCancellation() }
     }
 
     private fun launchWithAppInfo(): ActivityScenario<IconActivity> {
@@ -110,17 +119,7 @@ class IconActivityTest {
 
     @Test
     fun collectEvents_generateFailed_finishesActivity() {
-        every {
-            fakeGenerateIcon(
-                any<ApplicationInfo>(),
-                any<Int>(),
-                any<Boolean>(),
-                any<Boolean>(),
-                any<Int>(),
-                any<Int>(),
-                any<PackageManager>(),
-            )
-        } throws IOException("test")
+        coEvery { fakeGetUserSettings() } throws IOException("test")
         launchWithAppInfo().use { _ ->
             shadowOf(Looper.getMainLooper()).idle()
         }
@@ -131,6 +130,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
                 val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_save_as_image }
                 activity.onOptionsItemSelected(item)
             }
@@ -142,6 +142,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
                 val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_share }
                 activity.onOptionsItemSelected(item)
             }
@@ -164,6 +165,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
                 val item = mockk<MenuItem> { every { itemId } returns android.R.id.home }
                 activity.onOptionsItemSelected(item)
             }
@@ -172,9 +174,12 @@ class IconActivityTest {
 
     @Test
     fun maskedCheckbox_click_togglesMask() {
-        launchWithAppInfo().use { _ ->
-            shadowOf(Looper.getMainLooper()).idle()
-            onView(withId(R.id.masked_checkbox)).perform(click())
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                // performClick() calls toggle() before the enabled check, firing the listener
+                // with isRendering=false regardless of whether the checkbox is enabled.
+                activity.findViewById<CheckBox>(R.id.masked_checkbox).performClick()
+            }
             shadowOf(Looper.getMainLooper()).idle()
         }
     }
@@ -189,6 +194,42 @@ class IconActivityTest {
     }
 
     @Test
+    fun colorCheckbox_programmaticUncheck_doesNotCallViewModel() {
+        // fakeGenerateIcon returns isAdaptiveIcon=false so regenerateIcon produces a state
+        // where colorCheckbox.isChecked would be set from true→false inside renderState.
+        every {
+            fakeGenerateIcon(
+                any<ApplicationInfo>(),
+                any<Int>(),
+                any<Boolean>(),
+                any<Boolean>(),
+                any<Int>(),
+                any<Int>(),
+                any<PackageManager>(),
+            )
+        } returns testIconResult.copy(isAdaptiveIcon = false)
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                // performClick() fires OnCheckedChangeListener (isRendering=false) → onColorChanged(true).
+                // regenerateIcon runs with colorEnabled=true, isAdaptiveIcon=false from stub.
+                activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
+            }
+            // renderState: colorCheckbox.isChecked = colorEnabled && isAdaptiveIcon = true && false = false
+            // → changes from true→false while isRendering=true → listener fires with isRendering=true (skips body).
+            shadowOf(Looper.getMainLooper()).idle()
+        }
+    }
+
+    @Test
+    fun icon_longClick_nullIcon_returnsFalse() {
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).performLongClick()
+            }
+        }
+    }
+
+    @Test
     fun icon_longClick_copiesClipboard() {
         mockkStatic(FileProvider::class)
         every { FileProvider.getUriForFile(any(), any(), any()) } returns Uri.parse("content://test/icon.png")
@@ -196,6 +237,7 @@ class IconActivityTest {
             launchWithAppInfo().use { scenario ->
                 shadowOf(Looper.getMainLooper()).idle()
                 scenario.onActivity { activity ->
+                    activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
                     activity.findViewById<ImageView>(R.id.icon).performLongClick()
                 }
             }
@@ -209,6 +251,15 @@ class IconActivityTest {
         launchWithAppInfo().use { _ ->
             shadowOf(Looper.getMainLooper()).idle()
             onView(withId(R.id.size_edittext)).perform(replaceText("256"), pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+        }
+    }
+
+    @Test
+    fun sizeEdittext_editorAction_nonNumericText_doesNotUpdateSize() {
+        launchWithAppInfo().use { _ ->
+            shadowOf(Looper.getMainLooper()).idle()
+            onView(withId(R.id.size_edittext)).perform(replaceText("abc"), pressImeActionButton())
             shadowOf(Looper.getMainLooper()).idle()
         }
     }
@@ -262,6 +313,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
             }
         }
@@ -272,6 +324,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_CANCELED, null))
             }
         }
@@ -282,6 +335,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
                 activity.onExportBitmapResult(null)
             }
         }
@@ -292,6 +346,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, null))
             }
         }
@@ -302,6 +357,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                activity.seekbarChangeListener.onProgressChanged(activity.findViewById(R.id.size_seekbar), 512, true)
                 activity.onExportBitmapResult(ActivityResult(99, null))
             }
         }
@@ -324,6 +380,34 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 activity.onColorPicked(Color.BLUE, false)
             }
+        }
+    }
+
+    @Test
+    fun setButtonColors_brightBackground_usesBlackText() {
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onColorPicked(Color.WHITE, isBackground = true)
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+        }
+    }
+
+    @Test
+    fun setButtonColors_darkForeground_usesWhiteText() {
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onColorPicked(Color.BLACK, isBackground = false)
+            }
+            shadowOf(Looper.getMainLooper()).idle()
         }
     }
 

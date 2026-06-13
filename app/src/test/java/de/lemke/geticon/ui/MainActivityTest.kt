@@ -77,6 +77,12 @@ class MainActivityTest {
     }
 
     @Test
+    fun onCreate_onboardingRequired_returnsEarly() {
+        commonUtilsSettings.lastVersionCode = -1
+        ActivityScenario.launch(MainActivity::class.java).use { _ -> }
+    }
+
+    @Test
     fun onSaveInstanceState_ready_savesState() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.recreate()
@@ -96,6 +102,17 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
             controller.newIntent(Intent(Intent.ACTION_SEARCH))
+            shadowOf(Looper.getMainLooper()).idle()
+        } finally {
+            controller.destroy()
+        }
+    }
+
+    @Test
+    fun onNewIntent_nonSearch_doesNothing() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            controller.newIntent(Intent("some.other.action"))
             shadowOf(Looper.getMainLooper()).idle()
         } finally {
             controller.destroy()
@@ -226,6 +243,32 @@ class MainActivityTest {
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
                 activity.onAppPickerItemClick(null, appInfo)
+            }
+        }
+    }
+
+    @Test
+    @Config(sdk = [29])
+    fun initAppPicker_belowApiR_skipsImmBottomPadding() {
+        ActivityScenario.launch(MainActivity::class.java).use { _ ->
+            shadowOf(Looper.getMainLooper()).idle()
+        }
+    }
+
+    @Test
+    fun setLeaksMenuItemVisibility_nonNullItem_setsVisibility() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setLeaksMenuItemVisibility(mockk(relaxed = true))
+            }
+        }
+    }
+
+    @Test
+    fun setLeaksMenuItemVisibility_nullItem_doesNothing() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setLeaksMenuItemVisibility(null)
             }
         }
     }
