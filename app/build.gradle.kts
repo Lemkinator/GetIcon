@@ -17,6 +17,7 @@
 @file:OptIn(ExperimentalRoborazziApi::class)
 
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH
 import kotlinx.kover.gradle.plugin.dsl.CoverageUnit.INSTRUCTION
 
 plugins {
@@ -245,6 +246,7 @@ kover {
             verify {
                 rule {
                     minBound(100, coverageUnits = INSTRUCTION)
+                    minBound(100, coverageUnits = BRANCH)
                 }
             }
         }
