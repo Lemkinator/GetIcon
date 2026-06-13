@@ -130,9 +130,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: check-formatting
-    strategy:
-      matrix:
-        api-level: [ 35 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -149,13 +146,8 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Run instrumented tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api-level }}
-          arch: x86_64
-          profile: pixel_6
-          script: chmod +x ./gradlew && ./gradlew connectedDebugAndroidTest --stacktrace
+      - name: Run instrumented tests (GMD)
+        run: chmod +x ./gradlew && ./gradlew pixel9Api35DebugAndroidTest --stacktrace
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}

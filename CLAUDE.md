@@ -11,18 +11,23 @@ All commands run from the repo root on Windows (PowerShell or Git Bash):
 ./gradlew assembleDebug          # build debug APK
 ./gradlew assembleRelease        # build release APK (debug signing fallback)
 ./gradlew installDebug           # install on connected device/emulator
-./gradlew build                  # full build (used in CI)
-./gradlew clean build --no-daemon
 ```
 
 Unit tests exist: `IconViewModelTest`, `IconActivityScreenshotTest` (Roborazzi),
 `MainActivityScreenshotTest` (Roborazzi), plus Konsist architecture tests.
-Instrumented tests: `TestApp.kt` (test application class) and the baseline profile
-generator (`BaselineProfileGenerator`) — both run on device via AndroidJUnit4.
+Instrumented tests: `MainActivityTest`, `IconActivityTest`, `UserSettingsRepositoryInstrumentedTest`
+— run via Gradle Managed Device (no physical device needed):
+
+```powershell
+./gradlew pixel9Api35DebugAndroidTest   # downloads ~1 GB image on first run, cached after
+```
+
+The GMD device (`pixel9Api35`: Pixel 9 / API 35 / aosp / x86_64) is declared once in root
+`build.gradle.kts` and shared by `:app` instrumented tests and `:benchmarks` baseline profile generation.
 
 ### Baseline Profile & Benchmarks
 
-Generate the baseline profile (Gradle Managed Device — downloads ~1 GB image on first run):
+Generate the baseline profile (same GMD device — image already cached if you ran instrumented tests):
 
 ```powershell
 ./gradlew :app:generateBaselineProfile `
@@ -32,25 +37,8 @@ Generate the baseline profile (Gradle Managed Device — downloads ~1 GB image o
 Run macrobenchmarks manually (not CI-gated — numbers are advisory and device-sensitive):
 
 ```powershell
-# Startup: 4 compilation modes (None / Partial-Disable / Partial-Require / Full) + JIT/ClassInit metrics
-# Scroll: FrameTimingMetric on the app-picker RecyclerView
 ./gradlew :benchmarks:pixel9Api35BenchmarkReleaseAndroidTest
 ```
-
-**4 compilation modes explained:**
-
-| Mode | Meaning |
-| --- | --- |
-| `None()` | Pure JIT — worst case baseline |
-| `Partial(Disable, warmupIterations=1)` | Partial AOT, profile disabled |
-| `Partial(Require)` | Our shipped state — profile must be present |
-| `Full()` | Everything AOT — upper bound |
-
-`startupBaselineProfile` should be within ~10% of `Full()` and clearly below `None()`.
-When the profile is applied, near-zero JIT/ClassInit metrics indicate the profile is working.
-
-Benchmarks run on GMD `pixel9Api35` (Pixel 9, API 35, AOSP image). AOSP (not `google_apis`)
-is required — Play images run background work that adds measurement noise.
 
 ## Private Dependencies (Required for Build)
 
@@ -64,12 +52,6 @@ Provide credentials via **one** of these (checked in order):
 1. `github.properties` in project root: `ghUsername=...` / `ghAccessToken=...`
 2. `~/.gradle/gradle.properties`: `ghUsername=...` / `ghAccessToken=...`
 3. Env vars: `GH_USERNAME` / `GH_ACCESS_TOKEN`
-
-Missing credentials are the most common build failure cause.
-
-Release signing properties (`releaseStoreFile`, `releaseStorePassword`,
-`releaseKeyAlias`, `releaseKeyPassword`) use the same lookup order.
-Without them the build falls back to debug signing.
 
 ## Architecture
 
@@ -115,9 +97,6 @@ call sites in `MainActivity.kt` / `IconActivity.kt` first.
 `de.lemke.commonutils.R as commonutilsR` alongside the app's own `R`.
 Be aware when touching resource IDs.
 
-**KSP code generation** — Hilt and Room annotations require a Gradle build
-to regenerate sources after editing annotated classes.
-
 **Use cases over repositories** — prefer injecting
 `GetUserSettingsUseCase` / `UpdateUserSettingsUseCase` rather than
 `UserSettingsRepository` directly.
@@ -134,12 +113,9 @@ Four tools run as part of `./gradlew build`:
   Detekt has no ktlint wrapper). Fix violations with
   `./gradlew spotlessApply`.
 - **Detekt** — static analysis; config at `config/detekt/detekt.yml`.
-  `autoCorrect = false` so fixes are manual.
-- **Kover** — coverage; verify threshold with `./gradlew koverVerifyDebug`.
-  Enforces 100% INSTRUCTION and BRANCH coverage. INSTRUCTION is more precise than LINE
-  and correctly handles empty-body interface methods (`{}`) — zero instructions, neutral
-  in the count. BRANCH catches untested conditionals that INSTRUCTION misses when branch
-  bodies are empty. A passing `koverVerifyDebug` guarantees Codecov patch coverage passes too.
+  `autoCorrect = false` — fixes are manual.
+- **Kover** — 100% INSTRUCTION + BRANCH coverage required.
+  Verify: `./gradlew koverVerifyDebug`.
 - **Konsist** — architecture rules in
   `app/src/test/java/de/lemke/geticon/ArchitectureTest.kt`. Enforces
   `data/domain/ui` layering. Runs as part of `./gradlew test`.
@@ -184,35 +160,13 @@ community practice (NowInAndroid, Pokedex both use the inline form):
   rules together enforce the split form; disabling only `annotation` is
   insufficient.
 
-**Important**: when upgrading ktlint, files already formatted in the
-ktlint-native (8-space) style will NOT be automatically reverted by
-`spotlessApply` — ktlint only flags violations of *enabled* rules.
-If you re-enable these rules and then disable them again, you must
-manually restore the inline form and re-run `spotlessApply`. See git
-history for the migration pattern.
-
-**IDE formatter (Ctrl+Alt+L) vs spotlessApply** — these ARE in sync.
-The ktlint IntelliJ plugin (`.idea/ktlint-plugin.xml`, mode
-`DISTRACT_FREE`) runs ktlint as a **post-processor after** IntelliJ's
-native formatter. Flow: IntelliJ formats → plugin runs ktlint on the
-result → final output matches `spotlessApply` exactly. IntelliJ never
-"learns" ktlint rules; ktlint just fixes IntelliJ's output. If the
-plugin mode is changed to `MANUAL`, this breaks — keep `DISTRACT_FREE`.
-
 ## Robolectric + JUnit 5
 
-**Do not migrate Robolectric tests to JUnit 5.** `org.robolectric.junit.jupiter.RobolectricExtension` does not exist — Robolectric has no
-native JUnit 5 support ([issue #3477](https://github.com/robolectric/robolectric/issues/3477)). The community extension
-`tech.apter.junit5.jupiter:robolectric-extension` only targets Robolectric 4.14.1, is pre-release, and has no Hilt/Roborazzi support.
-
-`@RunWith(RobolectricTestRunner::class)` + `junit-vintage-engine` is correct. Keep until Robolectric ships native JUnit 5.
+`@RunWith(RobolectricTestRunner::class)` + `junit-vintage-engine` is correct — Robolectric has no
+native JUnit 5 support. Keep until Robolectric ships native JUnit 5.
 
 ## Finding Code
 
-- `de.lemke.geticon` package (`app/src/main/java/de/lemke/geticon/`) is
-  the entire app surface
 - Search `commonUtilsSettings` to find shared preference usage
 - APK extraction flow: `MainActivity.processApk()` → temp file →
   `IconActivity` via intent with `ApplicationInfo`
-- Icon rendering/export: `IconActivity` with size (16–1024px), mask
-  toggle, color tint options
