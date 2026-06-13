@@ -76,7 +76,7 @@ subprojects {
 
             @Suppress("UnstableApiUsage")
             testOptions.managedDevices.localDevices {
-                create("pixel9Api35") {
+                register("pixel9Api35") {
                     device = "Pixel 9"
                     apiLevel = 35
                     systemImageSource = "aosp"
