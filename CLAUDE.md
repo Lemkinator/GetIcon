@@ -17,12 +17,19 @@ All commands run from the repo root on Windows (PowerShell or Git Bash):
 
 Unit tests exist: `IconViewModelTest`, `IconActivityScreenshotTest` (Roborazzi),
 `MainActivityScreenshotTest` (Roborazzi), plus Konsist architecture tests.
-Instrumented tests: `TestApp.kt` (test application class) and the baseline profile
-generator (`BaselineProfileGenerator`) — both run on device via AndroidJUnit4.
+Instrumented tests: `MainActivityTest`, `IconActivityTest`, `UserSettingsRepositoryInstrumentedTest`
+— run via Gradle Managed Device (no physical device needed):
+
+```powershell
+./gradlew pixel9Api35DebugAndroidTest   # downloads ~1 GB image on first run, cached after
+```
+
+The GMD device (`pixel9Api35`: Pixel 9 / API 35 / aosp / x86_64) is declared once in root
+`build.gradle.kts` and shared by `:app` instrumented tests and `:benchmarks` baseline profile generation.
 
 ### Baseline Profile & Benchmarks
 
-Generate the baseline profile (Gradle Managed Device — downloads ~1 GB image on first run):
+Generate the baseline profile (same GMD device — image already cached if you ran instrumented tests):
 
 ```powershell
 ./gradlew :app:generateBaselineProfile `
