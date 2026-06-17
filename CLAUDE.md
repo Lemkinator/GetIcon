@@ -56,20 +56,20 @@ Provide credentials via **one** of these (checked in order):
 ## Architecture
 
 Single-module (`:app`) Android app — extracts and exports app icons.
-Layered architecture (data/domain/ui) without ViewModels — Activities
-own state and inject use cases directly:
+Layered architecture (data/domain/ui) with ViewModels per activity:
 
 - **`data/`** — `UserSettingsRepository`: DataStore Preferences CRUD
   (icon size, mask, colors)
 - **`domain/`** — thin use cases: `GetUserSettingsUseCase`,
   `UpdateUserSettingsUseCase`, `AppPickerStrategy`
-- **`ui/`** — two activities: `MainActivity` (app picker + APK import),
-  `IconActivity` (icon preview + export)
+- **`ui/`** — two activities + two ViewModels: `MainActivity` / `MainViewModel`
+  (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
 - **`App.kt`** — `@HiltAndroidApp` entry point, calls `common-utils` init
 - **`PersistenceModule.kt`** — Hilt singleton providing `DataStore<Preferences>`
 
-DI is Hilt throughout. Async via coroutines (`lifecycleScope.launch`,
-`suspend`). ViewBinding enabled.
+DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
+ViewBinding enabled. Activities collect `StateFlow<UiState>` and one-shot
+`Channel<Event>` from their ViewModel via `collectState`/`collectEvents`.
 
 **Multi-activity (not single-activity).** OneUI (sesl-androidx) is activity-oriented;
 single-activity + Navigation Component was tried and reverted (buggy menu, leaky
