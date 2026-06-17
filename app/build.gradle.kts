@@ -233,10 +233,8 @@ kover {
                     "*_HiltModules*",
                     "*_Factory",
                     "*_Provide*",
-                    "*_MembersInjector",
                     "dagger.hilt.*",
                     "hilt_aggregated_deps.*",
-                    "*.di.*",
                 )
             }
         }
