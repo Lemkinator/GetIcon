@@ -111,11 +111,3 @@ subprojects {
         }
     }
 }
-
-tasks.register("staticAnalysis") {
-    group = "verification"
-    description = "Runs Spotless check + Detekt across all subprojects."
-    subprojects.forEach { sub ->
-        dependsOn(sub.tasks.matching { it.name in setOf("spotlessCheck", "detekt") })
-    }
-}

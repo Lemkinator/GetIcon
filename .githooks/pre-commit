@@ -13,8 +13,8 @@ if [ "$autocrlf" = "true" ]; then
     exit 1
 fi
 
-echo "Running staticAnalysis..."
-./gradlew staticAnalysis --quiet || {
+echo "Running static analysis..."
+./gradlew spotlessCheck detekt --quiet || {
     echo ""
     echo "ERROR: Static analysis or build failed."
     echo "Fix formatting with: ./gradlew spotlessApply"
