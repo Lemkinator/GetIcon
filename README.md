@@ -45,7 +45,7 @@ More Information: <a target="_blank" href='https://www.leonard-lemke.com/apps/ge
 
 ## Stats
 
-![Alt](https://repobeats.axiom.co/api/embed/e036d9142181fc91f90663653abc32c087e7aef6.svg "Repobeats analytics image")
+![Alt](https://repobeats.axiom.co/api/embed/8f176f9ffbcaf626702cf92fd4f5a72f85df9e7b.svg "Repobeats analytics image")
 
 <br>
 
