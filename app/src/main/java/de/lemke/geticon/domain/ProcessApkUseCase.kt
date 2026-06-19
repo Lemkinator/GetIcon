@@ -19,7 +19,6 @@ package de.lemke.geticon.domain
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.net.Uri
-import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.lemke.commonutils.di.IoDispatcher
 import java.io.File
@@ -65,7 +64,6 @@ class ProcessApkUseCase @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 tempFile?.delete()
-                Log.e("ProcessApkUseCase", "Failed to process APK", e)
                 ApkProcessResult.Error
             }
         }
