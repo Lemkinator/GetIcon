@@ -6,7 +6,7 @@ targetSdk = "37"
 #noinspection UnusedVersionCatalogEntry
 jvmTarget = "21"
 
-aboutlibraries = "14.2.1"
+aboutlibraries = "15.0.0"
 androidx-test-core = "1.7.0"
 androidx-test-espresso = "3.7.0"
 androidx-test-ext-junit = "1.3.0"
