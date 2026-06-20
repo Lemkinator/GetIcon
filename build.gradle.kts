@@ -89,9 +89,12 @@ subprojects {
             // com.android.test modules (e.g. :benchmarks) are not matched and keep
             // genuine AOSP AndroidX for UiAutomator and benchmark dependencies.
             plugins.withId("com.android.application") {
-                // Exclude from production configs only — unit-test* and androidTest* both need
-                // genuine AOSP AndroidX (Robolectric and Espresso depend on it).
-                configurations.matching { !it.name.contains("test", ignoreCase = true) }.configureEach {
+                // Exclude from non-test configs. Unit-test* configs (Robolectric) and production
+                // both need their respective versions. androidTest* uses SESL transitively from
+                // :app implementation deps, which is correct — instrumented tests launch SESL
+                // activities that call SESL-specific methods (e.g. MenuItemCompat.setSeslNaviMenuItemType).
+                // Using contains("test") would include AOSP in androidTest and cause NoSuchMethodError.
+                configurations.matching { !it.name.startsWith("test", ignoreCase = true) }.configureEach {
                     exclude(group = "androidx.core", module = "core")
                     exclude(group = "androidx.core", module = "core-ktx")
                     exclude(group = "androidx.customview", module = "customview")

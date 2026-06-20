@@ -158,8 +158,9 @@ dependencies {
     testImplementation(libs.bundles.robolectric.test)
     testImplementation(libs.hilt.android.testing)
     testImplementation(libs.konsist)
-    testImplementation(libs.junit.jupiter.api)
+    testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit4)
+    testRuntimeOnly(libs.junit.platform.launcher)
     testRuntimeOnly(libs.junit.jupiter.engine)
     testRuntimeOnly(libs.junit.vintage.engine)
     kspTest(libs.hilt.compiler)
@@ -234,8 +235,10 @@ kover {
                     "*_HiltModules*",
                     "*_Factory",
                     "*_Provide*",
+                    "*_MembersInjector",
                     "dagger.hilt.*",
                     "hilt_aggregated_deps.*",
+                    "*.di.*",
                 )
             }
         }
