@@ -65,10 +65,6 @@ import de.lemke.commonutils.R as commonutilsR
 class IconActivity :
     AppCompatActivity(),
     ViewYTranslator by AppBarAwareYTranslator() {
-    companion object {
-        const val KEY_APPLICATION_INFO = "applicationInfo"
-    }
-
     private lateinit var binding: ActivityIconBinding
     private val viewModel: IconViewModel by viewModels()
     private var isRendering = false
@@ -268,4 +264,8 @@ class IconActivity :
                     ),
                 )
             }.build()
+
+    companion object {
+        const val KEY_APPLICATION_INFO = "applicationInfo"
+    }
 }
