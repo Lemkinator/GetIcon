@@ -107,22 +107,6 @@ class MainActivity :
         isUIReady = true
     }
 
-    private fun collectEvents() {
-        collectEvents(viewModel.events) { event ->
-            when (event) {
-                is MainEvent.NavigateToIcon -> {
-                    startActivity(
-                        Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo),
-                    )
-                }
-
-                MainEvent.ShowError -> {
-                    toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
-                }
-            }
-        }
-    }
-
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         if (!isUIReady) return
@@ -141,6 +125,22 @@ class MainActivity :
             R.id.menu_item_search -> startSearch().let { true }
             else -> super.onOptionsItemSelected(item)
         }
+
+    private fun collectEvents() {
+        collectEvents(viewModel.events) { event ->
+            when (event) {
+                is MainEvent.NavigateToIcon -> {
+                    startActivity(
+                        Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo),
+                    )
+                }
+
+                MainEvent.ShowError -> {
+                    toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
+                }
+            }
+        }
+    }
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun applyFilter(query: String = "") {

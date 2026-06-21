@@ -91,6 +91,12 @@ class IconViewModel @Inject constructor(
         }
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        val path = applicationInfo?.sourceDir ?: return
+        if (path.startsWith(context.cacheDir.absolutePath)) File(path).delete()
+    }
+
     private suspend fun loadInitialState(appInfo: ApplicationInfo) {
         try {
             val userSettings = getUserSettings()
@@ -184,12 +190,6 @@ class IconViewModel @Inject constructor(
         } catch (e: OutOfMemoryError) {
             _events.trySend(IconEvent.GenerateFailed(e))
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        val path = applicationInfo?.sourceDir ?: return
-        if (path.startsWith(context.cacheDir.absolutePath)) File(path).delete()
     }
 
     private fun buildFileName(

@@ -73,23 +73,6 @@ class IconActivity :
     private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onExportBitmapResult(result: ActivityResult?) {
-        val icon = viewModel.state.value.icon ?: return
-        saveIconToUri(result, icon)
-    }
-
-    private fun saveIconToUri(
-        result: ActivityResult?,
-        icon: Bitmap,
-    ) {
-        if (result?.resultCode == RESULT_OK) {
-            saveBitmapToUri(result.data?.data, icon)
-        } else if (result?.resultCode != RESULT_CANCELED) {
-            toast(commonutilsR.string.commonutils_error_saving_image)
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         prepareActivityTransformationTo()
         super.onCreate(savedInstanceState)
@@ -120,6 +103,23 @@ class IconActivity :
             else -> {
                 super.onOptionsItemSelected(item)
             }
+        }
+    }
+
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun onExportBitmapResult(result: ActivityResult?) {
+        val icon = viewModel.state.value.icon ?: return
+        saveIconToUri(result, icon)
+    }
+
+    private fun saveIconToUri(
+        result: ActivityResult?,
+        icon: Bitmap,
+    ) {
+        if (result?.resultCode == RESULT_OK) {
+            saveBitmapToUri(result.data?.data, icon)
+        } else if (result?.resultCode != RESULT_CANCELED) {
+            toast(commonutilsR.string.commonutils_error_saving_image)
         }
     }
 
