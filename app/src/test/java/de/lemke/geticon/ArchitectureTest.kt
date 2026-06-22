@@ -75,10 +75,7 @@ class ArchitectureTest : ShouldSpec() {
             codeScope
                 .classes()
                 .assertTrue(testName = this.testCase.name.toString()) { koClass ->
-                    val functions =
-                        koClass
-                            .declarations(includeNested = false, includeLocal = false)
-                            .filterIsInstance<KoFunctionDeclaration>()
+                    val functions = koClass.functions(includeNested = false, includeLocal = false)
                     val lastOverrideIndex = functions.indexOfLast { it.hasModifier(KoModifier.OVERRIDE) }
                     val firstNonOverrideIndex = functions.indexOfFirst { !it.hasModifier(KoModifier.OVERRIDE) }
                     lastOverrideIndex == -1 || firstNonOverrideIndex == -1 || firstNonOverrideIndex > lastOverrideIndex
@@ -105,8 +102,7 @@ class ArchitectureTest : ShouldSpec() {
                 .filter { it.name.endsWith("UseCase") }
                 .assertTrue(testName = this.testCase.name.toString()) { koClass ->
                     koClass
-                        .declarations(includeNested = false, includeLocal = false)
-                        .filterIsInstance<KoFunctionDeclaration>()
+                        .functions(includeNested = false, includeLocal = false)
                         .any { it.name == "invoke" && it.hasModifier(KoModifier.OPERATOR) }
                 }
         }
