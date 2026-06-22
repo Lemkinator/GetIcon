@@ -80,17 +80,11 @@ class UserSettingsRepository @Inject constructor(
     }
 }
 
-/** Settings associated with the current user. */
 data class UserSettings(
-    /** icon Size*/
     val iconSize: Int,
-    /** mask enabled*/
     val maskEnabled: Boolean,
-    /** color enabled*/
     val colorEnabled: Boolean,
-    /** recent background colors */
     val recentBackgroundColors: List<Int>,
-    /** recent foreground colors */
     val recentForegroundColors: List<Int>,
 ) {
     companion object {

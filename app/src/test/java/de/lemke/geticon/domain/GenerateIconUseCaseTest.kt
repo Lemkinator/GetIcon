@@ -23,6 +23,7 @@ import android.graphics.Color
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.reflect.app.SeslApplicationPackageManagerReflector
 import androidx.test.core.app.ApplicationProvider
 import de.lemke.geticon.App
@@ -261,5 +262,25 @@ class GenerateIconUseCaseTest {
                 }
             val result = useCase(badAppInfo, 128, maskEnabled = false, colorEnabled = false, 0, 0, packageManager)
             result.bitmap shouldNotBe null
+        }
+
+    @Test
+    fun `loadIcon failure with null fallback drawable returns blank IconResult of requested size`() =
+        runTest {
+            mockkStatic(AppCompatResources::class)
+            try {
+                every { AppCompatResources.getDrawable(any(), any()) } returns null
+                val badAppInfo =
+                    object : ApplicationInfo() {
+                        override fun loadIcon(pm: PackageManager) = throw IllegalStateException("forced failure")
+                    }.apply { packageName = "com.does.not.exist" }
+                val result = useCase(badAppInfo, 128, maskEnabled = false, colorEnabled = false, 0, 0, packageManager)
+                result.bitmap.width shouldBe 128
+                result.bitmap.height shouldBe 128
+                result.isAdaptiveIcon shouldBe false
+                result.hasMaskedAppIcon shouldBe false
+            } finally {
+                unmockkStatic(AppCompatResources::class)
+            }
         }
 }

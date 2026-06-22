@@ -204,6 +204,11 @@ class MainActivity :
         lifecycleScope.launch { loadPackageList() }
     }
 
+    /**
+     * Loads the list of installed apps and displays them in the app picker.
+     *
+     * If loading fails, displays an error message to the user.
+     */
     @Suppress("TooGenericExceptionCaught")
     private suspend fun loadPackageList() {
         try {
@@ -217,6 +222,7 @@ class MainActivity :
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("MainActivity", "Failed to load package list", e)
+            toast(commonutilsR.string.commonutils_error)
         }
     }
 
