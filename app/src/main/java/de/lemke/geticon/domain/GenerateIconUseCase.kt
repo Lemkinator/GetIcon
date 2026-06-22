@@ -56,7 +56,12 @@ class GenerateIconUseCase @Inject constructor(
             try {
                 applicationInfo.loadIcon(packageManager)
             } catch (_: Exception) {
-                AppCompatResources.getDrawable(context, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)!!
+                AppCompatResources.getDrawable(context, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)
+                    ?: return IconResult(
+                        bitmap = createBitmap(size, size),
+                        isAdaptiveIcon = false,
+                        hasMaskedAppIcon = false,
+                    )
             }
         val maskedAppIcon = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
         val isAdaptiveIcon = appIcon is AdaptiveIconDrawable

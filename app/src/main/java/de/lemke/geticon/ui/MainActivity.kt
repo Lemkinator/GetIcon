@@ -217,6 +217,7 @@ class MainActivity :
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("MainActivity", "Failed to load package list", e)
+            toast(commonutilsR.string.commonutils_error)
         }
     }
 
