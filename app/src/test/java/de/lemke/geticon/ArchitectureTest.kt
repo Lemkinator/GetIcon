@@ -16,32 +16,63 @@
 
 package de.lemke.geticon
 
+import com.lemonappdev.konsist.api.KoModifier
 import com.lemonappdev.konsist.api.Konsist
 import com.lemonappdev.konsist.api.ext.list.withPackage
 import com.lemonappdev.konsist.api.verify.assertFalse
-import org.junit.jupiter.api.Test
+import com.lemonappdev.konsist.api.verify.assertTrue
+import io.kotest.core.spec.style.ShouldSpec
 
-class ArchitectureTest {
-    private val scope = Konsist.scopeFromProduction()
+class ArchitectureTest : ShouldSpec() {
+    private val codeScope = Konsist.scopeFromProduction()
 
-    @Test
-    fun `data layer does not depend on ui`() {
-        scope.files
-            .withPackage("de.lemke.geticon.data..")
-            .assertFalse { it.hasImport { import -> import.name.startsWith("de.lemke.geticon.ui.") } }
-    }
-
-    @Test
-    fun `data layer does not depend on domain`() {
-        scope.files
-            .withPackage("de.lemke.geticon.data..")
-            .assertFalse { it.hasImport { import -> import.name.startsWith("de.lemke.geticon.domain.") } }
-    }
-
-    @Test
-    fun `domain layer does not depend on ui`() {
-        scope.files
-            .withPackage("de.lemke.geticon.domain..")
-            .assertFalse { it.hasImport { import -> import.name.startsWith("de.lemke.geticon.ui.") } }
+    init {
+        should("data layer does not depend on ui") {
+            codeScope.files
+                .withPackage("de.lemke.geticon.data..")
+                .assertFalse(testName = this.testCase.name.toString()) {
+                    it.hasImport { import -> import.name.startsWith("de.lemke.geticon.ui.") }
+                }
+        }
+        should("data layer does not depend on domain") {
+            codeScope.files
+                .withPackage("de.lemke.geticon.data..")
+                .assertFalse(testName = this.testCase.name.toString()) {
+                    it.hasImport { import -> import.name.startsWith("de.lemke.geticon.domain.") }
+                }
+        }
+        should("domain layer does not depend on ui") {
+            codeScope.files
+                .withPackage("de.lemke.geticon.domain..")
+                .assertFalse(testName = this.testCase.name.toString()) {
+                    it.hasImport { import -> import.name.startsWith("de.lemke.geticon.ui.") }
+                }
+        }
+        should("use case classes declare operator fun invoke") {
+            codeScope
+                .classes()
+                .filter { it.name.endsWith("UseCase") }
+                .assertTrue(testName = this.testCase.name.toString()) { koClass ->
+                    koClass
+                        .functions(includeNested = false, includeLocal = false)
+                        .any { it.name == "invoke" && it.hasModifier(KoModifier.OPERATOR) }
+                }
+        }
+        should("classes named ViewModel extend ViewModel") {
+            codeScope
+                .classes()
+                .filter { it.name.endsWith("ViewModel") }
+                .assertTrue(testName = this.testCase.name.toString()) {
+                    it.hasParent { parent -> parent.name == "ViewModel" }
+                }
+        }
+        should("HiltViewModel classes use Inject constructor") {
+            codeScope
+                .classes()
+                .filter { it.hasAnnotation { ann -> ann.name == "HiltViewModel" } }
+                .assertTrue(testName = this.testCase.name.toString()) {
+                    it.primaryConstructor?.hasAnnotation { ann -> ann.name == "Inject" } == true
+                }
+        }
     }
 }
