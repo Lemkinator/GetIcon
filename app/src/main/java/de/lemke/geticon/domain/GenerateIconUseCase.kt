@@ -42,6 +42,11 @@ data class IconResult(
 class GenerateIconUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
 ) {
+    /**
+     * Loads an app icon and renders it into a bitmap, optionally applying masking and color tinting.
+     *
+     * @return An [IconResult] containing the rendered bitmap and metadata about the icon type.
+     */
     @SuppressLint("RestrictedApi")
     operator fun invoke(
         applicationInfo: ApplicationInfo,
