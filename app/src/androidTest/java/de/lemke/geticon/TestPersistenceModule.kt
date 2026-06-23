@@ -21,8 +21,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.android.testing.TestInstallIn
 import dagger.hilt.components.SingletonComponent
+import dagger.hilt.testing.TestInstallIn
 import java.io.File
 import javax.inject.Singleton
 import org.junit.rules.TemporaryFolder
