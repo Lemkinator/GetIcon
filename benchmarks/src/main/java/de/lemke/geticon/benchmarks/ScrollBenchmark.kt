@@ -29,14 +29,14 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
-class ScrollAppPickerBenchmark {
+class ScrollBenchmark {
     @get:Rule
     val benchmarkRule = MacrobenchmarkRule()
 
     @Test
-    fun scrollAppPickerBaselineProfile() = scrollAppPicker(CompilationMode.Partial())
+    fun scrollBaselineProfile() = scroll(CompilationMode.Partial())
 
-    private fun scrollAppPicker(compilationMode: CompilationMode) =
+    private fun scroll(compilationMode: CompilationMode) =
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
             metrics = listOf(FrameTimingMetric()),

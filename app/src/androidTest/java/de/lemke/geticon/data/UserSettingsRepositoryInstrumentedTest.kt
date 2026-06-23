@@ -30,7 +30,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 
-/** Confirms end-to-end Hilt wiring with an isolated test DataStore (via TestInstallIn). */
+/** Confirms end-to-end Hilt wiring with DataStore isolation via @BindValue TemporaryFolder. */
 @HiltAndroidTest
 @LargeTest
 @RunWith(AndroidJUnit4::class)
