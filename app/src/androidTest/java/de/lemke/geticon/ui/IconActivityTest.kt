@@ -25,7 +25,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
-import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import de.lemke.geticon.R
@@ -33,18 +32,13 @@ import io.kotest.matchers.shouldBe
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 
 @HiltAndroidTest
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class IconActivityTest {
-    @field:BindValue
-    @get:Rule(order = 0)
-    val tmpFolder: TemporaryFolder = TemporaryFolder()
-
-    @get:Rule(order = 1)
+    @get:Rule
     val hiltRule = HiltAndroidRule(this)
 
     private lateinit var appInfo: ApplicationInfo

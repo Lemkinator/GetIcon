@@ -16,26 +16,29 @@
 
 package de.lemke.geticon
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import dagger.Module
 import dagger.Provides
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
-import java.io.File
+import java.util.UUID
 import javax.inject.Singleton
-import org.junit.rules.TemporaryFolder
 
 @Module
 @TestInstallIn(components = [SingletonComponent::class], replaces = [PersistenceModule::class])
 object TestPersistenceModule {
     @Provides
     @Singleton
-    fun provideTestDataStore(tmpFolder: TemporaryFolder): DataStore<Preferences> =
+    fun provideTestDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<Preferences> =
         PreferenceDataStoreFactory.create {
-            // File(tmpFolder.root, name) not tmpFolder.newFile() — newFile() creates the file
-            // immediately, which conflicts with DataStore's own creation logic.
-            File(tmpFolder.root, "test_user_settings.preferences_pb")
+            // UUID per component instance avoids cross-test collisions without needing
+            // TemporaryFolder (which has a lifetime mismatch with @Singleton DataStore).
+            context.cacheDir.resolve("test_${UUID.randomUUID()}.preferences_pb")
         }
 }
