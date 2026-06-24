@@ -22,24 +22,18 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
-import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.kotest.matchers.shouldBe
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 
 @HiltAndroidTest
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class MainActivityTest {
-    @field:BindValue
-    @get:Rule(order = 0)
-    val tmpFolder: TemporaryFolder = TemporaryFolder()
-
-    @get:Rule(order = 1)
+    @get:Rule
     val hiltRule = HiltAndroidRule(this)
 
     @Test
