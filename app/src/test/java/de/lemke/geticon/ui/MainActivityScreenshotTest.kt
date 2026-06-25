@@ -24,7 +24,6 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.ResolveInfo
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
-import android.os.Looper
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
@@ -68,7 +67,6 @@ class MainActivityScreenshotTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             @Suppress("MagicNumber")
             Thread.sleep(500)
-            shadowOf(Looper.getMainLooper()).idle()
             onView(isRoot()).captureRoboImage("src/test/screenshots/main_default_dark.png")
         }
     }
