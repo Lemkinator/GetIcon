@@ -18,8 +18,10 @@ package de.lemke.geticon
 
 import de.lemke.commonutils.data.SettingsRepository
 
-// Sets lastVersionCode and acceptedTosVersion to Int.MAX_VALUE so onboardIfNeeded()
-// never redirects to OOBE in tests — no real version code will ever reach MAX_VALUE.
+/**
+ * Sets lastVersionCode and acceptedTosVersion to Int.MAX_VALUE so onboardIfNeeded()
+ * never redirects to OOBE in tests — no real version code will ever reach MAX_VALUE.
+ */
 fun SettingsRepository.bypassOobe() {
     lastVersionCode = Int.MAX_VALUE
     acceptedTosVersion = Int.MAX_VALUE
