@@ -16,8 +16,9 @@
 
 package de.lemke.geticon.ui
 
-import android.os.Looper
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.setupCommonUtilsSettingsActivity
@@ -27,7 +28,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import de.lemke.commonutils.R as commonutilsR
@@ -52,22 +52,16 @@ class SettingsActivityScreenshotTest {
 
     @Test
     fun settingsActivity_default() {
-        ActivityScenario.launch(CommonUtilsSettingsActivity::class.java).use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("src/test/screenshots/settings_default.png")
-            }
+        ActivityScenario.launch(CommonUtilsSettingsActivity::class.java).use {
+            onView(isRoot()).captureRoboImage("src/test/screenshots/settings_default.png")
         }
     }
 
     @Test
     @Config(qualifiers = "+night")
     fun settingsActivity_default_dark() {
-        ActivityScenario.launch(CommonUtilsSettingsActivity::class.java).use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("src/test/screenshots/settings_default_dark.png")
-            }
+        ActivityScenario.launch(CommonUtilsSettingsActivity::class.java).use {
+            onView(isRoot()).captureRoboImage("src/test/screenshots/settings_default_dark.png")
         }
     }
 }

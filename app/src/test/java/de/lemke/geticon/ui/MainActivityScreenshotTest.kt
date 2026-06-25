@@ -27,6 +27,8 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Looper
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.geticon.App
@@ -54,10 +56,8 @@ class MainActivityScreenshotTest {
 
     @Test
     fun mainActivity_default() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("src/test/screenshots/main_default.png")
-            }
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(isRoot()).captureRoboImage("src/test/screenshots/main_default.png")
         }
     }
 
@@ -65,13 +65,11 @@ class MainActivityScreenshotTest {
     @Config(qualifiers = "+night")
     fun mainActivity_default_dark() {
         installFakeApps()
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        ActivityScenario.launch(MainActivity::class.java).use {
             @Suppress("MagicNumber")
             Thread.sleep(500)
             shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("src/test/screenshots/main_default_dark.png")
-            }
+            onView(isRoot()).captureRoboImage("src/test/screenshots/main_default_dark.png")
         }
     }
 
