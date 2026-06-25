@@ -17,9 +17,10 @@
 package de.lemke.geticon.ui
 
 import android.content.Intent
-import android.os.Looper
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -37,7 +38,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -90,11 +90,8 @@ class IconActivityScreenshotTest {
         val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
         val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
         val intent = Intent(context, IconActivity::class.java).putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
-        ActivityScenario.launch<IconActivity>(intent).use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage(fileName)
-            }
+        ActivityScenario.launch<IconActivity>(intent).use {
+            onView(isRoot()).captureRoboImage(fileName)
         }
     }
 

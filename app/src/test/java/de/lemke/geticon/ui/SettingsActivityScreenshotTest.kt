@@ -16,32 +16,42 @@
 
 package de.lemke.geticon.ui
 
-import android.os.Looper
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.commonUtilsSettings
+import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.commonutils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
-import de.lemke.geticon.App
+import de.lemke.geticon.bypassOobe
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import de.lemke.commonutils.R as commonutilsR
 
 // sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
-// App::class: uses the production Hilt component so App.onCreate() initializes commonUtilsSettings.
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = App::class, sdk = [36])
+@Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsActivityScreenshotTest {
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
     @Before
     fun setup() {
-        commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
-        commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
+        hiltRule.inject()
+        ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
+        commonUtilsSettings.bypassOobe()
         setupCommonUtilsSettingsActivity(
             commonutilsR.xml.preferences_design,
             commonutilsR.xml.preferences_general_language_and_image_save_location,
@@ -52,22 +62,16 @@ class SettingsActivityScreenshotTest {
 
     @Test
     fun settingsActivity_default() {
-        ActivityScenario.launch(CommonUtilsSettingsActivity::class.java).use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("src/test/screenshots/settings_default.png")
-            }
+        ActivityScenario.launch(CommonUtilsSettingsActivity::class.java).use {
+            onView(isRoot()).captureRoboImage("src/test/screenshots/settings_default.png")
         }
     }
 
     @Test
     @Config(qualifiers = "+night")
     fun settingsActivity_default_dark() {
-        ActivityScenario.launch(CommonUtilsSettingsActivity::class.java).use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("src/test/screenshots/settings_default_dark.png")
-            }
+        ActivityScenario.launch(CommonUtilsSettingsActivity::class.java).use {
+            onView(isRoot()).captureRoboImage("src/test/screenshots/settings_default_dark.png")
         }
     }
 }

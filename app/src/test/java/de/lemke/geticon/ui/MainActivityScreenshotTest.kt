@@ -24,14 +24,20 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.ResolveInfo
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
-import android.os.Looper
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.commonUtilsSettings
-import de.lemke.geticon.App
+import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
+import de.lemke.geticon.bypassOobe
 import java.net.URL
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -40,24 +46,25 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 // sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
-// App::class: uses the production Hilt component so App.onCreate() initializes commonUtilsSettings.
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = App::class, sdk = [36])
+@Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class MainActivityScreenshotTest {
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
     @Before
     fun setup() {
-        // Bypass OOBE: fresh test has lastVersionCode == -1 which triggers openOOBEAndFinish().
-        commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
-        commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
+        hiltRule.inject()
+        ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
+        commonUtilsSettings.bypassOobe()
     }
 
     @Test
     fun mainActivity_default() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("src/test/screenshots/main_default.png")
-            }
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(isRoot()).captureRoboImage("src/test/screenshots/main_default.png")
         }
     }
 
@@ -65,13 +72,10 @@ class MainActivityScreenshotTest {
     @Config(qualifiers = "+night")
     fun mainActivity_default_dark() {
         installFakeApps()
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        ActivityScenario.launch(MainActivity::class.java).use {
             @Suppress("MagicNumber")
             Thread.sleep(500)
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.window.decorView.captureRoboImage("src/test/screenshots/main_default_dark.png")
-            }
+            onView(isRoot()).captureRoboImage("src/test/screenshots/main_default_dark.png")
         }
     }
 
