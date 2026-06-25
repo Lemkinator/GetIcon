@@ -21,6 +21,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
@@ -28,6 +30,7 @@ import de.lemke.commonutils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.geticon.bypassOobe
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -36,12 +39,17 @@ import org.robolectric.annotation.GraphicsMode
 import de.lemke.commonutils.R as commonutilsR
 
 // sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsActivityScreenshotTest {
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
     @Before
     fun setup() {
+        hiltRule.inject()
         ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
         commonUtilsSettings.bypassOobe()
         setupCommonUtilsSettingsActivity(
