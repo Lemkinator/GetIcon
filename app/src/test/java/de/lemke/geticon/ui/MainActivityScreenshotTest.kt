@@ -29,8 +29,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.commonUtilsSettings
-import de.lemke.geticon.App
+import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import java.net.URL
 import org.junit.Before
 import org.junit.Test
@@ -41,14 +42,13 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 // sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
-// App::class: uses the production Hilt component so App.onCreate() initializes commonUtilsSettings.
 @RunWith(RobolectricTestRunner::class)
-@Config(application = App::class, sdk = [36])
+@Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class MainActivityScreenshotTest {
     @Before
     fun setup() {
-        // Bypass OOBE: fresh test has lastVersionCode == -1 which triggers openOOBEAndFinish().
+        ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
         commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
         commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
     }

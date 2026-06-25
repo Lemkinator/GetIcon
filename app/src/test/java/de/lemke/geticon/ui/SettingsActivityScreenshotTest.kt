@@ -17,13 +17,15 @@
 package de.lemke.geticon.ui
 
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.commonUtilsSettings
+import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.commonutils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
-import de.lemke.geticon.App
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,13 +35,13 @@ import org.robolectric.annotation.GraphicsMode
 import de.lemke.commonutils.R as commonutilsR
 
 // sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
-// App::class: uses the production Hilt component so App.onCreate() initializes commonUtilsSettings.
 @RunWith(RobolectricTestRunner::class)
-@Config(application = App::class, sdk = [36])
+@Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsActivityScreenshotTest {
     @Before
     fun setup() {
+        ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
         commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
         commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
         setupCommonUtilsSettingsActivity(
