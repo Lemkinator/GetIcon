@@ -32,6 +32,7 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
+import de.lemke.geticon.bypassOobe
 import java.net.URL
 import org.junit.Before
 import org.junit.Test
@@ -49,8 +50,7 @@ class MainActivityScreenshotTest {
     @Before
     fun setup() {
         ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
-        commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
-        commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
+        commonUtilsSettings.bypassOobe()
     }
 
     @Test

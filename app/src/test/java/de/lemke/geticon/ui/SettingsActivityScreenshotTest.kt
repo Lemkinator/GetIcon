@@ -26,6 +26,7 @@ import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.commonutils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
+import de.lemke.geticon.bypassOobe
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,8 +43,7 @@ class SettingsActivityScreenshotTest {
     @Before
     fun setup() {
         ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
-        commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
-        commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
+        commonUtilsSettings.bypassOobe()
         setupCommonUtilsSettingsActivity(
             commonutilsR.xml.preferences_design,
             commonutilsR.xml.preferences_general_language_and_image_save_location,
