@@ -29,23 +29,13 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
-import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import dagger.hilt.android.testing.UninstallModules
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
-import de.lemke.commonutils.di.DefaultDispatcher
-import de.lemke.commonutils.di.IoDispatcher
-import de.lemke.commonutils.di.MainDispatcher
 import de.lemke.geticon.bypassOobe
-import de.lemke.geticon.di.DispatchersModule
 import java.net.URL
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -56,8 +46,6 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 // sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
-@OptIn(ExperimentalCoroutinesApi::class)
-@UninstallModules(DispatchersModule::class)
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
@@ -65,21 +53,6 @@ import org.robolectric.annotation.GraphicsMode
 class MainActivityScreenshotTest {
     @get:Rule
     val hiltRule = HiltAndroidRule(this)
-
-    @BindValue
-    @IoDispatcher
-    @JvmField
-    val testIoDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher()
-
-    @BindValue
-    @DefaultDispatcher
-    @JvmField
-    val testDefaultDispatcher: CoroutineDispatcher = Dispatchers.Default
-
-    @BindValue
-    @MainDispatcher
-    @JvmField
-    val testMainDispatcher: CoroutineDispatcher = Dispatchers.Main
 
     @Before
     fun setup() {

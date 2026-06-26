@@ -21,19 +21,13 @@ import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.model.AppInfoData
 import dagger.hilt.android.qualifiers.ApplicationContext
-import de.lemke.commonutils.di.IoDispatcher
 import javax.inject.Inject
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.withContext
 
 class GetInstalledAppsUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
     suspend operator fun invoke(): List<AppInfoData> =
-        withContext(ioDispatcher) {
-            SeslAppInfoDataHelper(context, GridAppDataBuilder::class.java)
-                .getPackages()
-                .onEach { it.subLabel = it.packageName }
-        }
+        SeslAppInfoDataHelper(context, GridAppDataBuilder::class.java)
+            .getPackages()
+            .onEach { it.subLabel = it.packageName }
 }
