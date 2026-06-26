@@ -18,8 +18,10 @@ package de.lemke.geticon.ui
 
 import android.content.pm.ApplicationInfo
 import android.net.Uri
+import androidx.picker.model.AppInfoData
 import app.cash.turbine.test
 import de.lemke.geticon.domain.ApkProcessResult
+import de.lemke.geticon.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -30,9 +32,28 @@ import io.mockk.mockk
 class MainViewModelTest : ShouldSpec(
     {
         val processApk = mockk<ProcessApkUseCase>()
+        val getInstalledApps = mockk<GetInstalledAppsUseCase>()
         lateinit var viewModel: MainViewModel
 
-        beforeEach { viewModel = MainViewModel(processApk) }
+        beforeEach {
+            coEvery { getInstalledApps() } returns emptyList()
+            viewModel = MainViewModel(processApk, getInstalledApps)
+        }
+
+        should("installedApps emits loaded list") {
+            val app = mockk<AppInfoData>()
+            coEvery { getInstalledApps() } returns listOf(app)
+            viewModel = MainViewModel(processApk, getInstalledApps)
+            viewModel.installedApps.value shouldBe listOf(app)
+        }
+
+        should("emit ShowLoadError when getInstalledApps throws") {
+            coEvery { getInstalledApps() } throws RuntimeException("load failed")
+            viewModel = MainViewModel(processApk, getInstalledApps)
+            viewModel.events.test {
+                awaitItem() shouldBe MainEvent.ShowLoadError
+            }
+        }
 
         should("emit ShowError when uri is null") {
             viewModel.events.test {

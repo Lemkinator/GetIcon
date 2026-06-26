@@ -59,6 +59,7 @@ class MainActivityScreenshotTest {
         hiltRule.inject()
         ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
         commonUtilsSettings.bypassOobe()
+        installFakeApps()
     }
 
     @Test
@@ -71,10 +72,7 @@ class MainActivityScreenshotTest {
     @Test
     @Config(qualifiers = "+night")
     fun mainActivity_default_dark() {
-        installFakeApps()
         ActivityScenario.launch(MainActivity::class.java).use {
-            @Suppress("MagicNumber")
-            Thread.sleep(500)
             onView(isRoot()).captureRoboImage("src/test/screenshots/main_default_dark.png")
         }
     }

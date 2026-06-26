@@ -34,13 +34,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.lifecycleScope
-import androidx.picker.helper.SeslAppInfoDataHelper
-import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.model.AppInfo
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.collectEvents
+import de.lemke.commonutils.collectState
 import de.lemke.commonutils.configureCommonUtilsSplashScreen
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.onNavigationSingleClick
@@ -68,10 +66,6 @@ import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISM
 import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
@@ -80,6 +74,7 @@ class MainActivity :
     ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
+
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
 
     @VisibleForTesting(otherwise = PRIVATE)
@@ -103,6 +98,7 @@ class MainActivity :
         initDrawer()
         initAppPicker()
         collectEvents()
+        collectState(viewModel.installedApps) { binding.appPicker.submitList(it) }
         savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
         isUIReady = true
     }
@@ -137,6 +133,10 @@ class MainActivity :
 
                 MainEvent.ShowError -> {
                     toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
+                }
+
+                MainEvent.ShowLoadError -> {
+                    toast(commonutilsR.string.commonutils_error)
                 }
             }
         }
@@ -200,29 +200,6 @@ class MainActivity :
             hideSoftInputOnScroll()
             if (SDK_INT >= VERSION_CODES.R) configureImmBottomPadding(binding.drawerLayout)
             setOnItemClickEventListener { view, appInfo -> onAppPickerItemClick(view, appInfo) }
-        }
-        lifecycleScope.launch { loadPackageList() }
-    }
-
-    /**
-     * Loads the list of installed apps and displays them in the app picker.
-     *
-     * If loading fails, displays an error message to the user.
-     */
-    @Suppress("TooGenericExceptionCaught")
-    private suspend fun loadPackageList() {
-        try {
-            val list =
-                withContext(Dispatchers.IO) {
-                    SeslAppInfoDataHelper(applicationContext, GridAppDataBuilder::class.java)
-                        .getPackages()
-                        .onEach { it.subLabel = it.packageName }
-                }
-            binding.appPicker.submitList(list)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e("MainActivity", "Failed to load package list", e)
-            toast(commonutilsR.string.commonutils_error)
         }
     }
 

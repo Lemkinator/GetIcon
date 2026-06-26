@@ -33,6 +33,7 @@ import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -82,11 +83,7 @@ class IconActivityScreenshotTest {
         }
     }
 
-    private fun captureIconScreenshot(
-        fileName: String,
-        preSetup: (suspend () -> Unit)? = null,
-    ) {
-        preSetup?.let { runBlocking { it() } }
+    private fun captureIconScreenshot(fileName: String) {
         val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
         val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
         val intent = Intent(context, IconActivity::class.java).putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
@@ -101,25 +98,25 @@ class IconActivityScreenshotTest {
     }
 
     @Test
-    fun iconActivity_maskDisabled() {
-        captureIconScreenshot("src/test/screenshots/icon_mask_disabled.png") {
+    fun iconActivity_maskDisabled() =
+        runTest {
             updateUserSettings.invoke { it.copy(maskEnabled = false) }
+            captureIconScreenshot("src/test/screenshots/icon_mask_disabled.png")
         }
-    }
 
     @Test
-    fun iconActivity_colorEnabled() {
-        captureIconScreenshot("src/test/screenshots/icon_color_enabled.png") {
+    fun iconActivity_colorEnabled() =
+        runTest {
             updateUserSettings.invoke { it.copy(colorEnabled = true) }
+            captureIconScreenshot("src/test/screenshots/icon_color_enabled.png")
         }
-    }
 
     @Test
-    fun iconActivity_sizeSmall() {
-        captureIconScreenshot("src/test/screenshots/icon_size_small.png") {
+    fun iconActivity_sizeSmall() =
+        runTest {
             updateUserSettings.invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) }
+            captureIconScreenshot("src/test/screenshots/icon_size_small.png")
         }
-    }
 
     @Test
     @Config(qualifiers = "+night")
@@ -129,25 +126,25 @@ class IconActivityScreenshotTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun iconActivity_maskDisabled_dark() {
-        captureIconScreenshot("src/test/screenshots/icon_mask_disabled_dark.png") {
+    fun iconActivity_maskDisabled_dark() =
+        runTest {
             updateUserSettings.invoke { it.copy(maskEnabled = false) }
+            captureIconScreenshot("src/test/screenshots/icon_mask_disabled_dark.png")
         }
-    }
 
     @Test
     @Config(qualifiers = "+night")
-    fun iconActivity_colorEnabled_dark() {
-        captureIconScreenshot("src/test/screenshots/icon_color_enabled_dark.png") {
+    fun iconActivity_colorEnabled_dark() =
+        runTest {
             updateUserSettings.invoke { it.copy(colorEnabled = true) }
+            captureIconScreenshot("src/test/screenshots/icon_color_enabled_dark.png")
         }
-    }
 
     @Test
     @Config(qualifiers = "+night")
-    fun iconActivity_sizeSmall_dark() {
-        captureIconScreenshot("src/test/screenshots/icon_size_small_dark.png") {
+    fun iconActivity_sizeSmall_dark() =
+        runTest {
             updateUserSettings.invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) }
+            captureIconScreenshot("src/test/screenshots/icon_size_small_dark.png")
         }
-    }
 }
