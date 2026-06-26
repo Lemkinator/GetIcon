@@ -40,7 +40,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -76,8 +75,8 @@ class IconViewModel @Inject constructor(
 ) : ViewModel() {
     private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
 
-    private val _state = MutableStateFlow(IconUiState())
-    val state: StateFlow<IconUiState> = _state.asStateFlow()
+    val state: StateFlow<IconUiState>
+        field = MutableStateFlow(IconUiState())
 
     private val _events = Channel<IconEvent>(Channel.BUFFERED)
     val events: Flow<IconEvent> = _events.receiveAsFlow()
@@ -112,7 +111,7 @@ class IconViewModel @Inject constructor(
                     bg,
                     context.packageManager,
                 )
-            _state.value =
+            state.value =
                 IconUiState(
                     icon = result.bitmap,
                     appName = appInfo.loadLabel(context.packageManager).toString(),
@@ -139,31 +138,31 @@ class IconViewModel @Inject constructor(
 
     fun onMaskChanged(enabled: Boolean) {
         viewModelScope.launch { updateUserSettings { it.copy(maskEnabled = enabled) } }
-        regenerateIcon(_state.value.copy(maskEnabled = enabled))
+        regenerateIcon(state.value.copy(maskEnabled = enabled))
     }
 
     fun onColorChanged(enabled: Boolean) {
         viewModelScope.launch { updateUserSettings { it.copy(colorEnabled = enabled) } }
-        regenerateIcon(_state.value.copy(colorEnabled = enabled))
+        regenerateIcon(state.value.copy(colorEnabled = enabled))
     }
 
     fun onSizeChanged(size: Int) {
         val clamped = size.coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE)
-        if (clamped == _state.value.size) return
+        if (clamped == state.value.size) return
         viewModelScope.launch { updateUserSettings { it.copy(iconSize = clamped) } }
-        regenerateIcon(_state.value.copy(size = clamped))
+        regenerateIcon(state.value.copy(size = clamped))
     }
 
     fun onForegroundColorChanged(color: Int) {
-        val recentColors = (listOf(color) + _state.value.recentForegroundColors).distinct().take(MAX_RECENT_COLORS)
+        val recentColors = (listOf(color) + state.value.recentForegroundColors).distinct().take(MAX_RECENT_COLORS)
         viewModelScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
-        regenerateIcon(_state.value.copy(foregroundColor = color, recentForegroundColors = recentColors))
+        regenerateIcon(state.value.copy(foregroundColor = color, recentForegroundColors = recentColors))
     }
 
     fun onBackgroundColorChanged(color: Int) {
-        val recentColors = (listOf(color) + _state.value.recentBackgroundColors).distinct().take(MAX_RECENT_COLORS)
+        val recentColors = (listOf(color) + state.value.recentBackgroundColors).distinct().take(MAX_RECENT_COLORS)
         viewModelScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
-        regenerateIcon(_state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
+        regenerateIcon(state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
     }
 
     private fun regenerateIcon(newState: IconUiState) {
@@ -179,7 +178,7 @@ class IconViewModel @Inject constructor(
                     newState.backgroundColor,
                     context.packageManager,
                 )
-            _state.value =
+            state.value =
                 newState.copy(
                     icon = result.bitmap,
                     isAdaptiveIcon = result.isAdaptiveIcon,

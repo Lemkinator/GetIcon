@@ -32,7 +32,6 @@ import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -54,8 +53,8 @@ class MainViewModel @Inject constructor(
     private val _events = Channel<MainEvent>(BUFFERED)
     val events: Flow<MainEvent> = _events.receiveAsFlow()
 
-    private val _installedApps = MutableStateFlow<List<AppInfoData>>(emptyList())
-    val installedApps: StateFlow<List<AppInfoData>> = _installedApps.asStateFlow()
+    val installedApps: StateFlow<List<AppInfoData>>
+        field = MutableStateFlow<List<AppInfoData>>(emptyList())
 
     init {
         viewModelScope.launch { loadInstalledApps() }
@@ -64,7 +63,7 @@ class MainViewModel @Inject constructor(
     @Suppress("TooGenericExceptionCaught")
     private suspend fun loadInstalledApps() {
         try {
-            _installedApps.value = getInstalledApps()
+            installedApps.value = getInstalledApps()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             _events.send(MainEvent.ShowLoadError)
