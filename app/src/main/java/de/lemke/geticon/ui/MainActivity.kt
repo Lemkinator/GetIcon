@@ -43,6 +43,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.collectEvents
 import de.lemke.commonutils.configureCommonUtilsSplashScreen
 import de.lemke.commonutils.data.commonUtilsSettings
+import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.onNavigationSingleClick
 import de.lemke.commonutils.onboardIfNeeded
 import de.lemke.commonutils.prepareActivityTransformationFrom
@@ -68,8 +69,9 @@ import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISM
 import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import de.lemke.commonutils.R as commonutilsR
@@ -80,6 +82,10 @@ class MainActivity :
     ViewYTranslator by AppBarAwareYTranslator() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
+
+    @Inject
+    @IoDispatcher
+    internal lateinit var ioDispatcher: CoroutineDispatcher
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
 
     @VisibleForTesting(otherwise = PRIVATE)
@@ -213,7 +219,7 @@ class MainActivity :
     private suspend fun loadPackageList() {
         try {
             val list =
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     SeslAppInfoDataHelper(applicationContext, GridAppDataBuilder::class.java)
                         .getPackages()
                         .onEach { it.subLabel = it.packageName }

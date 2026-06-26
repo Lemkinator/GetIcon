@@ -29,13 +29,18 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
+import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.geticon.bypassOobe
 import java.net.URL
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -46,6 +51,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 // sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
@@ -53,6 +59,11 @@ import org.robolectric.annotation.GraphicsMode
 class MainActivityScreenshotTest {
     @get:Rule
     val hiltRule = HiltAndroidRule(this)
+
+    @BindValue
+    @IoDispatcher
+    @JvmField
+    val testIoDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setup() {
@@ -73,8 +84,6 @@ class MainActivityScreenshotTest {
     fun mainActivity_default_dark() {
         installFakeApps()
         ActivityScenario.launch(MainActivity::class.java).use {
-            @Suppress("MagicNumber")
-            Thread.sleep(500)
             onView(isRoot()).captureRoboImage("src/test/screenshots/main_default_dark.png")
         }
     }
