@@ -20,9 +20,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import de.lemke.commonutils.di.DefaultDispatcher
 import de.lemke.commonutils.di.IoDispatcher
-import de.lemke.commonutils.di.MainDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
@@ -32,12 +30,4 @@ object DispatchersModule {
     @Provides
     @IoDispatcher
     fun provideIo(): CoroutineDispatcher = Dispatchers.IO
-
-    @Provides
-    @DefaultDispatcher
-    fun provideDefault(): CoroutineDispatcher = Dispatchers.Default
-
-    @Provides
-    @MainDispatcher
-    fun provideMain(): CoroutineDispatcher = Dispatchers.Main
 }

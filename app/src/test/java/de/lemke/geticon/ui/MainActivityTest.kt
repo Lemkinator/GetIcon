@@ -274,7 +274,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun initAppPicker_loadFailure_logsError() {
+    fun loadInstalledApps_onError_doesNotCrash() {
         mockkConstructor(SeslAppInfoDataHelper::class)
         every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws RuntimeException("test")
         try {
@@ -287,7 +287,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun loadPackageList_cancellationException_rethrows() {
+    fun loadInstalledApps_cancellationException_doesNotCrash() {
         mockkConstructor(SeslAppInfoDataHelper::class)
         every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws CancellationException("cancelled")
         try {
