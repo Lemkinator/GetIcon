@@ -86,6 +86,7 @@ class MainActivity :
     @Inject
     @IoDispatcher
     internal lateinit var ioDispatcher: CoroutineDispatcher
+
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
 
     @VisibleForTesting(otherwise = PRIVATE)
