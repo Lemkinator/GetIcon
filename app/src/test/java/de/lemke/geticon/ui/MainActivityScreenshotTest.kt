@@ -36,11 +36,11 @@ import dagger.hilt.android.testing.HiltTestApplication
 import dagger.hilt.android.testing.UninstallModules
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
-import de.lemke.commonutils.di.CoroutineDispatchersModule
 import de.lemke.commonutils.di.DefaultDispatcher
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.di.MainDispatcher
 import de.lemke.geticon.bypassOobe
+import de.lemke.geticon.di.DispatchersModule
 import java.net.URL
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -57,7 +57,7 @@ import org.robolectric.annotation.GraphicsMode
 
 // sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
 @OptIn(ExperimentalCoroutinesApi::class)
-@UninstallModules(CoroutineDispatchersModule::class)
+@UninstallModules(DispatchersModule::class)
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
@@ -86,6 +86,7 @@ class MainActivityScreenshotTest {
         hiltRule.inject()
         ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
         commonUtilsSettings.bypassOobe()
+        installFakeApps()
     }
 
     @Test
@@ -98,7 +99,6 @@ class MainActivityScreenshotTest {
     @Test
     @Config(qualifiers = "+night")
     fun mainActivity_default_dark() {
-        installFakeApps()
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(isRoot()).captureRoboImage("src/test/screenshots/main_default_dark.png")
         }

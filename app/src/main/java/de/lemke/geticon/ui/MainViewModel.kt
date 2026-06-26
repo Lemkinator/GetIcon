@@ -20,13 +20,19 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.picker.model.AppInfoData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.lemke.geticon.domain.ApkProcessResult
+import de.lemke.geticon.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -36,14 +42,34 @@ sealed class MainEvent {
     ) : MainEvent()
 
     data object ShowError : MainEvent()
+
+    data object ShowLoadError : MainEvent()
 }
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val processApk: ProcessApkUseCase,
+    private val getInstalledApps: GetInstalledAppsUseCase,
 ) : ViewModel() {
     private val _events = Channel<MainEvent>(BUFFERED)
     val events: Flow<MainEvent> = _events.receiveAsFlow()
+
+    private val _installedApps = MutableStateFlow<List<AppInfoData>>(emptyList())
+    val installedApps: StateFlow<List<AppInfoData>> = _installedApps.asStateFlow()
+
+    init {
+        viewModelScope.launch { loadInstalledApps() }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun loadInstalledApps() {
+        try {
+            _installedApps.value = getInstalledApps()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            _events.send(MainEvent.ShowLoadError)
+        }
+    }
 
     fun onApkPicked(uri: Uri?) {
         if (uri == null) {
