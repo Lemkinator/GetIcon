@@ -147,7 +147,6 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
-    implementation(libs.kotlin.metadata.jvm)
     ksp(libs.hilt.compiler)
 
     implementation(libs.profileinstaller)
