@@ -93,9 +93,10 @@ class IconActivityScreenshotTest {
     }
 
     @Test
-    fun iconActivity_default() {
-        captureIconScreenshot("src/test/screenshots/icon_default.png")
-    }
+    fun iconActivity_default() =
+        runTest {
+            captureIconScreenshot("src/test/screenshots/icon_default.png")
+        }
 
     @Test
     fun iconActivity_maskDisabled() =
@@ -120,9 +121,10 @@ class IconActivityScreenshotTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun iconActivity_default_dark() {
-        captureIconScreenshot("src/test/screenshots/icon_default_dark.png")
-    }
+    fun iconActivity_default_dark() =
+        runTest {
+            captureIconScreenshot("src/test/screenshots/icon_default_dark.png")
+        }
 
     @Test
     @Config(qualifiers = "+night")
