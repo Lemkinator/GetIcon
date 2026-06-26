@@ -30,7 +30,6 @@ class GetInstalledAppsUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
-    @Suppress("TooGenericExceptionCaught")
     suspend operator fun invoke(): List<AppInfoData> =
         withContext(ioDispatcher) {
             SeslAppInfoDataHelper(context, GridAppDataBuilder::class.java)
