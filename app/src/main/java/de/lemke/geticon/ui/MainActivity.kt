@@ -75,7 +75,7 @@ class MainActivity :
     private val viewModel: MainViewModel by viewModels()
 
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
-    private var lastTransitionView = WeakReference<View?>(null)
+    private var lastTransitionView = WeakReference<View>(null)
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal var isUIReady = false

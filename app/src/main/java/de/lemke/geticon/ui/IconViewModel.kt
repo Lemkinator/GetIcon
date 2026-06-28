@@ -96,6 +96,7 @@ class IconViewModel @Inject constructor(
         if (path.startsWith(context.cacheDir.absolutePath)) File(path).delete()
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun loadInitialState(appInfo: ApplicationInfo) {
         val sourceDir = appInfo.sourceDir
         if (sourceDir != null && sourceDir.startsWith(context.cacheDir.absolutePath) && !File(sourceDir).exists()) {
@@ -137,6 +138,8 @@ class IconViewModel @Inject constructor(
         } catch (e: IOException) {
             _events.send(IconEvent.GenerateFailed(e))
         } catch (e: OutOfMemoryError) {
+            _events.send(IconEvent.GenerateFailed(e))
+        } catch (e: Exception) {
             _events.send(IconEvent.GenerateFailed(e))
         }
     }

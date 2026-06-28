@@ -94,38 +94,33 @@ class MainActivityScreenshotTest {
         val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val fakeApps =
             listOf(
-                // Personal apps — real brand colours
-                FakeApp("OneURL", "de.lemke.oneurl", 0xFF8766C5.toInt(), ouiR.drawable.ic_oui_internet_website),
-                FakeApp("Sudoku", "de.lemke.sudoku", 0xFFCF7200.toInt(), ouiR.drawable.ic_oui_calculation_root),
-                FakeApp("NAKBuch", "de.lemke.nakbuch", 0xFF6F9DD1.toInt(), ouiR.drawable.ic_oui_category_music),
-                FakeApp("OneUI Sample", "de.lemke.oneui.sample", 0xFF0381FE.toInt(), ouiR.drawable.ic_oui_apps),
-                // Funny popular-app clones
-                FakeApp("WhatZap", "com.whatzap.android", 0xFF25D366.toInt(), ouiR.drawable.ic_oui_message),
+                FakeApp("OneURL", "de.lemke.oneurl", 0xFF8766C5.toInt(), ouiR.drawable.ic_oui_open_split_view),
+                FakeApp("Sudoku", "de.lemke.sudoku", 0xFFCF7200.toInt(), ouiR.drawable.ic_oui_list_grid),
+                FakeApp("NAKBuch", "de.lemke.nakbuch", 0xFF6F9DD1.toInt(), ouiR.drawable.ic_oui_audio_outline),
+                FakeApp("OneUI Sample", "de.lemke.oneui.sample", 0xFF0381FE.toInt(), ouiR.drawable.ic_oui_labs_outline),
+                FakeApp("WhatZap", "com.whatzap.android", 0xFF25D366.toInt(), ouiR.drawable.ic_oui_message_outline),
                 FakeApp("Faceplant", "io.faceplant.app", 0xFF1877F2.toInt(), ouiR.drawable.ic_oui_biometric_type_face),
                 FakeApp("Instasham", "co.instasham", 0xFFC13584.toInt(), ouiR.drawable.ic_oui_image),
-                FakeApp("SnackChat", "com.snackchat.android", 0xFFFFFC00.toInt(), ouiR.drawable.ic_oui_camera_outline),
-                FakeApp("Xitter", "com.xitter.android", 0xFF14171A.toInt(), ouiR.drawable.ic_oui_share),
+                FakeApp("SnackChat", "com.snackchat.android", 0xFFD1BB15.toInt(), ouiR.drawable.ic_oui_creatures_outline),
+                FakeApp("Xitter", "com.xitter.android", 0xFF050505.toInt(), ouiR.drawable.ic_oui_share),
                 FakeApp("LinkedOut", "com.linkedout.droid", 0xFF0A66C2.toInt(), ouiR.drawable.ic_oui_contact_outline),
                 FakeApp("YouToob", "com.youtoob.android", 0xFFFF0000.toInt(), ouiR.drawable.ic_oui_control_play_circle_filled),
                 FakeApp("Glitch", "tv.glitch.android", 0xFF9146FF.toInt(), ouiR.drawable.ic_oui_game),
-                FakeApp("Spotifly", "com.spotifly.music", 0xFF1DB954.toInt(), ouiR.drawable.ic_oui_sound),
-                FakeApp("HomeResist", "io.homeresist.companion", 0xFF38B2D8.toInt(), ouiR.drawable.ic_oui_automation),
+                FakeApp("Spotifly", "com.spotifly.music", 0xFF1DB954.toInt(), ouiR.drawable.ic_oui_sound_outline),
+                FakeApp("HomeResist", "io.homeresist.companion", 0xFF38B2D8.toInt(), ouiR.drawable.ic_oui_home_outline),
                 FakeApp("Clod", "com.clod.ai", 0xFFD97C4B.toInt(), ouiR.drawable.ic_oui_message_bot),
-                // Standard system apps
                 FakeApp("Calculator", "com.android.calculator2", 0xFF4CAF50.toInt(), ouiR.drawable.ic_oui_calculation),
                 FakeApp("Files", "com.android.documentsui", 0xFFFF9800.toInt(), ouiR.drawable.ic_oui_file_type_folder),
                 FakeApp("Camera", "com.android.camera2", 0xFF212121.toInt(), ouiR.drawable.ic_oui_camera),
-                FakeApp("Browser", "com.android.chrome", 0xFF1565C0.toInt(), ouiR.drawable.ic_oui_internet_web_search),
-                FakeApp("Phone", "com.android.dialer", 0xFF00BCD4.toInt(), ouiR.drawable.ic_oui_call),
+                FakeApp("Browser", "com.android.chrome", 0xFF1565C0.toInt(), ouiR.drawable.ic_oui_internet_website),
+                FakeApp("Phone", "com.android.dialer", 0xFF00BCD4.toInt(), ouiR.drawable.ic_oui_during_call_outline),
                 FakeApp("Contacts", "com.android.contacts", 0xFF009688.toInt(), ouiR.drawable.ic_oui_contact),
                 FakeApp("Clock", "com.android.deskclock", 0xFFFF5722.toInt(), ouiR.drawable.ic_oui_time),
                 FakeApp("Gallery", "com.android.gallery3d", 0xFF9C27B0.toInt(), ouiR.drawable.ic_oui_image_visual),
-                // More common apps
                 FakeApp("Messages", "com.android.mms", 0xFF3F51B5.toInt(), ouiR.drawable.ic_oui_message_all_read),
                 FakeApp("Email", "com.android.email", 0xFFF44336.toInt(), ouiR.drawable.ic_oui_email),
                 FakeApp("Maps", "com.google.android.apps.maps", 0xFF00C853.toInt(), ouiR.drawable.ic_oui_location),
-                FakeApp("Music", "com.android.music", 0xFFE91E63.toInt(), ouiR.drawable.ic_oui_category_sounds),
-                FakeApp("Settings", "com.android.settings", 0xFF607D8B.toInt(), ouiR.drawable.ic_oui_settings),
+                FakeApp("Settings", "com.android.settings", 0xFF607D8B.toInt(), ouiR.drawable.ic_oui_settings_outline),
             )
         shadowPm.setResolveInfosForIntent(
             launcherIntent,

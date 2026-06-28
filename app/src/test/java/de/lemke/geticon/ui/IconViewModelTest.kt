@@ -288,6 +288,14 @@ class IconViewModelTest : ShouldSpec(
                 }
             }
 
+            should("emit GenerateFailed when generateIcon throws RuntimeException in loadInitialState") {
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+                val viewModel = buildViewModel(appInfo)
+                viewModel.events.test {
+                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
             should("emit GenerateFailed when generateIcon throws OutOfMemoryError in regenerateIcon") {
                 val viewModel = buildViewModel(appInfo)
                 every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
