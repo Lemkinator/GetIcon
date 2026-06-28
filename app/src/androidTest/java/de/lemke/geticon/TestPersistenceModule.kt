@@ -25,6 +25,7 @@ import dagger.Provides
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import de.lemke.geticon.di.PersistenceModule
 import java.util.UUID
 import javax.inject.Singleton
 

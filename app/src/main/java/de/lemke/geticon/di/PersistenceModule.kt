@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.lemke.geticon
+package de.lemke.geticon.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
