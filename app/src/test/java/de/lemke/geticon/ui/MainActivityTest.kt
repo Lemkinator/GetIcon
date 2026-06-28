@@ -152,9 +152,10 @@ class MainActivityTest {
 
     @Test
     fun collectEvents_showError_callsToast() {
+        coEvery { fakeProcessApk(any()) } returns ApkProcessResult.InvalidApk
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(null)
+                ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
             }
             shadowOf(Looper.getMainLooper()).idle()
         }
@@ -238,12 +239,13 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_packageNotFound_returnsFalse() {
+    fun onAppPickerItemClick_packageNotFound_showsToast() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
                 activity.onAppPickerItemClick(null, appInfo)
             }
+            shadowOf(Looper.getMainLooper()).idle()
         }
     }
 

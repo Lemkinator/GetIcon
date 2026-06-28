@@ -234,15 +234,23 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("onCleared skips file deletion when sourceDir is not in cacheDir") {
-                appInfo.sourceDir = "/data/app/com.example.test.apk"
-                buildViewModel(appInfo).triggerOnCleared()
+                buildViewModel(
+                    ApplicationInfo().also {
+                        it.packageName = "com.example.test"
+                        it.sourceDir = "/data/app/com.example.test.apk"
+                    },
+                ).triggerOnCleared()
             }
 
             should("onCleared deletes temp file when sourceDir is in cacheDir") {
                 val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
                 val tmpFile = File(tmpDir, "test_icon.apk").also { it.createNewFile() }
-                appInfo.sourceDir = tmpFile.absolutePath
-                buildViewModel(appInfo).triggerOnCleared()
+                buildViewModel(
+                    ApplicationInfo().also {
+                        it.packageName = "com.example.test"
+                        it.sourceDir = tmpFile.absolutePath
+                    },
+                ).triggerOnCleared()
                 tmpFile.exists() shouldBe false
             }
 
@@ -286,6 +294,30 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.events.test {
                     viewModel.onMaskChanged(false)
                     awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
+            should("emit GenerateFailed when generateIcon throws RuntimeException in regenerateIcon") {
+                val viewModel = buildViewModel(appInfo)
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+                viewModel.events.test {
+                    viewModel.onMaskChanged(false)
+                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
+            should("emit Finish when temp APK file was deleted before loadInitialState (process death)") {
+                val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
+                val deletedApk = File(tmpDir, "deleted_icon_${System.nanoTime()}.apk") // never created
+                val staleInfo =
+                    ApplicationInfo().also {
+                        it.packageName = "com.example.test"
+                        it.sourceDir = deletedApk.absolutePath
+                    }
+                every { mockContext.cacheDir } returns tmpDir
+                val viewModel = buildViewModel(staleInfo)
+                viewModel.events.test {
+                    awaitItem() shouldBe IconEvent.Finish
                 }
             }
 

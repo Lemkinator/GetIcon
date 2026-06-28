@@ -97,6 +97,11 @@ class IconViewModel @Inject constructor(
     }
 
     private suspend fun loadInitialState(appInfo: ApplicationInfo) {
+        val sourceDir = appInfo.sourceDir
+        if (sourceDir != null && sourceDir.startsWith(context.cacheDir.absolutePath) && !File(sourceDir).exists()) {
+            _events.send(IconEvent.Finish)
+            return
+        }
         try {
             val userSettings = getUserSettings()
             val fg = userSettings.recentForegroundColors.first()
@@ -165,6 +170,7 @@ class IconViewModel @Inject constructor(
         regenerateIcon(state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun regenerateIcon(newState: IconUiState) {
         val appInfo = applicationInfo ?: return
         try {
@@ -187,6 +193,8 @@ class IconViewModel @Inject constructor(
                     isLoading = false,
                 )
         } catch (e: OutOfMemoryError) {
+            _events.trySend(IconEvent.GenerateFailed(e))
+        } catch (e: Exception) {
             _events.trySend(IconEvent.GenerateFailed(e))
         }
     }
