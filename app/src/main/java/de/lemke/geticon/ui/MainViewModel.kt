@@ -27,7 +27,6 @@ import de.lemke.geticon.domain.GetApplicationInfoUseCase
 import de.lemke.geticon.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.flow.Flow
@@ -64,11 +63,8 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch { loadInstalledApps() }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private suspend fun loadInstalledApps() {
-        try {
-            installedApps.value = getInstalledApps()
-        } catch (e: Exception) {
+        runCatching { installedApps.value = getInstalledApps() }.onFailure { e ->
             if (e is CancellationException) throw e
             _events.send(MainEvent.ShowLoadError)
         }
