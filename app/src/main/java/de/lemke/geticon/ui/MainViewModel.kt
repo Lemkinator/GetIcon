@@ -37,9 +37,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 sealed class MainEvent {
-    data class NavigateToIcon(
-        val applicationInfo: ApplicationInfo,
-    ) : MainEvent()
+    data class NavigateToIcon(val applicationInfo: ApplicationInfo) : MainEvent()
+
+    data class NavigateToApkIcon(val applicationInfo: ApplicationInfo) : MainEvent()
 
     data object ShowError : MainEvent()
 
@@ -76,7 +76,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val event =
                 when (val result = processApk(uri)) {
-                    is ApkProcessResult.Success -> MainEvent.NavigateToIcon(result.applicationInfo)
+                    is ApkProcessResult.Success -> MainEvent.NavigateToApkIcon(result.applicationInfo)
                     is ApkProcessResult.InvalidApk, is ApkProcessResult.Error -> MainEvent.ShowError
                 }
             _events.send(event)

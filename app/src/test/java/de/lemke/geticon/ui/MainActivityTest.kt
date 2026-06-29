@@ -162,7 +162,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun collectEvents_navigateToIcon_startsIconActivity() {
+    fun collectEvents_navigateToApkIcon_startsIconActivity() {
         val appInfo = mockk<ApplicationInfo>(relaxed = true).also { it.packageName = "com.test" }
         coEvery { fakeProcessApk(any()) } returns ApkProcessResult.Success(appInfo)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->

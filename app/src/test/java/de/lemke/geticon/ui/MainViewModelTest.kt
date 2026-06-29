@@ -86,25 +86,25 @@ class MainViewModelTest : ShouldSpec(
             }
         }
 
-        should("emit NavigateToIcon when processApk succeeds") {
+        should("emit NavigateToApkIcon when processApk succeeds") {
             val uri = mockk<Uri>()
             val appInfo = mockk<ApplicationInfo>()
             coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
 
             viewModel.events.test {
                 viewModel.onApkPicked(uri)
-                awaitItem().shouldBeInstanceOf<MainEvent.NavigateToIcon>()
+                awaitItem().shouldBeInstanceOf<MainEvent.NavigateToApkIcon>()
             }
         }
 
-        should("NavigateToIcon carries the returned ApplicationInfo") {
+        should("NavigateToApkIcon carries the returned ApplicationInfo") {
             val uri = mockk<Uri>()
             val appInfo = mockk<ApplicationInfo>()
             coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
 
             viewModel.events.test {
                 viewModel.onApkPicked(uri)
-                val event = awaitItem() as MainEvent.NavigateToIcon
+                val event = awaitItem() as MainEvent.NavigateToApkIcon
                 event.applicationInfo shouldBe appInfo
             }
         }
