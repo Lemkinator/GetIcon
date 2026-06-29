@@ -87,12 +87,11 @@ class MainActivityScreenshotTest {
 
     private data class FakeApp(val label: String, val packageName: String, val bgColor: Int, val iconRes: Int)
 
-    @Suppress("DEPRECATION", "MagicNumber", "LongMethod")
-    private fun installFakeApps() {
-        val context = ApplicationProvider.getApplicationContext<Application>()
-        val shadowPm = shadowOf(context.packageManager)
-        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val fakeApps =
+    companion object {
+        private const val ICON_SIZE = 192
+
+        @Suppress("MagicNumber")
+        private val FAKE_APPS =
             listOf(
                 FakeApp("OneURL", "de.lemke.oneurl", 0xFF8766C5.toInt(), ouiR.drawable.ic_oui_open_split_view),
                 FakeApp("Sudoku", "de.lemke.sudoku", 0xFFCF7200.toInt(), ouiR.drawable.ic_oui_list_grid),
@@ -122,9 +121,16 @@ class MainActivityScreenshotTest {
                 FakeApp("Maps", "com.google.android.apps.maps", 0xFF00C853.toInt(), ouiR.drawable.ic_oui_location),
                 FakeApp("Settings", "com.android.settings", 0xFF607D8B.toInt(), ouiR.drawable.ic_oui_settings_outline),
             )
+    }
+
+    @Suppress("DEPRECATION")
+    private fun installFakeApps() {
+        val context = ApplicationProvider.getApplicationContext<Application>()
+        val shadowPm = shadowOf(context.packageManager)
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         shadowPm.setResolveInfosForIntent(
             launcherIntent,
-            fakeApps.map { app ->
+            FAKE_APPS.map { app ->
                 ResolveInfo().apply {
                     nonLocalizedLabel = app.label
                     activityInfo =
@@ -141,7 +147,7 @@ class MainActivityScreenshotTest {
                 }
             },
         )
-        fakeApps.forEach { app ->
+        FAKE_APPS.forEach { app ->
             val bitmap = makeIcon(context, app.bgColor, app.iconRes)
             shadowPm.addActivityIcon(
                 ComponentName(app.packageName, "${app.packageName}.MainActivity"),
@@ -156,11 +162,11 @@ class MainActivityScreenshotTest {
         bgColor: Int,
         @DrawableRes iconResId: Int,
     ): Bitmap {
-        val size = 192
+        val size = ICON_SIZE
         val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = bgColor }
-        canvas.drawPath(squirclePath(size), paint)
+        canvas.drawPath(squirclePath(), paint)
         val iconPad = size / 4
         AppCompatResources.getDrawable(context, iconResId)?.apply {
             setBounds(iconPad, iconPad, size - iconPad, size - iconPad)
@@ -171,9 +177,9 @@ class MainActivityScreenshotTest {
     }
 
     @Suppress("MagicNumber")
-    private fun squirclePath(size: Int): Path {
+    private fun squirclePath(): Path {
         // Squircle cubic bezier from ic_splash.xml (100×100 viewport), scaled to bitmap size.
-        val s = size / 100f
+        val s = ICON_SIZE / 100f
         return Path().apply {
             moveTo(99f * s, 50f * s)
             cubicTo(99f * s, 6.935f * s, 77.063f * s, 1f * s, 50f * s, 1f * s)
