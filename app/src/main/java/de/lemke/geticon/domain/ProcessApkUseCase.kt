@@ -28,8 +28,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
-private const val MAX_APK_BYTES = 512L * 1024 * 1024 // 512 MB
-
 sealed class ApkProcessResult {
     data class Success(val applicationInfo: ApplicationInfo) : ApkProcessResult()
 
@@ -53,21 +51,7 @@ class ProcessApkUseCase @Inject constructor(
                     tempFile.delete()
                     return@withContext ApkProcessResult.Error
                 }
-                stream.use { input ->
-                    FileOutputStream(tempFile).use { out ->
-                        var total = 0L
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                        var n: Int
-                        while (input.read(buffer).also { n = it } >= 0) {
-                            total += n
-                            if (total > MAX_APK_BYTES) {
-                                tempFile.delete()
-                                return@withContext ApkProcessResult.Error
-                            }
-                            out.write(buffer, 0, n)
-                        }
-                    }
-                }
+                stream.use { input -> FileOutputStream(tempFile).use { out -> input.copyTo(out) } }
                 val path = tempFile.absolutePath
                 val applicationInfo = context.packageManager.getPackageArchiveInfo(path, 0)?.applicationInfo
                 if (applicationInfo == null) {

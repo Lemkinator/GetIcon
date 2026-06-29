@@ -29,7 +29,6 @@ import io.mockk.every
 import io.mockk.mockk
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -135,29 +134,6 @@ class ProcessApkUseCaseTest : ShouldSpec(
             val success = result.shouldBeInstanceOf<ApkProcessResult.Success>()
             success.applicationInfo.sourceDir.isNotEmpty() shouldBe true
             success.applicationInfo.sourceDir shouldBe success.applicationInfo.publicSourceDir
-        }
-
-        should("return Error when stream exceeds 512 MB") {
-            // Int.MAX_VALUE > MAX_APK_BYTES (536870912), so a single read returning Int.MAX_VALUE triggers the limit
-            val largeStream =
-                mockk<InputStream> {
-                    every { read(any<ByteArray>()) } returns Int.MAX_VALUE
-                    every { close() } returns Unit
-                }
-            every { contentResolver.openInputStream(any()) } returns largeStream
-            val result = useCase(uri)
-            result shouldBe ApkProcessResult.Error
-        }
-
-        should("delete temp file when stream exceeds 512 MB") {
-            val largeStream =
-                mockk<InputStream> {
-                    every { read(any<ByteArray>()) } returns Int.MAX_VALUE
-                    every { close() } returns Unit
-                }
-            every { contentResolver.openInputStream(any()) } returns largeStream
-            useCase(uri)
-            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
         }
     },
 )
