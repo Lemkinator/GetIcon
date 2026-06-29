@@ -48,7 +48,6 @@ class GenerateIconUseCase @Inject constructor(
      *
      * @return An [IconResult] containing the rendered bitmap and metadata about the icon type.
      */
-    @Suppress("TooGenericExceptionCaught")
     @SuppressLint("RestrictedApi")
     operator fun invoke(
         applicationInfo: ApplicationInfo,
@@ -60,17 +59,16 @@ class GenerateIconUseCase @Inject constructor(
         packageManager: PackageManager,
     ): IconResult {
         val appIcon: Drawable =
-            try {
-                applicationInfo.loadIcon(packageManager)
-            } catch (e: Exception) {
-                Log.w("GenerateIconUseCase", "loadIcon failed for ${applicationInfo.packageName}", e)
-                AppCompatResources.getDrawable(context, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)
-                    ?: return IconResult(
-                        bitmap = createBitmap(size, size),
-                        isAdaptiveIcon = false,
-                        hasMaskedAppIcon = false,
-                    )
-            }
+            runCatching { applicationInfo.loadIcon(packageManager) }
+                .getOrElse { e ->
+                    Log.w("GenerateIconUseCase", "loadIcon failed for ${applicationInfo.packageName}", e)
+                    AppCompatResources.getDrawable(context, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)
+                        ?: return IconResult(
+                            bitmap = createBitmap(size, size),
+                            isAdaptiveIcon = false,
+                            hasMaskedAppIcon = false,
+                        )
+                }
         val maskedAppIcon = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
         val isAdaptiveIcon = appIcon is AdaptiveIconDrawable
         val hasMaskedAppIcon = isAdaptiveIcon || maskedAppIcon != null
