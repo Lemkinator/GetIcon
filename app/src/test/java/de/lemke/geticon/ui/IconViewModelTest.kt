@@ -370,6 +370,41 @@ class IconViewModelTest : ShouldSpec(
                 repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
                 viewModel.state.value.recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
             }
+
+            should("onCleared skips deletion when canonicalFile throws IOException") {
+                val mockCacheDir = mockk<File>()
+                every { mockCacheDir.canonicalFile } throws IOException("canonical failed")
+                every { mockContext.cacheDir } returns mockCacheDir
+                val tmpFile =
+                    File(System.getProperty("java.io.tmpdir") ?: "/tmp", "test_${System.nanoTime()}.apk")
+                        .also { it.createNewFile() }
+                try {
+                    buildViewModel(
+                        ApplicationInfo().also {
+                            it.packageName = "com.example.test"
+                            it.sourceDir = tmpFile.absolutePath
+                        },
+                    ).triggerOnCleared()
+                    tmpFile.exists() shouldBe true
+                } finally {
+                    tmpFile.delete()
+                }
+            }
+
+            should("loadInitialState falls through to generateIcon when canonicalFile throws IOException") {
+                val mockCacheDir = mockk<File>()
+                every { mockCacheDir.canonicalFile } throws IOException("canonical failed")
+                every { mockContext.cacheDir } returns mockCacheDir
+                val viewModel =
+                    buildViewModel(
+                        mockk<ApplicationInfo>(relaxed = true).also {
+                            it.packageName = "com.example.test"
+                            it.sourceDir =
+                                File(System.getProperty("java.io.tmpdir") ?: "/tmp", "test_${System.nanoTime()}.apk").absolutePath
+                        },
+                    )
+                viewModel.state.value.isLoading shouldBe false
+            }
         }
     },
 )
