@@ -18,7 +18,6 @@ package de.lemke.geticon.domain
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.content.pm.PackageManager.NameNotFoundException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
