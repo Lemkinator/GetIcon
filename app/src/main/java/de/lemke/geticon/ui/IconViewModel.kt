@@ -92,12 +92,12 @@ class IconViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         val sourceFile = applicationInfo?.sourceDir?.let { File(it) } ?: return
-        if (sourceFile.startsWith(context.cacheDir)) sourceFile.delete()
+        if (sourceFile.canonicalFile.startsWith(context.cacheDir.canonicalFile)) sourceFile.delete()
     }
 
     private suspend fun loadInitialState(appInfo: ApplicationInfo) {
         val sourceFile = appInfo.sourceDir?.let { File(it) }
-        if (sourceFile != null && sourceFile.startsWith(context.cacheDir) && !sourceFile.exists()) {
+        if (sourceFile != null && sourceFile.canonicalFile.startsWith(context.cacheDir.canonicalFile) && !sourceFile.exists()) {
             _events.send(IconEvent.Finish)
             return
         }
