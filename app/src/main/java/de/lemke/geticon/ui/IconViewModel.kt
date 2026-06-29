@@ -33,7 +33,6 @@ import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import java.io.File
-import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
@@ -96,14 +95,13 @@ class IconViewModel @Inject constructor(
         if (path.startsWith(context.cacheDir.absolutePath)) File(path).delete()
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private suspend fun loadInitialState(appInfo: ApplicationInfo) {
         val sourceDir = appInfo.sourceDir
         if (sourceDir != null && sourceDir.startsWith(context.cacheDir.absolutePath) && !File(sourceDir).exists()) {
             _events.send(IconEvent.Finish)
             return
         }
-        try {
+        runCatching {
             val userSettings = getUserSettings()
             val fg = userSettings.recentForegroundColors.first()
             val bg = userSettings.recentBackgroundColors.first()
@@ -133,13 +131,8 @@ class IconViewModel @Inject constructor(
                     recentBackgroundColors = userSettings.recentBackgroundColors,
                     isLoading = false,
                 )
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: IOException) {
-            _events.send(IconEvent.GenerateFailed(e))
-        } catch (e: OutOfMemoryError) {
-            _events.send(IconEvent.GenerateFailed(e))
-        } catch (e: Exception) {
+        }.onFailure { e ->
+            if (e is CancellationException) throw e
             _events.send(IconEvent.GenerateFailed(e))
         }
     }
@@ -173,10 +166,9 @@ class IconViewModel @Inject constructor(
         regenerateIcon(state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun regenerateIcon(newState: IconUiState) {
         val appInfo = applicationInfo ?: return
-        try {
+        runCatching {
             val result =
                 generateIcon(
                     appInfo,
@@ -195,9 +187,7 @@ class IconViewModel @Inject constructor(
                     fileName = buildFileName(appInfo.packageName, newState.maskEnabled, newState.colorEnabled),
                     isLoading = false,
                 )
-        } catch (e: OutOfMemoryError) {
-            _events.trySend(IconEvent.GenerateFailed(e))
-        } catch (e: Exception) {
+        }.onFailure { e ->
             _events.trySend(IconEvent.GenerateFailed(e))
         }
     }
