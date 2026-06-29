@@ -235,6 +235,18 @@ class MainActivityTest {
                 val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
                 activity.onAppPickerItemClick(null, appInfo)
             }
+            shadowOf(Looper.getMainLooper()).idle()
+        }
+    }
+
+    @Test
+    fun onAppPickerItemClick_withNonNullView_setsTransitionView() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
+                activity.onAppPickerItemClick(activity.window.decorView, appInfo)
+            }
+            shadowOf(Looper.getMainLooper()).idle()
         }
     }
 

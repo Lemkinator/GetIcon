@@ -75,7 +75,7 @@ class MainActivity :
     private val viewModel: MainViewModel by viewModels()
 
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
-    private var lastTransitionView = WeakReference<View>(null)
+    private var lastTransitionView: WeakReference<View>? = null
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal var isUIReady = false
@@ -129,7 +129,7 @@ class MainActivity :
                     val intent =
                         Intent(this@MainActivity, IconActivity::class.java)
                             .putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
-                    transformToActivity(lastTransitionView.get(), intent)
+                    transformToActivity(lastTransitionView?.get(), intent)
                 }
 
                 is MainEvent.NavigateToApkIcon -> {
@@ -221,7 +221,7 @@ class MainActivity :
         appInfo: AppInfo,
     ): Boolean {
         hideSoftInput()
-        lastTransitionView = WeakReference(view)
+        lastTransitionView = view?.let { WeakReference(it) }
         viewModel.onAppSelected(appInfo.packageName)
         return true
     }
