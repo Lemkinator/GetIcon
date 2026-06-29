@@ -126,10 +126,12 @@ class MainActivity :
         collectEvents(viewModel.events) { event ->
             when (event) {
                 is MainEvent.NavigateToIcon -> {
+                    val transitionView = lastTransitionView.get()
+                    lastTransitionView = WeakReference(null)
                     val intent =
                         Intent(this@MainActivity, IconActivity::class.java)
                             .putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
-                    transformToActivity(lastTransitionView.get(), intent)
+                    transformToActivity(transitionView, intent)
                 }
 
                 MainEvent.ShowError -> {

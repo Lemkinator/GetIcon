@@ -27,6 +27,7 @@ import de.lemke.geticon.domain.GetApplicationInfoUseCase
 import de.lemke.geticon.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.flow.Flow
