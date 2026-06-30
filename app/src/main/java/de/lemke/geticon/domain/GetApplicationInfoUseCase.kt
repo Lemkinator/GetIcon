@@ -18,7 +18,10 @@ package de.lemke.geticon.domain
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.content.pm.PackageManager.NameNotFoundException
+import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES.TIRAMISU
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -27,7 +30,12 @@ class GetApplicationInfoUseCase @Inject constructor(
 ) {
     operator fun invoke(packageName: String): ApplicationInfo? =
         try {
-            context.packageManager.getApplicationInfo(packageName, 0)
+            if (SDK_INT >= TIRAMISU) {
+                context.packageManager.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0L))
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getApplicationInfo(packageName, 0)
+            }
         } catch (_: NameNotFoundException) {
             null
         }
