@@ -130,6 +130,7 @@ class MainActivity :
                         Intent(this@MainActivity, IconActivity::class.java)
                             .putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
                     transformToActivity(lastTransitionView?.get(), intent)
+                    lastTransitionView = null
                 }
 
                 is MainEvent.NavigateToApkIcon -> {
