@@ -152,16 +152,17 @@ class MainActivityTest {
 
     @Test
     fun collectEvents_showError_callsToast() {
+        coEvery { fakeProcessApk(any()) } returns ApkProcessResult.InvalidApk
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(null)
+                ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
             }
             shadowOf(Looper.getMainLooper()).idle()
         }
     }
 
     @Test
-    fun collectEvents_navigateToIcon_startsIconActivity() {
+    fun collectEvents_navigateToApkIcon_startsIconActivity() {
         val appInfo = mockk<ApplicationInfo>(relaxed = true).also { it.packageName = "com.test" }
         coEvery { fakeProcessApk(any()) } returns ApkProcessResult.Success(appInfo)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -234,16 +235,29 @@ class MainActivityTest {
                 val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
                 activity.onAppPickerItemClick(null, appInfo)
             }
+            shadowOf(Looper.getMainLooper()).idle()
         }
     }
 
     @Test
-    fun onAppPickerItemClick_packageNotFound_returnsFalse() {
+    fun onAppPickerItemClick_withNonNullView_setsTransitionView() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
+                activity.onAppPickerItemClick(activity.window.decorView, appInfo)
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+        }
+    }
+
+    @Test
+    fun onAppPickerItemClick_packageNotFound_showsToast() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
                 activity.onAppPickerItemClick(null, appInfo)
             }
+            shadowOf(Looper.getMainLooper()).idle()
         }
     }
 

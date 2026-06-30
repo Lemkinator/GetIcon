@@ -33,7 +33,6 @@ import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import java.io.File
-import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
@@ -92,12 +91,21 @@ class IconViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        val path = applicationInfo?.sourceDir ?: return
-        if (path.startsWith(context.cacheDir.absolutePath)) File(path).delete()
+        val sourceFile = applicationInfo?.sourceDir?.let { File(it) } ?: return
+        val isInCache = runCatching { sourceFile.canonicalFile.startsWith(context.cacheDir.canonicalFile) }.getOrElse { false }
+        if (isInCache) sourceFile.delete()
     }
 
     private suspend fun loadInitialState(appInfo: ApplicationInfo) {
-        try {
+        val sourceFile = appInfo.sourceDir?.let { File(it) }
+        if (sourceFile != null) {
+            val isInCache = runCatching { sourceFile.canonicalFile.startsWith(context.cacheDir.canonicalFile) }.getOrElse { false }
+            if (isInCache && !sourceFile.exists()) {
+                _events.send(IconEvent.Finish)
+                return
+            }
+        }
+        runCatching {
             val userSettings = getUserSettings()
             val fg = userSettings.recentForegroundColors.first()
             val bg = userSettings.recentBackgroundColors.first()
@@ -127,11 +135,8 @@ class IconViewModel @Inject constructor(
                     recentBackgroundColors = userSettings.recentBackgroundColors,
                     isLoading = false,
                 )
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: IOException) {
-            _events.send(IconEvent.GenerateFailed(e))
-        } catch (e: OutOfMemoryError) {
+        }.onFailure { e ->
+            if (e is CancellationException) throw e
             _events.send(IconEvent.GenerateFailed(e))
         }
     }
@@ -165,9 +170,11 @@ class IconViewModel @Inject constructor(
         regenerateIcon(state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
     }
 
+    // generateIcon runs synchronously on Main (~5 ms). Dispatching to Default caused slider jank:
+    // cancellation was ineffective mid-withContext, producing concurrent bitmap allocations (557e6db).
     private fun regenerateIcon(newState: IconUiState) {
         val appInfo = applicationInfo ?: return
-        try {
+        runCatching {
             val result =
                 generateIcon(
                     appInfo,
@@ -186,7 +193,7 @@ class IconViewModel @Inject constructor(
                     fileName = buildFileName(appInfo.packageName, newState.maskEnabled, newState.colorEnabled),
                     isLoading = false,
                 )
-        } catch (e: OutOfMemoryError) {
+        }.onFailure { e ->
             _events.trySend(IconEvent.GenerateFailed(e))
         }
     }

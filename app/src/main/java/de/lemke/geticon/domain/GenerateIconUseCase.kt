@@ -26,6 +26,7 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.TIRAMISU
+import android.util.Log
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
@@ -57,10 +58,12 @@ class GenerateIconUseCase @Inject constructor(
         backgroundColor: Int,
         packageManager: PackageManager,
     ): IconResult {
+        @Suppress("TooGenericExceptionCaught")
         val appIcon: Drawable =
             try {
                 applicationInfo.loadIcon(packageManager)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("GenerateIconUseCase", "loadIcon failed for ${applicationInfo.packageName}", e)
                 AppCompatResources.getDrawable(context, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)
                     ?: return IconResult(
                         bitmap = createBitmap(size, size),

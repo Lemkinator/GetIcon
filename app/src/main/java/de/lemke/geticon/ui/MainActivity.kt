@@ -18,11 +18,9 @@ package de.lemke.geticon.ui
 
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
-import android.content.pm.PackageManager.NameNotFoundException
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -66,6 +64,7 @@ import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISM
 import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
+import java.lang.ref.WeakReference
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
@@ -76,6 +75,7 @@ class MainActivity :
     private val viewModel: MainViewModel by viewModels()
 
     private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
+    private var lastTransitionView: WeakReference<View>? = null
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal var isUIReady = false
@@ -126,9 +126,18 @@ class MainActivity :
         collectEvents(viewModel.events) { event ->
             when (event) {
                 is MainEvent.NavigateToIcon -> {
-                    startActivity(
-                        Intent(this@MainActivity, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, event.applicationInfo),
-                    )
+                    val intent =
+                        Intent(this@MainActivity, IconActivity::class.java)
+                            .putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
+                    transformToActivity(lastTransitionView?.get(), intent)
+                    lastTransitionView = null
+                }
+
+                is MainEvent.NavigateToApkIcon -> {
+                    val intent =
+                        Intent(this@MainActivity, IconActivity::class.java)
+                            .putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
+                    transformToActivity(null, intent)
                 }
 
                 MainEvent.ShowError -> {
@@ -137,6 +146,10 @@ class MainActivity :
 
                 MainEvent.ShowLoadError -> {
                     toast(commonutilsR.string.commonutils_error)
+                }
+
+                MainEvent.ShowAppNotFoundError -> {
+                    toast(commonutilsR.string.commonutils_error_app_not_found)
                 }
             }
         }
@@ -207,16 +220,10 @@ class MainActivity :
     internal fun onAppPickerItemClick(
         view: View?,
         appInfo: AppInfo,
-    ): Boolean =
-        try {
-            hideSoftInput()
-            val appInfo2 = packageManager.getApplicationInfo(appInfo.packageName, 0)
-            val intent = Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, appInfo2)
-            transformToActivity(view, intent)
-            true
-        } catch (e: NameNotFoundException) {
-            Log.e("MainActivity", "App not found: ${appInfo.packageName}", e)
-            toast(commonutilsR.string.commonutils_error_app_not_found)
-            false
-        }
+    ): Boolean {
+        hideSoftInput()
+        lastTransitionView = view?.let { WeakReference(it) }
+        viewModel.onAppSelected(appInfo.packageName)
+        return true
+    }
 }

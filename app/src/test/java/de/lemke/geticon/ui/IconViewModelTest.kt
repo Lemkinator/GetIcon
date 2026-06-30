@@ -234,15 +234,23 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("onCleared skips file deletion when sourceDir is not in cacheDir") {
-                appInfo.sourceDir = "/data/app/com.example.test.apk"
-                buildViewModel(appInfo).triggerOnCleared()
+                buildViewModel(
+                    ApplicationInfo().also {
+                        it.packageName = "com.example.test"
+                        it.sourceDir = "/data/app/com.example.test.apk"
+                    },
+                ).triggerOnCleared()
             }
 
             should("onCleared deletes temp file when sourceDir is in cacheDir") {
                 val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
                 val tmpFile = File(tmpDir, "test_icon.apk").also { it.createNewFile() }
-                appInfo.sourceDir = tmpFile.absolutePath
-                buildViewModel(appInfo).triggerOnCleared()
+                buildViewModel(
+                    ApplicationInfo().also {
+                        it.packageName = "com.example.test"
+                        it.sourceDir = tmpFile.absolutePath
+                    },
+                ).triggerOnCleared()
                 tmpFile.exists() shouldBe false
             }
 
@@ -280,12 +288,44 @@ class IconViewModelTest : ShouldSpec(
                 }
             }
 
+            should("emit GenerateFailed when generateIcon throws RuntimeException in loadInitialState") {
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+                val viewModel = buildViewModel(appInfo)
+                viewModel.events.test {
+                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
             should("emit GenerateFailed when generateIcon throws OutOfMemoryError in regenerateIcon") {
                 val viewModel = buildViewModel(appInfo)
                 every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
                 viewModel.events.test {
                     viewModel.onMaskChanged(false)
                     awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
+            should("emit GenerateFailed when generateIcon throws RuntimeException in regenerateIcon") {
+                val viewModel = buildViewModel(appInfo)
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+                viewModel.events.test {
+                    viewModel.onMaskChanged(false)
+                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                }
+            }
+
+            should("emit Finish when temp APK file was deleted before loadInitialState (process death)") {
+                val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
+                val deletedApk = File(tmpDir, "deleted_icon_${System.nanoTime()}.apk") // never created
+                val staleInfo =
+                    ApplicationInfo().also {
+                        it.packageName = "com.example.test"
+                        it.sourceDir = deletedApk.absolutePath
+                    }
+                every { mockContext.cacheDir } returns tmpDir
+                val viewModel = buildViewModel(staleInfo)
+                viewModel.events.test {
+                    awaitItem() shouldBe IconEvent.Finish
                 }
             }
 
@@ -329,6 +369,41 @@ class IconViewModelTest : ShouldSpec(
                 val viewModel = buildViewModel(appInfo)
                 repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
                 viewModel.state.value.recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
+            }
+
+            should("onCleared skips deletion when canonicalFile throws IOException") {
+                val mockCacheDir = mockk<File>()
+                every { mockCacheDir.canonicalFile } throws IOException("canonical failed")
+                every { mockContext.cacheDir } returns mockCacheDir
+                val tmpFile =
+                    File(System.getProperty("java.io.tmpdir") ?: "/tmp", "test_${System.nanoTime()}.apk")
+                        .also { it.createNewFile() }
+                try {
+                    buildViewModel(
+                        ApplicationInfo().also {
+                            it.packageName = "com.example.test"
+                            it.sourceDir = tmpFile.absolutePath
+                        },
+                    ).triggerOnCleared()
+                    tmpFile.exists() shouldBe true
+                } finally {
+                    tmpFile.delete()
+                }
+            }
+
+            should("loadInitialState falls through to generateIcon when canonicalFile throws IOException") {
+                val mockCacheDir = mockk<File>()
+                every { mockCacheDir.canonicalFile } throws IOException("canonical failed")
+                every { mockContext.cacheDir } returns mockCacheDir
+                val viewModel =
+                    buildViewModel(
+                        mockk<ApplicationInfo>(relaxed = true).also {
+                            it.packageName = "com.example.test"
+                            it.sourceDir =
+                                File(System.getProperty("java.io.tmpdir") ?: "/tmp", "test_${System.nanoTime()}.apk").absolutePath
+                        },
+                    )
+                viewModel.state.value.isLoading shouldBe false
             }
         }
     },

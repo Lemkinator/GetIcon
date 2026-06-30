@@ -51,7 +51,7 @@ class ProcessApkUseCase @Inject constructor(
                     tempFile.delete()
                     return@withContext ApkProcessResult.Error
                 }
-                stream.use { FileOutputStream(tempFile).use { out -> it.copyTo(out) } }
+                stream.use { input -> FileOutputStream(tempFile).use { out -> input.copyTo(out) } }
                 val path = tempFile.absolutePath
                 val applicationInfo = context.packageManager.getPackageArchiveInfo(path, 0)?.applicationInfo
                 if (applicationInfo == null) {

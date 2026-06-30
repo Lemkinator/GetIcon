@@ -18,12 +18,20 @@ package de.lemke.geticon.ui
 
 import android.app.Application
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.ResolveInfo
-import android.graphics.BitmapFactory
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.drawable.BitmapDrawable
+import androidx.annotation.DrawableRes
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.createBitmap
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
@@ -35,7 +43,6 @@ import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.commonUtilsSettings
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.geticon.bypassOobe
-import java.net.URL
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -44,6 +51,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import dev.oneuiproject.oneui.R as ouiR
 
 // sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
 @HiltAndroidTest
@@ -77,65 +85,108 @@ class MainActivityScreenshotTest {
         }
     }
 
+    private data class FakeApp(val label: String, val packageName: String, val bgColor: Int, val iconRes: Int)
+
+    companion object {
+        private const val ICON_SIZE = 192
+
+        @Suppress("MagicNumber")
+        private val FAKE_APPS =
+            listOf(
+                FakeApp("OneURL", "de.lemke.oneurl", 0xFF8766C5.toInt(), ouiR.drawable.ic_oui_open_split_view),
+                FakeApp("Sudoku", "de.lemke.sudoku", 0xFFCF7200.toInt(), ouiR.drawable.ic_oui_list_grid),
+                FakeApp("NAKBuch", "de.lemke.nakbuch", 0xFF6F9DD1.toInt(), ouiR.drawable.ic_oui_audio_outline),
+                FakeApp("OneUI Sample", "de.lemke.oneui.sample", 0xFF0381FE.toInt(), ouiR.drawable.ic_oui_labs_outline),
+                FakeApp("WhatZap", "com.whatzap.android", 0xFF25D366.toInt(), ouiR.drawable.ic_oui_message_outline),
+                FakeApp("Faceplant", "io.faceplant.app", 0xFF1877F2.toInt(), ouiR.drawable.ic_oui_biometric_type_face),
+                FakeApp("Instasham", "co.instasham", 0xFFC13584.toInt(), ouiR.drawable.ic_oui_image),
+                FakeApp("SnackChat", "com.snackchat.android", 0xFFD1BB15.toInt(), ouiR.drawable.ic_oui_creatures_outline),
+                FakeApp("Xitter", "com.xitter.android", 0xFF050505.toInt(), ouiR.drawable.ic_oui_share),
+                FakeApp("LinkedOut", "com.linkedout.droid", 0xFF0A66C2.toInt(), ouiR.drawable.ic_oui_contact_outline),
+                FakeApp("YouToob", "com.youtoob.android", 0xFFFF0000.toInt(), ouiR.drawable.ic_oui_control_play_circle_filled),
+                FakeApp("Glitch", "tv.glitch.android", 0xFF9146FF.toInt(), ouiR.drawable.ic_oui_game),
+                FakeApp("Spotifly", "com.spotifly.music", 0xFF1DB954.toInt(), ouiR.drawable.ic_oui_sound_outline),
+                FakeApp("HomeResist", "io.homeresist.companion", 0xFF38B2D8.toInt(), ouiR.drawable.ic_oui_home_outline),
+                FakeApp("Clod", "com.clod.ai", 0xFFD97C4B.toInt(), ouiR.drawable.ic_oui_message_bot),
+                FakeApp("Calculator", "com.android.calculator2", 0xFF4CAF50.toInt(), ouiR.drawable.ic_oui_calculation),
+                FakeApp("Files", "com.android.documentsui", 0xFFFF9800.toInt(), ouiR.drawable.ic_oui_file_type_folder),
+                FakeApp("Camera", "com.android.camera2", 0xFF212121.toInt(), ouiR.drawable.ic_oui_camera),
+                FakeApp("Browser", "com.android.chrome", 0xFF1565C0.toInt(), ouiR.drawable.ic_oui_internet_website),
+                FakeApp("Phone", "com.android.dialer", 0xFF00BCD4.toInt(), ouiR.drawable.ic_oui_during_call_outline),
+                FakeApp("Contacts", "com.android.contacts", 0xFF009688.toInt(), ouiR.drawable.ic_oui_contact),
+                FakeApp("Clock", "com.android.deskclock", 0xFFFF5722.toInt(), ouiR.drawable.ic_oui_time),
+                FakeApp("Gallery", "com.android.gallery3d", 0xFF9C27B0.toInt(), ouiR.drawable.ic_oui_image_visual),
+                FakeApp("Messages", "com.android.mms", 0xFF3F51B5.toInt(), ouiR.drawable.ic_oui_message_all_read),
+                FakeApp("Email", "com.android.email", 0xFFF44336.toInt(), ouiR.drawable.ic_oui_email),
+                FakeApp("Maps", "com.google.android.apps.maps", 0xFF00C853.toInt(), ouiR.drawable.ic_oui_location),
+                FakeApp("Settings", "com.android.settings", 0xFF607D8B.toInt(), ouiR.drawable.ic_oui_settings_outline),
+            )
+    }
+
     @Suppress("DEPRECATION")
     private fun installFakeApps() {
         val context = ApplicationProvider.getApplicationContext<Application>()
         val shadowPm = shadowOf(context.packageManager)
         val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val fakeApps =
-            listOf(
-                // My apps
-                Pair("Sudoku", "https://raw.githubusercontent.com/Lemkinator/Sudoku/main/img/Sudoku_squircle.png"),
-                Pair("OneURL", "https://raw.githubusercontent.com/Lemkinator/OneUrl/main/img/OneURL_squircle.png"),
-                Pair("NAKBuch", "https://raw.githubusercontent.com/Lemkinator/nakbuch_lite_web/main/icons/Icon-squircle-512.png"),
-                // Popular open source apps — icons via F-Droid CDN
-                Pair("Aegis", "https://f-droid.org/repo/com.beemdevelopment.aegis/en-US/icon.png"),
-                Pair("Catima", "https://f-droid.org/repo/me.hackerchick.catima/en-US/icon.png"),
-                Pair("Conversations", "https://f-droid.org/repo/eu.siacs.conversations/en-US/icon.png"),
-                Pair("Element", "https://f-droid.org/repo/im.vector.app/en-US/icon.png"),
-                Pair("F-Droid", "https://f-droid.org/repo/org.fdroid.fdroid/en-US/icon.png"),
-                Pair("Feeder", "https://f-droid.org/repo/com.nononsenseapps.feeder/en-US/icon.png"),
-                Pair("Fritter", "https://f-droid.org/repo/com.jonjomckay.fritter/en-US/icon.png"),
-                Pair("Grocy", "https://f-droid.org/repo/xyz.zedler.patrick.grocy/en-US/icon.png"),
-                Pair("K-9 Mail", "https://f-droid.org/repo/com.fsck.k9/en-US/icon.png"),
-                Pair("Kiwix", "https://f-droid.org/repo/org.kiwix.kiwixmobile/en-US/icon.png"),
-                Pair("Nextcloud", "https://f-droid.org/repo/com.nextcloud.client/en-US/icon.png"),
-                Pair("NewPipe", "https://f-droid.org/repo/org.schabi.newpipe/en-US/icon.png"),
-                Pair("Open Food Facts", "https://f-droid.org/repo/openfoodfacts.github.scrachx.openfood/en-US/icon.png"),
-                Pair("Organic Maps", "https://f-droid.org/repo/app.organicmaps/en-US/icon.png"),
-                Pair("OsmAnd", "https://f-droid.org/repo/net.osmand.plus/en-US/icon.png"),
-                Pair("ReadYou", "https://f-droid.org/repo/me.ash.reader/en-US/icon.png"),
-                Pair("Simple Calendar", "https://f-droid.org/repo/com.simplemobiletools.calendar.pro/en-US/icon.png"),
-                Pair("Simple Gallery", "https://f-droid.org/repo/com.simplemobiletools.gallery.pro/en-US/icon.png"),
-                Pair("Tasks", "https://f-droid.org/repo/org.tasks/en-US/icon.png"),
-                Pair("Telegram", "https://f-droid.org/repo/org.telegram.messenger/en-US/icon.png"),
-                Pair("Tutanota", "https://f-droid.org/repo/de.tutao.tutanota/en-US/icon.png"),
-                Pair("Tusky", "https://f-droid.org/repo/com.keylesspalace.tusky/en-US/icon.png"),
-                Pair("VLC", "https://f-droid.org/repo/org.videolan.vlc/en-US/icon.png"),
-                Pair("Wire", "https://f-droid.org/repo/com.wire/en-US/icon.png"),
-            )
         shadowPm.setResolveInfosForIntent(
             launcherIntent,
-            fakeApps.map { (label, _) ->
+            FAKE_APPS.map { app ->
                 ResolveInfo().apply {
-                    nonLocalizedLabel = label
+                    nonLocalizedLabel = app.label
                     activityInfo =
                         ActivityInfo().apply {
-                            packageName = label
-                            name = "$label.MainActivity"
+                            packageName = app.packageName
+                            name = "${app.packageName}.MainActivity"
                             applicationInfo =
                                 ApplicationInfo().apply {
-                                    packageName = label
-                                    nonLocalizedLabel = label
+                                    packageName = app.packageName
+                                    nonLocalizedLabel = app.label
                                     flags = ApplicationInfo.FLAG_INSTALLED
                                 }
                         }
                 }
             },
         )
-        fakeApps.forEach { (label, url) ->
-            val bitmap = BitmapFactory.decodeStream(URL(url).openStream())
-            shadowPm.addActivityIcon(ComponentName(label, "$label.MainActivity"), BitmapDrawable(context.resources, bitmap))
+        FAKE_APPS.forEach { app ->
+            val bitmap = makeIcon(context, app.bgColor, app.iconRes)
+            shadowPm.addActivityIcon(
+                ComponentName(app.packageName, "${app.packageName}.MainActivity"),
+                BitmapDrawable(context.resources, bitmap),
+            )
+        }
+    }
+
+    @Suppress("MagicNumber")
+    private fun makeIcon(
+        context: Context,
+        bgColor: Int,
+        @DrawableRes iconResId: Int,
+    ): Bitmap {
+        val size = ICON_SIZE
+        val bitmap = createBitmap(size, size)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = bgColor }
+        canvas.drawPath(squirclePath(), paint)
+        val iconPad = size / 4
+        AppCompatResources.getDrawable(context, iconResId)?.apply {
+            setBounds(iconPad, iconPad, size - iconPad, size - iconPad)
+            setTint(Color.WHITE)
+            draw(canvas)
+        }
+        return bitmap
+    }
+
+    @Suppress("MagicNumber")
+    private fun squirclePath(): Path {
+        // Squircle cubic bezier from ic_splash.xml (100×100 viewport), scaled to bitmap size.
+        val s = ICON_SIZE / 100f
+        return Path().apply {
+            moveTo(99f * s, 50f * s)
+            cubicTo(99f * s, 6.935f * s, 77.063f * s, 1f * s, 50f * s, 1f * s)
+            cubicTo(22.935f * s, 1f * s, 1f * s, 6.935f * s, 1f * s, 50f * s)
+            cubicTo(1f * s, 93.063f * s, 22.935f * s, 99f * s, 50f * s, 99f * s)
+            cubicTo(77.063f * s, 99f * s, 99f * s, 93.063f * s, 99f * s, 50f * s)
+            close()
         }
     }
 }

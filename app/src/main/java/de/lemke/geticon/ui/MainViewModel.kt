@@ -23,6 +23,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.picker.model.AppInfoData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.lemke.geticon.domain.ApkProcessResult
+import de.lemke.geticon.domain.GetApplicationInfoUseCase
 import de.lemke.geticon.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
 import javax.inject.Inject
@@ -36,19 +37,22 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 sealed class MainEvent {
-    data class NavigateToIcon(
-        val applicationInfo: ApplicationInfo,
-    ) : MainEvent()
+    data class NavigateToIcon(val applicationInfo: ApplicationInfo) : MainEvent()
+
+    data class NavigateToApkIcon(val applicationInfo: ApplicationInfo) : MainEvent()
 
     data object ShowError : MainEvent()
 
     data object ShowLoadError : MainEvent()
+
+    data object ShowAppNotFoundError : MainEvent()
 }
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val processApk: ProcessApkUseCase,
     private val getInstalledApps: GetInstalledAppsUseCase,
+    private val getApplicationInfo: GetApplicationInfoUseCase,
 ) : ViewModel() {
     private val _events = Channel<MainEvent>(BUFFERED)
     val events: Flow<MainEvent> = _events.receiveAsFlow()
@@ -60,28 +64,33 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch { loadInstalledApps() }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private suspend fun loadInstalledApps() {
-        try {
-            installedApps.value = getInstalledApps()
-        } catch (e: Exception) {
+        runCatching { installedApps.value = getInstalledApps() }.onFailure { e ->
             if (e is CancellationException) throw e
             _events.send(MainEvent.ShowLoadError)
         }
     }
 
     fun onApkPicked(uri: Uri?) {
-        if (uri == null) {
-            viewModelScope.launch { _events.send(MainEvent.ShowError) }
-            return
-        }
+        if (uri == null) return
         viewModelScope.launch {
             val event =
                 when (val result = processApk(uri)) {
-                    is ApkProcessResult.Success -> MainEvent.NavigateToIcon(result.applicationInfo)
+                    is ApkProcessResult.Success -> MainEvent.NavigateToApkIcon(result.applicationInfo)
                     is ApkProcessResult.InvalidApk, is ApkProcessResult.Error -> MainEvent.ShowError
                 }
             _events.send(event)
+        }
+    }
+
+    fun onAppSelected(packageName: String) {
+        viewModelScope.launch {
+            val appInfo = getApplicationInfo(packageName)
+            if (appInfo == null) {
+                _events.send(MainEvent.ShowAppNotFoundError)
+            } else {
+                _events.send(MainEvent.NavigateToIcon(appInfo))
+            }
         }
     }
 }
