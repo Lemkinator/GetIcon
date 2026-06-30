@@ -170,6 +170,8 @@ class IconViewModel @Inject constructor(
         regenerateIcon(state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
     }
 
+    // generateIcon runs synchronously on Main (~5 ms). Dispatching to Default caused slider jank:
+    // cancellation was ineffective mid-withContext, producing concurrent bitmap allocations (557e6db).
     private fun regenerateIcon(newState: IconUiState) {
         val appInfo = applicationInfo ?: return
         runCatching {
