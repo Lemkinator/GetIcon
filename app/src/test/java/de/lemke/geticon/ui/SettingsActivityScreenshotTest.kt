@@ -44,7 +44,7 @@ import de.lemke.commonutils.R as commonutilsR
 @Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsActivityScreenshotTest {
-    @get:Rule
+    @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
     @Before
