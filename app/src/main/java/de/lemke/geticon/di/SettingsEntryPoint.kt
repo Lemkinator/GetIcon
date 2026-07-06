@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package de.lemke.geticon.domain
+package de.lemke.geticon.di
 
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 import de.lemke.geticon.data.UserSettings
-import de.lemke.geticon.data.UserSettingsRepository
-import javax.inject.Inject
 
-class UpdateUserSettingsUseCase @Inject constructor(
-    private val userSettingsRepository: UserSettingsRepository,
-) {
-    suspend operator fun invoke(f: (UserSettings) -> UserSettings) = userSettingsRepository.updateSettings(f)
+/** Accessor for [UserSettings] from plain JUnit test classes that cannot use `@Inject`/`@HiltAndroidTest`. */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface SettingsEntryPoint {
+    fun userSettings(): UserSettings
 }

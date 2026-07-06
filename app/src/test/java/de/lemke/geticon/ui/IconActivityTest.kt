@@ -40,18 +40,18 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import dagger.hilt.android.testing.UninstallModules
 import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.geticon.R
+import de.lemke.geticon.data.UserSettings
+import de.lemke.geticon.di.SettingsModule
 import de.lemke.geticon.domain.GenerateIconUseCase
-import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.IconResult
-import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import java.io.IOException
-import kotlinx.coroutines.awaitCancellation
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -61,6 +61,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
+@UninstallModules(SettingsModule::class)
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
@@ -75,7 +76,7 @@ class IconActivityTest {
 
     @BindValue
     @JvmField
-    val fakeGetUserSettings: GetUserSettingsUseCase = mockk()
+    val fakeUserSettings: UserSettings = mockk(relaxed = true)
 
     @Before
     fun setup() {
@@ -92,7 +93,11 @@ class IconActivityTest {
                 any<PackageManager>(),
             )
         } returns testIconResult
-        coEvery { fakeGetUserSettings() } coAnswers { awaitCancellation() }
+        every { fakeUserSettings.iconSize } returns UserSettings.DEFAULT_ICON_SIZE
+        every { fakeUserSettings.maskEnabled } returns true
+        every { fakeUserSettings.colorEnabled } returns false
+        every { fakeUserSettings.recentForegroundColors } returns listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
+        every { fakeUserSettings.recentBackgroundColors } returns listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
     }
 
     private fun launchWithAppInfo(): ActivityScenario<IconActivity> {
@@ -118,7 +123,17 @@ class IconActivityTest {
 
     @Test
     fun collectEvents_generateFailed_finishesActivity() {
-        coEvery { fakeGetUserSettings() } throws IOException("test")
+        every {
+            fakeGenerateIcon(
+                any<ApplicationInfo>(),
+                any<Int>(),
+                any<Boolean>(),
+                any<Boolean>(),
+                any<Int>(),
+                any<Int>(),
+                any<PackageManager>(),
+            )
+        } throws IOException("test")
         launchWithAppInfo().use { _ ->
             shadowOf(Looper.getMainLooper()).idle()
         }
@@ -150,8 +165,8 @@ class IconActivityTest {
 
     @Test
     fun onOptionsItemSelected_nullIcon_callsSuper() {
-        // Call before idling looper so state.icon is still null
-        launchWithAppInfo().use { scenario ->
+        // No appInfo → loadInitialState never runs, so state.icon stays null.
+        launchWithoutAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_save_as_image }
                 activity.onOptionsItemSelected(item)
@@ -221,7 +236,8 @@ class IconActivityTest {
 
     @Test
     fun icon_longClick_nullIcon_returnsFalse() {
-        launchWithAppInfo().use { scenario ->
+        // No appInfo → loadInitialState never runs, so state.icon stays null.
+        launchWithoutAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).performLongClick()
             }
@@ -287,8 +303,8 @@ class IconActivityTest {
 
     @Test
     fun onExportBitmapResult_nullIcon_returnsEarly() {
-        // icon still null before looper idles
-        launchWithAppInfo().use { scenario ->
+        // No appInfo → loadInitialState never runs, so state.icon stays null.
+        launchWithoutAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
             }

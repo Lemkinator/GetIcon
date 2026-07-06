@@ -24,14 +24,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
-import de.lemke.geticon.domain.GetUserSettingsUseCase
-import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -68,8 +67,7 @@ sealed class IconEvent {
 class IconViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
-    private val getUserSettings: GetUserSettingsUseCase,
-    private val updateUserSettings: UpdateUserSettingsUseCase,
+    private val userSettings: UserSettings,
     private val generateIcon: GenerateIconUseCase,
 ) : ViewModel() {
     private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
@@ -106,7 +104,6 @@ class IconViewModel @Inject constructor(
             }
         }
         runCatching {
-            val userSettings = getUserSettings()
             val fg = userSettings.recentForegroundColors.first()
             val bg = userSettings.recentBackgroundColors.first()
             val result =
@@ -142,31 +139,31 @@ class IconViewModel @Inject constructor(
     }
 
     fun onMaskChanged(enabled: Boolean) {
-        viewModelScope.launch { updateUserSettings { it.copy(maskEnabled = enabled) } }
+        userSettings.maskEnabled = enabled
         regenerateIcon(state.value.copy(maskEnabled = enabled))
     }
 
     fun onColorChanged(enabled: Boolean) {
-        viewModelScope.launch { updateUserSettings { it.copy(colorEnabled = enabled) } }
+        userSettings.colorEnabled = enabled
         regenerateIcon(state.value.copy(colorEnabled = enabled))
     }
 
     fun onSizeChanged(size: Int) {
         val clamped = size.coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE)
         if (clamped == state.value.size) return
-        viewModelScope.launch { updateUserSettings { it.copy(iconSize = clamped) } }
+        userSettings.iconSize = clamped
         regenerateIcon(state.value.copy(size = clamped))
     }
 
     fun onForegroundColorChanged(color: Int) {
         val recentColors = (listOf(color) + state.value.recentForegroundColors).distinct().take(MAX_RECENT_COLORS)
-        viewModelScope.launch { updateUserSettings { it.copy(recentForegroundColors = recentColors) } }
+        userSettings.recentForegroundColors = recentColors
         regenerateIcon(state.value.copy(foregroundColor = color, recentForegroundColors = recentColors))
     }
 
     fun onBackgroundColorChanged(color: Int) {
         val recentColors = (listOf(color) + state.value.recentBackgroundColors).distinct().take(MAX_RECENT_COLORS)
-        viewModelScope.launch { updateUserSettings { it.copy(recentBackgroundColors = recentColors) } }
+        userSettings.recentBackgroundColors = recentColors
         regenerateIcon(state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
     }
 

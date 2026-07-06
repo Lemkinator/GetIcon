@@ -144,7 +144,6 @@ dependencies {
     implementation(libs.oneui.design)
     implementation(libs.oneui.icons)
     implementation(libs.common.utils)
-    implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

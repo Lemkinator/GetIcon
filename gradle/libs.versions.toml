@@ -16,7 +16,6 @@ arch-core-testing = "2.2.0"
 benchmark-macro = "1.5.0-alpha07"
 common-utils = "1.1.4"
 coroutines = "1.11.0"
-datastore-preferences = "1.2.1"
 dependency-analysis = "3.16.0"
 detekt = "2.0.0-alpha.5"
 agp = "9.2.1"
@@ -56,7 +55,6 @@ benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4",
 common-utils = { module = "io.github.lemkinator:common-utils", version.ref = "common-utils" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore-preferences" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
