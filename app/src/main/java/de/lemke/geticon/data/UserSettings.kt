@@ -19,16 +19,21 @@ package de.lemke.geticon.data
 import android.content.SharedPreferences
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.data.delegates
+import de.lemke.commonutils.data.sanitized
 
-/** GetIcon-specific settings, layered on top of common-utils' [SettingsRepository]. */
+/** GetIcon-specific settings, layered on top of common-utils [SettingsRepository]. */
 class UserSettings(
     preferences: SharedPreferences,
 ) : SettingsRepository(preferences) {
-    var iconSize: Int by preferences.delegates.int(DEFAULT_ICON_SIZE)
+    var iconSize: Int by preferences.delegates.int(DEFAULT_ICON_SIZE).sanitized { it.coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE) }
     var maskEnabled: Boolean by preferences.delegates.boolean(true)
     var colorEnabled: Boolean by preferences.delegates.boolean(false)
-    var recentForegroundColors: List<Int> by preferences.delegates.intList(listOf(DEFAULT_FOREGROUND_COLOR))
-    var recentBackgroundColors: List<Int> by preferences.delegates.intList(listOf(DEFAULT_BACKGROUND_COLOR))
+    var recentForegroundColors: List<Int> by preferences.delegates
+        .intList(listOf(DEFAULT_FOREGROUND_COLOR))
+        .sanitized { it.take(MAX_RECENT_COLORS) }
+    var recentBackgroundColors: List<Int> by preferences.delegates
+        .intList(listOf(DEFAULT_BACKGROUND_COLOR))
+        .sanitized { it.take(MAX_RECENT_COLORS) }
 
     companion object {
         const val DEFAULT_FOREGROUND_COLOR = -1

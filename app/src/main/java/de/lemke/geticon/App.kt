@@ -18,7 +18,9 @@ package de.lemke.geticon
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
+import de.lemke.commonutils.data.applyDarkMode
+import de.lemke.geticon.data.UserSettings
+import javax.inject.Inject
 
 /**
  * Main entry point into the application process.
@@ -26,8 +28,11 @@ import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
  */
 @HiltAndroidApp
 class App : Application() {
+    @Inject
+    lateinit var userSettings: UserSettings
+
     override fun onCreate() {
         super.onCreate()
-        initCommonUtilsSettingsAndSetDarkMode()
+        userSettings.applyDarkMode()
     }
 }
