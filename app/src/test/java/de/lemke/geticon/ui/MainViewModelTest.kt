@@ -16,13 +16,14 @@
 
 package de.lemke.geticon.ui
 
+import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import androidx.picker.model.AppInfoData
 import app.cash.turbine.test
+import de.lemke.commonutils.getInstalledAppsForPicker
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.GetApplicationInfoUseCase
-import de.lemke.geticon.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -30,30 +31,37 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 
 class MainViewModelTest : ShouldSpec(
     {
+        val context = mockk<Context>(relaxed = true)
         val processApk = mockk<ProcessApkUseCase>()
-        val getInstalledApps = mockk<GetInstalledAppsUseCase>()
         val getApplicationInfo = mockk<GetApplicationInfoUseCase>()
         lateinit var viewModel: MainViewModel
 
         beforeEach {
-            coEvery { getInstalledApps() } returns emptyList()
+            mockkStatic("de.lemke.commonutils.AppPickerStrategyKt")
+            every { context.getInstalledAppsForPicker() } returns emptyList()
             every { getApplicationInfo(any()) } returns null
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = MainViewModel(context, processApk, getApplicationInfo)
+        }
+
+        afterEach {
+            unmockkStatic("de.lemke.commonutils.AppPickerStrategyKt")
         }
 
         should("installedApps emits loaded list") {
             val app = mockk<AppInfoData>()
-            coEvery { getInstalledApps() } returns listOf(app)
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            every { context.getInstalledAppsForPicker() } returns listOf(app)
+            viewModel = MainViewModel(context, processApk, getApplicationInfo)
             viewModel.installedApps.value shouldBe listOf(app)
         }
 
-        should("emit ShowLoadError when getInstalledApps throws") {
-            coEvery { getInstalledApps() } throws RuntimeException("load failed")
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+        should("emit ShowLoadError when getInstalledAppsForPicker throws") {
+            every { context.getInstalledAppsForPicker() } throws RuntimeException("load failed")
+            viewModel = MainViewModel(context, processApk, getApplicationInfo)
             viewModel.events.test {
                 awaitItem() shouldBe MainEvent.ShowLoadError
             }
