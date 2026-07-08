@@ -15,7 +15,7 @@ All commands run from the repo root on Windows (PowerShell or Git Bash):
 
 Unit tests exist: `IconViewModelTest`, `IconActivityScreenshotTest` (Roborazzi),
 `MainActivityScreenshotTest` (Roborazzi), plus Konsist architecture tests.
-Instrumented tests: `MainActivityTest`, `IconActivityTest`, `UserSettingsRepositoryInstrumentedTest`
+Instrumented tests: `MainActivityTest`, `IconActivityTest`
 — run via Gradle Managed Device (no physical device needed):
 
 ```powershell
@@ -58,14 +58,15 @@ Provide credentials via **one** of these (checked in order):
 Single-module (`:app`) Android app — extracts and exports app icons.
 Layered architecture (data/domain/ui) with ViewModels per activity:
 
-- **`data/`** — `UserSettingsRepository`: DataStore Preferences CRUD
-  (icon size, mask, colors)
-- **`domain/`** — thin use cases: `GetUserSettingsUseCase`,
-  `UpdateUserSettingsUseCase`, `AppPickerStrategy`
+- **`data/`** — `UserSettings`: a common-utils `SettingsRepository` subclass,
+  SharedPreferences-backed (icon size, mask, colors)
+- **`domain/`** — thin use cases: `GenerateIconUseCase`, `GetApplicationInfoUseCase`, `ProcessApkUseCase`.
 - **`ui/`** — two activities + two ViewModels: `MainActivity` / `MainViewModel`
   (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
 - **`App.kt`** — `@HiltAndroidApp` entry point, calls `common-utils` init
-- **`PersistenceModule.kt`** — Hilt singleton providing `DataStore<Preferences>`
+- **`di/SettingsModule.kt`** — Hilt singleton providing `UserSettings`
+- **`di/SettingsEntryPoint.kt`** — lets plain JUnit tests (that can't use
+  `@Inject`/`@HiltAndroidTest`) fetch the Hilt-provided `UserSettings` singleton
 
 DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
 ViewBinding enabled. Activities collect `StateFlow<UiState>` and one-shot
@@ -96,10 +97,6 @@ call sites in `MainActivity.kt` / `IconActivity.kt` first.
 **Resource aliasing** — code imports
 `de.lemke.commonutils.R as commonutilsR` alongside the app's own `R`.
 Be aware when touching resource IDs.
-
-**Use cases over repositories** — prefer injecting
-`GetUserSettingsUseCase` / `UpdateUserSettingsUseCase` rather than
-`UserSettingsRepository` directly.
 
 **Dependency exclusions** — root `build.gradle.kts` excludes many AndroidX
 modules from subprojects to prevent duplicate packaging. Check
@@ -135,7 +132,7 @@ targeted message if `core.autocrlf=true` is detected.
 **After any change** — run the full local CI suite before declaring work done:
 
 ```powershell
-./gradlew spotlessCheck detekt lintDebug testDebugUnitTest koverVerifyDebug verifyRoborazziDebug pixel9Api35DebugAndroidTest assembleRelease
+./gradlew spotlessCheck detekt lintDebug testDebugUnitTest koverVerifyDebug koverHtmlReportDebug verifyRoborazziDebug pixel9Api35DebugAndroidTest assembleRelease
 ```
 
 If `spotlessCheck` fails, fix with `./gradlew spotlessApply` then re-run. Screenshot test failures (`verifyRoborazziDebug`) mean the code
