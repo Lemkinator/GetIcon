@@ -24,7 +24,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.picker.model.AppInfoData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import de.lemke.commonutils.getInstalledAppsForPicker
+import de.lemke.commonutils.ui.widget.getInstalledAppsForPicker
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.GetApplicationInfoUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase

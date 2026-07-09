@@ -21,7 +21,7 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import androidx.picker.model.AppInfoData
 import app.cash.turbine.test
-import de.lemke.commonutils.getInstalledAppsForPicker
+import de.lemke.commonutils.ui.widget.getInstalledAppsForPicker
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.GetApplicationInfoUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
@@ -42,14 +42,14 @@ class MainViewModelTest : ShouldSpec(
         lateinit var viewModel: MainViewModel
 
         beforeEach {
-            mockkStatic("de.lemke.commonutils.AppPickerStrategyKt")
+            mockkStatic("de.lemke.commonutils.ui.widget.AppPickerStrategyKt")
             every { context.getInstalledAppsForPicker() } returns emptyList()
             every { getApplicationInfo(any()) } returns null
             viewModel = MainViewModel(context, processApk, getApplicationInfo)
         }
 
         afterEach {
-            unmockkStatic("de.lemke.commonutils.AppPickerStrategyKt")
+            unmockkStatic("de.lemke.commonutils.ui.widget.AppPickerStrategyKt")
         }
 
         should("installedApps emits loaded list") {

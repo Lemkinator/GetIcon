@@ -45,7 +45,7 @@
             android:background="?android:colorBackground"
             android:clipToPadding="false"
             android:scrollbarStyle="outsideOverlay"
-            app:strategy="de.lemke.commonutils.AppPickerStrategy" />
+            app:strategy="de.lemke.commonutils.ui.widget.AppPickerStrategy" />
 
         <de.lemke.commonutils.ui.widget.NoEntryView
             android:id="@+id/noEntryView"
