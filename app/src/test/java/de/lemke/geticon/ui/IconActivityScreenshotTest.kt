@@ -22,13 +22,11 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
-import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.geticon.data.UserSettings
-import de.lemke.geticon.di.SettingsEntryPoint
+import javax.inject.Inject
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -45,20 +43,12 @@ class IconActivityScreenshotTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
-    private val userSettings by lazy {
-        EntryPointAccessors
-            .fromApplication(
-                ApplicationProvider.getApplicationContext(),
-                SettingsEntryPoint::class.java,
-            ).userSettings()
-    }
+    @Inject
+    lateinit var userSettings: UserSettings
 
     @Before
     fun resetSettings() {
         hiltRule.inject()
-        ApplicationProvider
-            .getApplicationContext<HiltTestApplication>()
-            .initCommonUtilsSettingsAndSetDarkMode()
         userSettings.apply {
             iconSize = UserSettings.DEFAULT_ICON_SIZE
             maskEnabled = true

@@ -41,10 +41,9 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import dagger.hilt.android.testing.UninstallModules
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings
-import de.lemke.geticon.di.SettingsModule
+import de.lemke.geticon.di.SettingsProvideModule
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.IconResult
 import io.mockk.every
@@ -61,7 +60,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-@UninstallModules(SettingsModule::class)
+@UninstallModules(SettingsProvideModule::class)
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
@@ -81,7 +80,6 @@ class IconActivityTest {
     @Before
     fun setup() {
         hiltRule.inject()
-        ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
         every {
             fakeGenerateIcon(
                 any<ApplicationInfo>(),

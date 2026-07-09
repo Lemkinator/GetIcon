@@ -30,8 +30,7 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import de.lemke.commonutils.data.commonUtilsSettings
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
+import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.geticon.R
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
@@ -41,6 +40,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.unmockkConstructor
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import leakcanary.AppWatcher
 import org.junit.Before
@@ -65,12 +65,14 @@ class MainActivityTest {
     @JvmField
     val fakeProcessApk: ProcessApkUseCase = mockk(relaxed = true)
 
+    @Inject
+    lateinit var settings: SettingsRepository
+
     @Before
     fun setup() {
         hiltRule.inject()
-        ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
-        commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
-        commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
+        settings.lastVersionCode = Int.MAX_VALUE
+        settings.acceptedTosVersion = Int.MAX_VALUE
         if (!AppWatcher.isInstalled) {
             AppWatcher.manualInstall(ApplicationProvider.getApplicationContext<HiltTestApplication>())
         }
@@ -78,7 +80,7 @@ class MainActivityTest {
 
     @Test
     fun onCreate_onboardingRequired_returnsEarly() {
-        commonUtilsSettings.lastVersionCode = -1
+        settings.lastVersionCode = -1
         ActivityScenario.launch(MainActivity::class.java).use { _ -> }
     }
 

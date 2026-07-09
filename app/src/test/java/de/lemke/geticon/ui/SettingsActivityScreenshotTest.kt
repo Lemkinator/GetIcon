@@ -17,18 +17,17 @@
 package de.lemke.geticon.ui
 
 import androidx.test.core.app.ActivityScenario
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import de.lemke.commonutils.data.commonUtilsSettings
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
+import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.geticon.bypassOobe
+import javax.inject.Inject
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -47,11 +46,13 @@ class SettingsActivityScreenshotTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
+    @Inject
+    lateinit var settings: SettingsRepository
+
     @Before
     fun setup() {
         hiltRule.inject()
-        ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
-        commonUtilsSettings.bypassOobe()
+        settings.bypassOobe()
         setupCommonUtilsSettingsActivity(
             commonutilsR.xml.preferences_design,
             commonutilsR.xml.preferences_general_language_and_image_save_location,
