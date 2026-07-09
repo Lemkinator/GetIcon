@@ -63,10 +63,12 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
 - **`domain/`** — thin use cases: `GenerateIconUseCase`, `GetApplicationInfoUseCase`, `ProcessApkUseCase`.
 - **`ui/`** — two activities + two ViewModels: `MainActivity` / `MainViewModel`
   (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
-- **`App.kt`** — `@HiltAndroidApp` entry point, calls `common-utils` init
-- **`di/SettingsModule.kt`** — Hilt singleton providing `UserSettings`
-- **`di/SettingsEntryPoint.kt`** — lets plain JUnit tests (that can't use
-  `@Inject`/`@HiltAndroidTest`) fetch the Hilt-provided `UserSettings` singleton
+- **`App.kt`** — `@HiltAndroidApp` entry point; injects `settings: SettingsRepository`
+  and calls `settings.applyDarkMode()` in `onCreate()`
+- **`di/SettingsModule.kt`** — two Hilt modules: `SettingsProvideModule`
+  (`@Provides @Singleton` builds the single `UserSettings` instance) and
+  `SettingsBindModule` (`@Binds` redirects `SettingsRepository`-typed requests
+  to that instance)
 
 DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
 ViewBinding enabled. Activities collect `StateFlow<UiState>` and one-shot
@@ -89,8 +91,8 @@ to bypass OOBE and measure Main + Icon only; production `release` keeps it `fals
 ## Key Patterns
 
 **External libraries dominate UI logic.** Many helpers
-(`prepareActivityTransformationFrom()`, `toast`, `exportBitmap`,
-`commonUtilsSettings`) live in `io.github.lemkinator:common-utils`
+(`prepareActivityTransformationFrom()`, `toast`, `exportBitmap`)
+live in `io.github.lemkinator:common-utils`
 (imported as `de.lemke.commonutils`). When changing behavior, inspect
 call sites in `MainActivity.kt` / `IconActivity.kt` first.
 
@@ -164,6 +166,6 @@ native JUnit 5 support. Keep until Robolectric ships native JUnit 5.
 
 ## Finding Code
 
-- Search `commonUtilsSettings` to find shared preference usage
+- Search `@Inject lateinit var settings: SettingsRepository` to find shared preference usage
 - APK extraction flow: `MainActivity.processApk()` → temp file →
   `IconActivity` via intent with `ApplicationInfo`
