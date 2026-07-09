@@ -38,7 +38,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.collectEvents
 import de.lemke.commonutils.collectState
 import de.lemke.commonutils.configureCommonUtilsSplashScreen
-import de.lemke.commonutils.data.commonUtilsSettings
+import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.onNavigationSingleClick
 import de.lemke.commonutils.onboardIfNeeded
 import de.lemke.commonutils.prepareActivityTransformationFrom
@@ -65,12 +65,16 @@ import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
 import java.lang.ref.WeakReference
+import javax.inject.Inject
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
 class MainActivity :
     AppCompatActivity(),
     ViewYTranslator by AppBarAwareYTranslator() {
+    @Inject
+    lateinit var settings: SettingsRepository
+
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
 
@@ -83,7 +87,12 @@ class MainActivity :
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        onboardIfNeeded(BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, allowSkip = BuildConfig.FIRST_RUN_SKIPPABLE) ?: return
+        onboardIfNeeded(
+            BuildConfig.VERSION_CODE,
+            BuildConfig.VERSION_NAME,
+            settings,
+            allowSkip = BuildConfig.FIRST_RUN_SKIPPABLE,
+        ) ?: return
         prepareActivityTransformationFrom()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -164,11 +173,11 @@ class MainActivity :
         binding.drawerLayout.startSearchMode(
             onStart = {
                 it.queryHint = getString(commonutilsR.string.commonutils_search_apps)
-                it.setQuery(commonUtilsSettings.search, false)
+                it.setQuery(settings.search, false)
             },
             onQuery = { query, _ ->
                 applyFilter(query)
-                commonUtilsSettings.search = query
+                settings.search = query
                 true
             },
             onEnd = { applyFilter() },

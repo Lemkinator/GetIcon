@@ -17,21 +17,30 @@
 package de.lemke.geticon.di
 
 import android.content.Context
+import androidx.preference.PreferenceManager
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.lemke.commonutils.data.createCommonUtilsSettings
+import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.geticon.data.UserSettings
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object SettingsModule {
+object SettingsProvideModule {
     @Provides
     @Singleton
     fun provideUserSettings(
-        @ApplicationContext context: Context,
-    ): UserSettings = context.createCommonUtilsSettings(::UserSettings)
+        @ApplicationContext c: Context,
+    ): UserSettings = UserSettings(PreferenceManager.getDefaultSharedPreferences(c))
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class SettingsBindModule {
+    @Binds
+    abstract fun bindSettingsRepository(u: UserSettings): SettingsRepository
 }

@@ -18,23 +18,8 @@ package de.lemke.geticon
 
 import android.app.Application
 import dagger.hilt.android.testing.CustomTestApplication
-import de.lemke.commonutils.data.commonUtilsSettings
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 
-open class TestApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        // No Hilt here (@Inject field or EntryPointAccessors) — the test component isn't built until
-        // HiltAndroidRule.inject() runs in @Before, confirmed by EntryPointAccessors throwing "The
-        // component was not created." Don't reintroduce it; see SettingsInitParityTest for why this
-        // is still equivalent to App.kt's Hilt-based init.
-        initCommonUtilsSettingsAndSetDarkMode()
-        // Prevent OOBE redirect: fresh prefs default lastVersionCode = -1, which triggers
-        // onboardIfNeeded → finishAfterTransition, leaving MainActivity DESTROYED.
-        commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
-        commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
-    }
-}
+open class TestApp : Application()
 
 @Suppress("unused") // KSP generates TestApplication_Application from this annotation target
 @CustomTestApplication(TestApp::class)

@@ -18,8 +18,8 @@ package de.lemke.geticon
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
+import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.data.applyDarkMode
-import de.lemke.geticon.data.UserSettings
 import javax.inject.Inject
 
 /**
@@ -29,10 +29,10 @@ import javax.inject.Inject
 @HiltAndroidApp
 class App : Application() {
     @Inject
-    lateinit var userSettings: UserSettings
+    lateinit var settings: SettingsRepository
 
     override fun onCreate() {
         super.onCreate()
-        userSettings.applyDarkMode()
+        settings.applyDarkMode()
     }
 }
