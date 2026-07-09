@@ -32,6 +32,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.geticon.R
+import de.lemke.geticon.bypassOobe
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
@@ -71,8 +72,7 @@ class MainActivityTest {
     @Before
     fun setup() {
         hiltRule.inject()
-        settings.lastVersionCode = Int.MAX_VALUE
-        settings.acceptedTosVersion = Int.MAX_VALUE
+        settings.bypassOobe()
         if (!AppWatcher.isInstalled) {
             AppWatcher.manualInstall(ApplicationProvider.getApplicationContext<HiltTestApplication>())
         }
