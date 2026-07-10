@@ -35,7 +35,6 @@ object TestSettingsModule {
     fun provideTestUserSettings(
         @ApplicationContext context: Context,
     ): UserSettings =
-        // UUID-named file per Hilt component instance avoids cross-test collisions on a reused GMD device,
-        // the same isolation the deleted DataStore-based TestPersistenceModule used to provide.
+        // UUID-named file per Hilt component instance avoids cross-test collisions on a reused GMD device.
         UserSettings(context.getSharedPreferences("test_${UUID.randomUUID()}", Context.MODE_PRIVATE))
 }
