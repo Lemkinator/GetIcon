@@ -16,15 +16,13 @@
 
 package de.lemke.geticon.ui
 
-import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.picker.model.AppInfoData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import de.lemke.commonutils.ui.widget.getInstalledAppsForPicker
+import de.lemke.commonutils.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.GetApplicationInfoUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
@@ -52,8 +50,8 @@ sealed class MainEvent {
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    @param:ApplicationContext private val context: Context,
     private val processApk: ProcessApkUseCase,
+    private val getInstalledApps: GetInstalledAppsUseCase,
     private val getApplicationInfo: GetApplicationInfoUseCase,
 ) : ViewModel() {
     private val _events = Channel<MainEvent>(BUFFERED)
@@ -67,7 +65,7 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun loadInstalledApps() {
-        runCatching { installedApps.value = context.getInstalledAppsForPicker() }.onFailure { e ->
+        runCatching { installedApps.value = getInstalledApps() }.onFailure { e ->
             if (e is CancellationException) throw e
             _events.send(MainEvent.ShowLoadError)
         }
