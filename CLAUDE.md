@@ -182,6 +182,24 @@ order-independence relies on test hygiene (every test resets any shared/static s
 touches, e.g. `AppCompatDelegate`'s static delegate registry via `ActivityScenario`'s
 auto-`close()`) rather than a randomizer.
 
+## Settings in Tests
+
+Tests never mock settings: every test uses the real `UserSettings` over an isolated, empty
+store, so defaults come from `UserSettings`'s own production delegates — no duplicated
+default values, no manual reset helpers, no per-field mock stubs.
+
+- **`TestSettingsModule` twins** — `app/src/test/java/de/lemke/geticon/TestSettingsModule.kt`
+  and `app/src/androidTest/java/de/lemke/geticon/TestSettingsModule.kt`: same package, same
+  file name, byte-for-byte identical content. Each `@TestInstallIn`-replaces
+  `SettingsProvideModule` with a fresh UUID-named `SharedPreferences` file per Hilt component
+  instance, so every `@HiltAndroidTest` gets a real, empty `UserSettings` automatically.
+- **`FakeSharedPreferences`** (`app/src/test/java/de/lemke/geticon/data/FakeSharedPreferences.kt`)
+  — a pure-JVM double used only by the one Kotest spec with no Context (`IconViewModelTest`);
+  everywhere else Robolectric's real `SharedPreferences` (via the module above) or a
+  Context-backed file (`UserSettingsTest`) is used instead.
+- **`bypassOobe()`** testFixture (`app/src/testFixtures/java/de/lemke/geticon/TestUtils.kt`),
+  shared by `test` + `androidTest`, for any test that launches `MainActivity`.
+
 ## Finding Code
 
 - Search `@Inject lateinit var settings: SettingsRepository` to find shared preference usage
