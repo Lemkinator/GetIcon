@@ -18,6 +18,9 @@ package de.lemke.geticon.data
 
 import android.content.SharedPreferences
 
+/** Sentinel marking a pending removal in [FakeSharedPreferences.FakeEditor.pending]. */
+private object Removed
+
 /**
  * Pure-JVM analog of Robolectric's real SharedPreferences; exists only because
  * [de.lemke.geticon.ui.IconViewModelTest] deliberately trades Robolectric for JVM speed and has
@@ -73,8 +76,9 @@ class FakeSharedPreferences : SharedPreferences {
     }
 
     private inner class FakeEditor : SharedPreferences.Editor {
+        // Single ordered map, keyed like real SharedPreferences.EditorImpl.mModified: put/remove on the
+        // same key just overwrite this map's entry, so the last call wins regardless of call order.
         private val pending = mutableMapOf<String, Any?>()
-        private val removed = mutableSetOf<String>()
         private var clearAll = false
 
         override fun putString(
@@ -107,9 +111,15 @@ class FakeSharedPreferences : SharedPreferences {
             value: Boolean,
         ) = apply { key?.let { pending[it] = value } }
 
-        override fun remove(key: String?) = apply { key?.let { removed += it } }
+        override fun remove(key: String?) = apply { key?.let { pending[it] = Removed } }
 
-        override fun clear() = apply { clearAll = true }
+        // Real Editor.clear() also drops this editor's own pending puts/removes issued so far -
+        // only ones issued after clear() (in call order) survive to apply().
+        override fun clear() =
+            apply {
+                pending.clear()
+                clearAll = true
+            }
 
         override fun commit(): Boolean {
             applyChanges()
@@ -120,11 +130,9 @@ class FakeSharedPreferences : SharedPreferences {
 
         private fun applyChanges() {
             if (clearAll) map.clear()
-            removed.forEach { map.remove(it) }
-            map.putAll(pending)
-            val changedKeys = pending.keys + removed
+            pending.forEach { (key, value) -> if (value === Removed) map.remove(key) else map[key] = value }
             listeners.forEach { listener ->
-                changedKeys.forEach { key -> listener.onSharedPreferenceChanged(this@FakeSharedPreferences, key) }
+                pending.keys.forEach { key -> listener.onSharedPreferenceChanged(this@FakeSharedPreferences, key) }
             }
         }
     }
