@@ -16,7 +16,6 @@
 
 package de.lemke.geticon.ui
 
-import android.content.Context.INPUT_METHOD_SERVICE
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
 import android.os.Build.VERSION.SDK_INT
