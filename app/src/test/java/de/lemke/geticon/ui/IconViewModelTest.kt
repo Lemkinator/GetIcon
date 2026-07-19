@@ -23,6 +23,7 @@ import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
+import de.lemke.geticon.data.FakeSharedPreferences
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
@@ -51,7 +52,7 @@ class IconViewModelTest : ShouldSpec(
     {
         val mockContext = mockk<Context>(relaxed = true)
         val mockPackageManager = mockk<PackageManager>(relaxed = true)
-        val userSettings = mockk<UserSettings>(relaxed = true)
+        lateinit var userSettings: UserSettings
         val generateIcon = mockk<GenerateIconUseCase>()
 
         val defaultIconSize = DEFAULT_ICON_SIZE
@@ -62,14 +63,10 @@ class IconViewModelTest : ShouldSpec(
         val mockIconResult = IconResult(bitmap = mockk<Bitmap>(relaxed = true), isAdaptiveIcon = true, hasMaskedAppIcon = false)
 
         beforeEach {
-            clearMocks(userSettings, generateIcon)
+            clearMocks(generateIcon)
             every { mockContext.packageManager } returns mockPackageManager
             every { mockContext.cacheDir } returns File(System.getProperty("java.io.tmpdir") ?: "/tmp")
-            every { userSettings.iconSize } returns defaultIconSize
-            every { userSettings.maskEnabled } returns defaultMaskEnabled
-            every { userSettings.colorEnabled } returns defaultColorEnabled
-            every { userSettings.recentForegroundColors } returns defaultForegroundColors
-            every { userSettings.recentBackgroundColors } returns defaultBackgroundColors
+            userSettings = UserSettings(FakeSharedPreferences())
             every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } returns mockIconResult
         }
 
@@ -90,8 +87,8 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("not read from userSettings") {
-                buildViewModel(appInfo = null)
-                verify(exactly = 0) { userSettings.recentForegroundColors }
+                val viewModel = buildViewModel(appInfo = null)
+                viewModel.state.value shouldBe IconUiState()
             }
 
             should("onMaskChanged does not call generateIcon when applicationInfo is null") {
@@ -205,19 +202,19 @@ class IconViewModelTest : ShouldSpec(
             should("onMaskChanged writes maskEnabled to userSettings") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onMaskChanged(false)
-                verify { userSettings.maskEnabled = false }
+                userSettings.maskEnabled shouldBe false
             }
 
             should("onColorChanged writes colorEnabled to userSettings") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onColorChanged(true)
-                verify { userSettings.colorEnabled = true }
+                userSettings.colorEnabled shouldBe true
             }
 
             should("onSizeChanged writes iconSize to userSettings") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onSizeChanged(256)
-                verify { userSettings.iconSize = 256 }
+                userSettings.iconSize shouldBe 256
             }
 
             should("onCleared does nothing when sourceDir is null") {
