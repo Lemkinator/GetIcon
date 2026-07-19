@@ -16,6 +16,7 @@
 
 package de.lemke.geticon.ui
 
+import android.content.Context.INPUT_METHOD_SERVICE
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
 import android.os.Build.VERSION.SDK_INT
@@ -24,6 +25,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
@@ -174,6 +176,7 @@ class MainActivity :
             onStart = {
                 it.queryHint = getString(commonutilsR.string.commonutils_search_apps)
                 it.setQuery(settings.search, false)
+                (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(it, 0)
             },
             onQuery = { query, _ ->
                 applyFilter(query)
