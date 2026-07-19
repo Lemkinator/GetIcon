@@ -25,6 +25,7 @@ import androidx.test.filters.LargeTest
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.geticon.bypassOobe
 import io.kotest.matchers.shouldBe
 import javax.inject.Inject
 import org.junit.Before
@@ -47,8 +48,7 @@ class MainActivityTest {
         hiltRule.inject()
         // Prevent OOBE redirect: fresh prefs default lastVersionCode = -1, which triggers
         // onboardIfNeeded → finishAfterTransition, leaving MainActivity DESTROYED.
-        settings.lastVersionCode = Int.MAX_VALUE
-        settings.acceptedTosVersion = Int.MAX_VALUE
+        settings.bypassOobe()
     }
 
     @Test
