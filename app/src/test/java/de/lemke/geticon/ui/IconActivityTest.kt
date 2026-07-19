@@ -40,10 +40,7 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import dagger.hilt.android.testing.UninstallModules
 import de.lemke.geticon.R
-import de.lemke.geticon.data.UserSettings
-import de.lemke.geticon.di.SettingsProvideModule
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.IconResult
 import io.mockk.every
@@ -60,7 +57,6 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-@UninstallModules(SettingsProvideModule::class)
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
@@ -72,10 +68,6 @@ class IconActivityTest {
     @BindValue
     @JvmField
     val fakeGenerateIcon: GenerateIconUseCase = mockk()
-
-    @BindValue
-    @JvmField
-    val fakeUserSettings: UserSettings = mockk(relaxed = true)
 
     @Before
     fun setup() {
@@ -91,11 +83,6 @@ class IconActivityTest {
                 any<PackageManager>(),
             )
         } returns testIconResult
-        every { fakeUserSettings.iconSize } returns UserSettings.DEFAULT_ICON_SIZE
-        every { fakeUserSettings.maskEnabled } returns true
-        every { fakeUserSettings.colorEnabled } returns false
-        every { fakeUserSettings.recentForegroundColors } returns listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
-        every { fakeUserSettings.recentBackgroundColors } returns listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
     }
 
     private fun launchWithAppInfo(): ActivityScenario<IconActivity> {

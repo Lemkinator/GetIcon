@@ -49,13 +49,6 @@ class IconActivityScreenshotTest {
     @Before
     fun resetSettings() {
         hiltRule.inject()
-        userSettings.apply {
-            iconSize = UserSettings.DEFAULT_ICON_SIZE
-            maskEnabled = true
-            colorEnabled = false
-            recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
-            recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
-        }
     }
 
     private fun captureIconScreenshot(fileName: String) {
