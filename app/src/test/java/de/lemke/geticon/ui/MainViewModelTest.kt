@@ -39,20 +39,20 @@ class MainViewModelTest : ShouldSpec(
         lateinit var viewModel: MainViewModel
 
         beforeEach {
-            every { getInstalledApps() } returns emptyList()
+            coEvery { getInstalledApps() } returns emptyList()
             every { getApplicationInfo(any()) } returns null
             viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
         }
 
         should("installedApps emits loaded list") {
             val app = mockk<AppInfoData>()
-            every { getInstalledApps() } returns listOf(app)
+            coEvery { getInstalledApps() } returns listOf(app)
             viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
             viewModel.installedApps.value shouldBe listOf(app)
         }
 
         should("emit ShowLoadError when getInstalledApps throws") {
-            every { getInstalledApps() } throws RuntimeException("load failed")
+            coEvery { getInstalledApps() } throws RuntimeException("load failed")
             viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
             viewModel.events.test {
                 awaitItem() shouldBe MainEvent.ShowLoadError
