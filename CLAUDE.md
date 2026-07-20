@@ -215,9 +215,3 @@ or `PreferenceManager.getDefaultSharedPreferences(...)` directly.
   that launches `MainActivity`. GetIcon has no settings-test code of its own left beyond the
   `TestSettingsModule` twins, which name GetIcon's own `UserSettings`/`SettingsProvideModule`
   and can't move into common-utils.
-
-## Finding Code
-
-- Search `@Inject lateinit var settings: SettingsRepository` to find shared preference usage
-- APK extraction flow: `MainActivity.processApk()` → temp file →
-  `IconActivity` via intent with `ApplicationInfo`
