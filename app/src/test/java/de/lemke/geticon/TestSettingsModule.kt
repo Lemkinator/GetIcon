@@ -22,9 +22,9 @@ import dagger.Provides
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import de.lemke.commonutils.freshTestPreferences
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.di.SettingsProvideModule
-import java.util.UUID
 import javax.inject.Singleton
 
 @Module
@@ -34,7 +34,5 @@ object TestSettingsModule {
     @Singleton
     fun provideTestUserSettings(
         @ApplicationContext context: Context,
-    ): UserSettings =
-        // UUID-named file per Hilt component instance avoids cross-test collisions on a reused GMD device.
-        UserSettings(context.getSharedPreferences("test_${UUID.randomUUID()}", Context.MODE_PRIVATE))
+    ): UserSettings = UserSettings(freshTestPreferences(context))
 }

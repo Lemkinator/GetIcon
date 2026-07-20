@@ -24,8 +24,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import de.lemke.commonutils.bypassOobe
 import de.lemke.commonutils.data.SettingsRepository
-import de.lemke.geticon.bypassOobe
 import io.kotest.matchers.shouldBe
 import javax.inject.Inject
 import org.junit.Before

@@ -40,8 +40,8 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import de.lemke.commonutils.bypassOobe
 import de.lemke.commonutils.data.SettingsRepository
-import de.lemke.geticon.bypassOobe
 import javax.inject.Inject
 import org.junit.Before
 import org.junit.Rule

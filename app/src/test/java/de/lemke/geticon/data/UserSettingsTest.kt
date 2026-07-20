@@ -17,9 +17,8 @@
 package de.lemke.geticon.data
 
 import android.app.Application
-import android.content.Context
 import android.content.SharedPreferences
-import androidx.test.core.app.ApplicationProvider
+import de.lemke.commonutils.freshTestPreferences
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
@@ -46,8 +45,7 @@ class UserSettingsTest {
 
     @Before
     fun setUp() {
-        prefs = ApplicationProvider.getApplicationContext<Context>().getSharedPreferences("user_settings_test", Context.MODE_PRIVATE)
-        prefs.edit().clear().apply()
+        prefs = freshTestPreferences()
         settings = UserSettings(prefs)
     }
 

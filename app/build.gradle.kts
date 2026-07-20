@@ -110,10 +110,6 @@ android {
         abortOnError = true
         baseline = file("lint-baseline.xml")
     }
-    @Suppress("UnstableApiUsage")
-    testFixtures {
-        enable = true
-    }
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
@@ -154,7 +150,7 @@ dependencies {
     baselineProfile(project(":benchmarks"))
     debugImplementation(libs.leakcanary)
 
-    testFixturesImplementation(libs.common.utils)
+    testImplementation(testFixtures(libs.common.utils))
 
     testImplementation(libs.arch.core.testing)
     testImplementation(libs.bundles.unit.test)
@@ -168,6 +164,7 @@ dependencies {
     testRuntimeOnly(libs.junit.vintage.engine)
     kspTest(libs.hilt.compiler)
 
+    androidTestImplementation(testFixtures(libs.common.utils))
     androidTestImplementation(libs.bundles.android.test)
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.turbine)

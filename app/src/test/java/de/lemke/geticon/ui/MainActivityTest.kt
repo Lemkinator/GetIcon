@@ -30,9 +30,9 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import de.lemke.commonutils.bypassOobe
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.geticon.R
-import de.lemke.geticon.bypassOobe
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
