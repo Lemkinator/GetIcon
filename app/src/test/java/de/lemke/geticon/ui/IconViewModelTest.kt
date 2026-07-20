@@ -318,7 +318,7 @@ class IconViewModelTest : ShouldSpec(
                 }
             }
 
-            should("does not emit GenerateFailed when generateIcon throws CancellationException in loadInitialState") {
+            should("not emit GenerateFailed when generateIcon throws CancellationException in loadInitialState") {
                 every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws CancellationException("cancelled")
                 val viewModel = buildViewModel(appInfo)
                 viewModel.events.test { expectNoEvents() }
