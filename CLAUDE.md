@@ -188,17 +188,33 @@ Tests never mock settings: every test uses the real `UserSettings` over an isola
 store, so defaults come from `UserSettings`'s own production delegates — no duplicated
 default values, no manual reset helpers, no per-field mock stubs.
 
+The only canonical way to get a fresh store in a test is `freshTestPreferences()` — published by
+common-utils from `lib/src/testFixtures` (`testImplementation(testFixtures(libs.common.utils))` /
+`androidTestImplementation(testFixtures(libs.common.utils))`). It returns a UUID-named
+`SharedPreferences` file, fresh by construction — no manual `.edit().clear()`, no caller-supplied
+names, no collision risk on a reused GMD device. Test code never calls `getSharedPreferences(...)`
+or `PreferenceManager.getDefaultSharedPreferences(...)` directly.
+
 - **`TestSettingsModule` twins** — `app/src/test/java/de/lemke/geticon/TestSettingsModule.kt`
   and `app/src/androidTest/java/de/lemke/geticon/TestSettingsModule.kt`: same package, same
   file name, byte-for-byte identical content. Each `@TestInstallIn`-replaces
-  `SettingsProvideModule` with a fresh UUID-named `SharedPreferences` file per Hilt component
-  instance, so every `@HiltAndroidTest` gets a real, empty `UserSettings` automatically.
-- **`FakeSharedPreferences`** (`app/src/test/java/de/lemke/geticon/data/FakeSharedPreferences.kt`)
-  — a pure-JVM double used only by the one Kotest spec with no Context (`IconViewModelTest`);
-  everywhere else Robolectric's real `SharedPreferences` (via the module above) or a
-  Context-backed file (`UserSettingsTest`) is used instead.
-- **`bypassOobe()`** testFixture (`app/src/testFixtures/java/de/lemke/geticon/TestUtils.kt`),
-  shared by `test` + `androidTest`, for any test that launches `MainActivity`.
+  `SettingsProvideModule` with `UserSettings(freshTestPreferences(context))`, so every
+  `@HiltAndroidTest` gets a real, empty `UserSettings` automatically. **Kept as twins
+  deliberately** — consolidating into a single `app/src/testFixtures` file was tried and
+  reverted: Hilt's kapt/ksp aggregation doesn't pick up a `@Module`/`@TestInstallIn` class
+  declared in the `testFixtures` source set for the `test` (Robolectric) side, even though it
+  compiles cleanly and silently falls back to the production module (verify via
+  `app/build/intermediates/javac/debugUnitTest/.../hilt_aggregated_deps` if revisiting this).
+- **`FakeSharedPreferences`** (published by common-utils from
+  `lib/src/testFixtures/java/de/lemke/commonutils/data/FakeSharedPreferences.kt`) — a pure-JVM
+  double used only by the one Kotest spec with no Context (`IconViewModelTest`); everywhere else
+  Robolectric's real `SharedPreferences` (via the module above) or a Context-backed file
+  (`UserSettingsTest`, using `freshTestPreferences()` directly) is used instead.
+- **`bypassOobe()`** — also published by common-utils testFixtures
+  (`de.lemke.commonutils.bypassOobe()`, a plain `SettingsRepository` extension), for any test
+  that launches `MainActivity`. GetIcon has no settings-test code of its own left beyond the
+  `TestSettingsModule` twins, which name GetIcon's own `UserSettings`/`SettingsProvideModule`
+  and can't move into common-utils.
 
 ## Finding Code
 
