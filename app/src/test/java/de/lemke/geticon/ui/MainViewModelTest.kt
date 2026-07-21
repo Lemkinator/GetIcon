@@ -116,7 +116,7 @@ class MainViewModelTest : ShouldSpec(
                 viewModel.onAppSelected("com.example.test")
                 val event = awaitItem()
                 event.shouldBeInstanceOf<MainEvent.NavigateToIcon>()
-                (event as MainEvent.NavigateToIcon).applicationInfo shouldBe appInfo
+                event.applicationInfo shouldBe appInfo
             }
         }
 
