@@ -24,7 +24,6 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.inputmethod.InputMethodManager
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
@@ -51,6 +50,7 @@ import de.lemke.commonutils.ui.utils.saveSearchAndActionMode
 import de.lemke.commonutils.ui.utils.setupCommonUtilsAboutActivity
 import de.lemke.commonutils.ui.utils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.setupHeaderAndNavRail
+import de.lemke.commonutils.ui.utils.showSoftInput
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.commonutils.ui.utils.transformToActivity
 import de.lemke.geticon.BuildConfig
@@ -175,7 +175,7 @@ class MainActivity :
             onStart = {
                 it.queryHint = getString(commonutilsR.string.commonutils_search_apps)
                 it.setQuery(settings.search, false)
-                (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(it, 0)
+                it.showSoftInput()
             },
             onQuery = { query, _ ->
                 applyFilter(query)
