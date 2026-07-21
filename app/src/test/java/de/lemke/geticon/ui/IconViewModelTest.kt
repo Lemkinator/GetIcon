@@ -38,6 +38,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import java.io.File
 import java.io.IOException
@@ -68,14 +69,17 @@ class IconViewModelTest : ShouldSpec(
             every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } returns mockIconResult
         }
 
-        fun buildViewModel(appInfo: ApplicationInfo? = null): IconViewModel {
+        fun buildViewModel(
+            appInfo: ApplicationInfo? = null,
+            settings: UserSettings = userSettings,
+        ): IconViewModel {
             val handle =
                 if (appInfo != null) {
                     SavedStateHandle(mapOf(IconActivity.KEY_APPLICATION_INFO to appInfo))
                 } else {
                     SavedStateHandle()
                 }
-            return IconViewModel(mockContext, handle, userSettings, generateIcon)
+            return IconViewModel(mockContext, handle, settings, generateIcon)
         }
 
         context("null applicationInfo") {
@@ -85,8 +89,12 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("not read from userSettings") {
-                val viewModel = buildViewModel(appInfo = null)
+                val spyPreferences = spyk(FakeSharedPreferences())
+                val viewModel = buildViewModel(appInfo = null, settings = UserSettings(spyPreferences))
                 viewModel.state.value shouldBe IconUiState()
+                verify(exactly = 0) { spyPreferences.getInt(any(), any()) }
+                verify(exactly = 0) { spyPreferences.getBoolean(any(), any()) }
+                verify(exactly = 0) { spyPreferences.getString(any(), any()) }
             }
 
             should("onMaskChanged does not call generateIcon when applicationInfo is null") {
