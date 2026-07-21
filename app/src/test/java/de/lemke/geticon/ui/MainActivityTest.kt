@@ -64,7 +64,7 @@ class MainActivityTest {
 
     @BindValue
     @JvmField
-    val fakeProcessApk: ProcessApkUseCase = mockk(relaxed = true)
+    val processApkStub: ProcessApkUseCase = mockk(relaxed = true)
 
     @Inject
     lateinit var settings: SettingsRepository
@@ -154,7 +154,7 @@ class MainActivityTest {
 
     @Test
     fun collectEvents_showError_callsToast() {
-        coEvery { fakeProcessApk(any()) } returns ApkProcessResult.InvalidApk
+        coEvery { processApkStub(any()) } returns ApkProcessResult.InvalidApk
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
@@ -166,7 +166,7 @@ class MainActivityTest {
     @Test
     fun collectEvents_navigateToApkIcon_startsIconActivity() {
         val appInfo = mockk<ApplicationInfo>(relaxed = true).also { it.packageName = "com.test" }
-        coEvery { fakeProcessApk(any()) } returns ApkProcessResult.Success(appInfo)
+        coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[MainViewModel::class.java]

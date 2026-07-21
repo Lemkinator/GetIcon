@@ -67,13 +67,13 @@ class IconActivityTest {
 
     @BindValue
     @JvmField
-    val fakeGenerateIcon: GenerateIconUseCase = mockk()
+    val generateIconStub: GenerateIconUseCase = mockk()
 
     @Before
     fun setup() {
         hiltRule.inject()
         every {
-            fakeGenerateIcon(
+            generateIconStub(
                 any<ApplicationInfo>(),
                 any<Int>(),
                 any<Boolean>(),
@@ -109,7 +109,7 @@ class IconActivityTest {
     @Test
     fun collectEvents_generateFailed_finishesActivity() {
         every {
-            fakeGenerateIcon(
+            generateIconStub(
                 any<ApplicationInfo>(),
                 any<Int>(),
                 any<Boolean>(),
@@ -194,10 +194,10 @@ class IconActivityTest {
 
     @Test
     fun colorCheckbox_programmaticUncheck_doesNotCallViewModel() {
-        // fakeGenerateIcon returns isAdaptiveIcon=false so regenerateIcon produces a state
+        // generateIconStub returns isAdaptiveIcon=false so regenerateIcon produces a state
         // where colorCheckbox.isChecked would be set from true→false inside renderState.
         every {
-            fakeGenerateIcon(
+            generateIconStub(
                 any<ApplicationInfo>(),
                 any<Int>(),
                 any<Boolean>(),
