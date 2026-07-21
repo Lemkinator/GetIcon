@@ -56,8 +56,6 @@ class IconViewModelTest : ShouldSpec(
         val generateIcon = mockk<GenerateIconUseCase>()
 
         val defaultIconSize = DEFAULT_ICON_SIZE
-        val defaultMaskEnabled = true
-        val defaultColorEnabled = false
         val defaultForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
         val defaultBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
         val mockIconResult = IconResult(bitmap = mockk<Bitmap>(relaxed = true), isAdaptiveIcon = true, hasMaskedAppIcon = false)
@@ -111,10 +109,10 @@ class IconViewModelTest : ShouldSpec(
                     viewModel.state.value.size shouldBe defaultIconSize
                 }
                 withClue("maskEnabled should match userSettings.maskEnabled") {
-                    viewModel.state.value.maskEnabled shouldBe defaultMaskEnabled
+                    viewModel.state.value.maskEnabled shouldBe userSettings.maskEnabled
                 }
                 withClue("colorEnabled should match userSettings.colorEnabled") {
-                    viewModel.state.value.colorEnabled shouldBe defaultColorEnabled
+                    viewModel.state.value.colorEnabled shouldBe userSettings.colorEnabled
                 }
             }
 
