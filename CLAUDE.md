@@ -216,10 +216,8 @@ or `PreferenceManager.getDefaultSharedPreferences(...)` directly.
   `TestSettingsModule` twins, which name GetIcon's own `UserSettings`/`SettingsProvideModule`
   and can't move into common-utils.
   **Per-test, not structural** — each `@HiltAndroidTest` gets its own fresh, isolated
-  `UserSettings` via `freshTestPreferences()` (a new UUID-named file), so there is no
-  Application-level default that pre-bypasses OOBE for every test the way GetIcon's old
-  `TestApp.onCreate()` used to. Any new androidTest that launches `MainActivity` must call
+  `UserSettings` via `freshTestPreferences()` (a new UUID-named file).
+  Any new androidTest that launches `MainActivity` must call
   `settings.bypassOobe()` itself (inject `SettingsRepository`, call it in `@Before`) —
   see `app/src/androidTest/java/de/lemke/geticon/ui/MainActivityTest.kt`. Forgetting it
-  redirects the launch into OOBE and leaves the activity `DESTROYED` via
-  `finishAfterTransition`.
+  redirects the launch into OOBE and leaves the activity `DESTROYED` via `finishAfterTransition`.
