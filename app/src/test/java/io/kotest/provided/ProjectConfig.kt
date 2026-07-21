@@ -18,7 +18,9 @@ package io.kotest.provided
 
 import de.lemke.geticon.TestDispatcherListener
 import io.kotest.core.config.AbstractProjectConfig
+import io.kotest.core.spec.SpecExecutionOrder
 
 class ProjectConfig : AbstractProjectConfig() {
+    override val specExecutionOrder = SpecExecutionOrder.Random
     override val extensions = listOf(TestDispatcherListener())
 }

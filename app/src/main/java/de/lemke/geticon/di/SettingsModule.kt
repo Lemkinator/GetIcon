@@ -17,24 +17,30 @@
 package de.lemke.geticon.di
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.preference.PreferenceManager
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.geticon.data.UserSettings
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object PersistenceModule {
-    private val Context.userSettingsStore: DataStore<Preferences> by preferencesDataStore(name = "userSettings")
-
+object SettingsProvideModule {
     @Provides
     @Singleton
-    fun provideUserSettingsDataStore(
-        @ApplicationContext context: Context,
-    ): DataStore<Preferences> = context.userSettingsStore
+    fun provideUserSettings(
+        @ApplicationContext c: Context,
+    ): UserSettings = UserSettings(PreferenceManager.getDefaultSharedPreferences(c))
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class SettingsBindModule {
+    @Binds
+    abstract fun bindSettingsRepository(u: UserSettings): SettingsRepository
 }

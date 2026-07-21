@@ -18,19 +18,8 @@ package de.lemke.geticon
 
 import android.app.Application
 import dagger.hilt.android.testing.CustomTestApplication
-import de.lemke.commonutils.data.commonUtilsSettings
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 
-open class TestApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        initCommonUtilsSettingsAndSetDarkMode()
-        // Prevent OOBE redirect: fresh SharedPreferences has lastVersionCode = -1 which triggers
-        // onboardIfNeeded → finishAfterTransition, leaving MainActivity DESTROYED.
-        commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
-        commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
-    }
-}
+open class TestApp : Application()
 
 @Suppress("unused") // KSP generates TestApplication_Application from this annotation target
 @CustomTestApplication(TestApp::class)

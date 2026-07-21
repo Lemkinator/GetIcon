@@ -17,29 +17,22 @@
 package de.lemke.geticon
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.Preferences
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
-import de.lemke.geticon.di.PersistenceModule
-import java.util.UUID
+import de.lemke.commonutils.freshTestPreferences
+import de.lemke.geticon.data.UserSettings
+import de.lemke.geticon.di.SettingsProvideModule
 import javax.inject.Singleton
 
 @Module
-@TestInstallIn(components = [SingletonComponent::class], replaces = [PersistenceModule::class])
-object TestPersistenceModule {
+@TestInstallIn(components = [SingletonComponent::class], replaces = [SettingsProvideModule::class])
+object TestSettingsModule {
     @Provides
     @Singleton
-    fun provideTestDataStore(
+    fun provideTestUserSettings(
         @ApplicationContext context: Context,
-    ): DataStore<Preferences> =
-        PreferenceDataStoreFactory.create {
-            // UUID per component instance avoids cross-test collisions without needing
-            // TemporaryFolder (which has a lifetime mismatch with @Singleton DataStore).
-            context.cacheDir.resolve("test_${UUID.randomUUID()}.preferences_pb")
-        }
+    ): UserSettings = UserSettings(freshTestPreferences(context))
 }

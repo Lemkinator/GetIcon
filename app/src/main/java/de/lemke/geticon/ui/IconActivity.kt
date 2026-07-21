@@ -39,17 +39,17 @@ import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
-import de.lemke.commonutils.collectEvents
-import de.lemke.commonutils.collectState
-import de.lemke.commonutils.copyToClipboard
-import de.lemke.commonutils.data.commonUtilsSettings
-import de.lemke.commonutils.exportBitmap
-import de.lemke.commonutils.prepareActivityTransformationTo
-import de.lemke.commonutils.saveBitmapToUri
-import de.lemke.commonutils.setCustomBackAnimation
-import de.lemke.commonutils.setWindowTransparent
-import de.lemke.commonutils.shareBitmap
-import de.lemke.commonutils.toast
+import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.commonutils.ui.utils.collectEvents
+import de.lemke.commonutils.ui.utils.collectState
+import de.lemke.commonutils.ui.utils.copyToClipboard
+import de.lemke.commonutils.ui.utils.exportBitmap
+import de.lemke.commonutils.ui.utils.prepareActivityTransformationTo
+import de.lemke.commonutils.ui.utils.saveBitmapToUri
+import de.lemke.commonutils.ui.utils.setCustomBackAnimation
+import de.lemke.commonutils.ui.utils.setWindowTransparent
+import de.lemke.commonutils.ui.utils.shareBitmap
+import de.lemke.commonutils.ui.utils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
@@ -58,6 +58,7 @@ import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.onProgressChanged
+import javax.inject.Inject
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
@@ -65,6 +66,9 @@ import de.lemke.commonutils.R as commonutilsR
 class IconActivity :
     AppCompatActivity(),
     ViewYTranslator by AppBarAwareYTranslator() {
+    @Inject
+    lateinit var settings: SettingsRepository
+
     private lateinit var binding: ActivityIconBinding
     private val viewModel: IconViewModel by viewModels()
     private var isRendering = false
@@ -91,7 +95,7 @@ class IconActivity :
         val icon = state.icon ?: return super.onOptionsItemSelected(item)
         return when (item.itemId) {
             R.id.menu_item_icon_save_as_image -> {
-                exportBitmap(commonUtilsSettings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher)
+                exportBitmap(settings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher)
                 true
             }
 

@@ -24,7 +24,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import de.lemke.commonutils.bypassOobe
+import de.lemke.commonutils.data.SettingsRepository
 import io.kotest.matchers.shouldBe
+import javax.inject.Inject
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,6 +39,17 @@ import org.junit.runner.RunWith
 class MainActivityTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
+
+    @Inject
+    lateinit var settings: SettingsRepository
+
+    @Before
+    fun setUp() {
+        hiltRule.inject()
+        // Prevent OOBE redirect: fresh prefs default lastVersionCode = -1, which triggers
+        // onboardIfNeeded → finishAfterTransition, leaving MainActivity DESTROYED.
+        settings.bypassOobe()
+    }
 
     @Test
     fun activityLaunchesWithoutCrash() {

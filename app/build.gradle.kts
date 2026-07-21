@@ -109,8 +109,6 @@ android {
         checkReleaseBuilds = true
         abortOnError = true
         baseline = file("lint-baseline.xml")
-        sarifReport = true
-        htmlReport = true
     }
     testOptions {
         unitTests {
@@ -144,7 +142,6 @@ dependencies {
     implementation(libs.oneui.design)
     implementation(libs.oneui.icons)
     implementation(libs.common.utils)
-    implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -152,6 +149,8 @@ dependencies {
     implementation(libs.profileinstaller)
     baselineProfile(project(":benchmarks"))
     debugImplementation(libs.leakcanary)
+
+    testImplementation(testFixtures(libs.common.utils))
 
     testImplementation(libs.arch.core.testing)
     testImplementation(libs.bundles.unit.test)
@@ -165,6 +164,7 @@ dependencies {
     testRuntimeOnly(libs.junit.vintage.engine)
     kspTest(libs.hilt.compiler)
 
+    androidTestImplementation(testFixtures(libs.common.utils))
     androidTestImplementation(libs.bundles.android.test)
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.turbine)
@@ -236,6 +236,7 @@ kover {
                     "*_HiltModules*",
                     "*_Factory",
                     "*_Provide*",
+                    "*_MembersInjector",
                     "dagger.hilt.*",
                     "hilt_aggregated_deps.*",
                 )

@@ -30,8 +30,8 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import de.lemke.commonutils.data.commonUtilsSettings
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
+import de.lemke.commonutils.bypassOobe
+import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.geticon.R
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
@@ -41,6 +41,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.unmockkConstructor
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import leakcanary.AppWatcher
 import org.junit.Before
@@ -63,14 +64,15 @@ class MainActivityTest {
 
     @BindValue
     @JvmField
-    val fakeProcessApk: ProcessApkUseCase = mockk(relaxed = true)
+    val processApkStub: ProcessApkUseCase = mockk(relaxed = true)
+
+    @Inject
+    lateinit var settings: SettingsRepository
 
     @Before
     fun setup() {
         hiltRule.inject()
-        ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
-        commonUtilsSettings.lastVersionCode = Int.MAX_VALUE
-        commonUtilsSettings.acceptedTosVersion = Int.MAX_VALUE
+        settings.bypassOobe()
         if (!AppWatcher.isInstalled) {
             AppWatcher.manualInstall(ApplicationProvider.getApplicationContext<HiltTestApplication>())
         }
@@ -78,7 +80,7 @@ class MainActivityTest {
 
     @Test
     fun onCreate_onboardingRequired_returnsEarly() {
-        commonUtilsSettings.lastVersionCode = -1
+        settings.lastVersionCode = -1
         ActivityScenario.launch(MainActivity::class.java).use { _ -> }
     }
 
@@ -152,7 +154,7 @@ class MainActivityTest {
 
     @Test
     fun collectEvents_showError_callsToast() {
-        coEvery { fakeProcessApk(any()) } returns ApkProcessResult.InvalidApk
+        coEvery { processApkStub(any()) } returns ApkProcessResult.InvalidApk
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
@@ -164,7 +166,7 @@ class MainActivityTest {
     @Test
     fun collectEvents_navigateToApkIcon_startsIconActivity() {
         val appInfo = mockk<ApplicationInfo>(relaxed = true).also { it.packageName = "com.test" }
-        coEvery { fakeProcessApk(any()) } returns ApkProcessResult.Success(appInfo)
+        coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[MainViewModel::class.java]

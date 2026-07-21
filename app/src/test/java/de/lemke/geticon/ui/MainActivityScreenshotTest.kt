@@ -40,9 +40,9 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import de.lemke.commonutils.data.commonUtilsSettings
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
-import de.lemke.geticon.bypassOobe
+import de.lemke.commonutils.bypassOobe
+import de.lemke.commonutils.data.SettingsRepository
+import javax.inject.Inject
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -62,11 +62,13 @@ class MainActivityScreenshotTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
+    @Inject
+    lateinit var settings: SettingsRepository
+
     @Before
     fun setup() {
         hiltRule.inject()
-        ApplicationProvider.getApplicationContext<HiltTestApplication>().initCommonUtilsSettingsAndSetDarkMode()
-        commonUtilsSettings.bypassOobe()
+        settings.bypassOobe()
         installFakeApps()
     }
 

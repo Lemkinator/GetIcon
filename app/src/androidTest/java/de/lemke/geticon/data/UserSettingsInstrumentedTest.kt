@@ -22,30 +22,28 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.kotest.matchers.shouldBe
 import javax.inject.Inject
-import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Confirms end-to-end Hilt wiring with DataStore isolation via UUID-named file in cacheDir. */
+/** Confirms end-to-end Hilt wiring: [UserSettings] resolves through the real dependency graph on-device. */
 @HiltAndroidTest
 @LargeTest
 @RunWith(AndroidJUnit4::class)
-class UserSettingsRepositoryInstrumentedTest {
+class UserSettingsInstrumentedTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
     @Inject
-    lateinit var repo: UserSettingsRepository
+    lateinit var userSettings: UserSettings
 
     @Before
     fun inject() = hiltRule.inject()
 
     @Test
-    fun iconSizeRoundTrip() =
-        runTest {
-            repo.updateSettings { it.copy(iconSize = 200) }
-            repo.getSettings().iconSize shouldBe 200
-        }
+    fun iconSizeRoundTrip() {
+        userSettings.iconSize = 200
+        userSettings.iconSize shouldBe 200
+    }
 }

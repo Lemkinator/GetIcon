@@ -22,18 +22,11 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.github.takahirom.roborazzi.captureRoboImage
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import dagger.hilt.components.SingletonComponent
-import de.lemke.commonutils.data.initCommonUtilsSettingsAndSetDarkMode
 import de.lemke.geticon.data.UserSettings
-import de.lemke.geticon.domain.UpdateUserSettingsUseCase
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
+import javax.inject.Inject
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -50,37 +43,12 @@ class IconActivityScreenshotTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
-    @EntryPoint
-    @InstallIn(SingletonComponent::class)
-    interface SettingsEntryPoint {
-        fun updateUserSettings(): UpdateUserSettingsUseCase
-    }
-
-    private val updateUserSettings by lazy {
-        EntryPointAccessors
-            .fromApplication(
-                ApplicationProvider.getApplicationContext(),
-                SettingsEntryPoint::class.java,
-            ).updateUserSettings()
-    }
+    @Inject
+    lateinit var userSettings: UserSettings
 
     @Before
     fun resetSettings() {
         hiltRule.inject()
-        ApplicationProvider
-            .getApplicationContext<HiltTestApplication>()
-            .initCommonUtilsSettingsAndSetDarkMode()
-        runBlocking {
-            updateUserSettings.invoke {
-                UserSettings(
-                    iconSize = UserSettings.DEFAULT_ICON_SIZE,
-                    maskEnabled = true,
-                    colorEnabled = false,
-                    recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
-                    recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
-                )
-            }
-        }
     }
 
     private fun captureIconScreenshot(fileName: String) {
@@ -98,25 +66,22 @@ class IconActivityScreenshotTest {
     }
 
     @Test
-    fun iconActivity_maskDisabled() =
-        runTest {
-            updateUserSettings.invoke { it.copy(maskEnabled = false) }
-            captureIconScreenshot("src/test/screenshots/icon_mask_disabled.png")
-        }
+    fun iconActivity_maskDisabled() {
+        userSettings.maskEnabled = false
+        captureIconScreenshot("src/test/screenshots/icon_mask_disabled.png")
+    }
 
     @Test
-    fun iconActivity_colorEnabled() =
-        runTest {
-            updateUserSettings.invoke { it.copy(colorEnabled = true) }
-            captureIconScreenshot("src/test/screenshots/icon_color_enabled.png")
-        }
+    fun iconActivity_colorEnabled() {
+        userSettings.colorEnabled = true
+        captureIconScreenshot("src/test/screenshots/icon_color_enabled.png")
+    }
 
     @Test
-    fun iconActivity_sizeSmall() =
-        runTest {
-            updateUserSettings.invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) }
-            captureIconScreenshot("src/test/screenshots/icon_size_small.png")
-        }
+    fun iconActivity_sizeSmall() {
+        userSettings.iconSize = UserSettings.MIN_ICON_SIZE
+        captureIconScreenshot("src/test/screenshots/icon_size_small.png")
+    }
 
     @Test
     @Config(qualifiers = "+night")
@@ -126,25 +91,22 @@ class IconActivityScreenshotTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun iconActivity_maskDisabled_dark() =
-        runTest {
-            updateUserSettings.invoke { it.copy(maskEnabled = false) }
-            captureIconScreenshot("src/test/screenshots/icon_mask_disabled_dark.png")
-        }
+    fun iconActivity_maskDisabled_dark() {
+        userSettings.maskEnabled = false
+        captureIconScreenshot("src/test/screenshots/icon_mask_disabled_dark.png")
+    }
 
     @Test
     @Config(qualifiers = "+night")
-    fun iconActivity_colorEnabled_dark() =
-        runTest {
-            updateUserSettings.invoke { it.copy(colorEnabled = true) }
-            captureIconScreenshot("src/test/screenshots/icon_color_enabled_dark.png")
-        }
+    fun iconActivity_colorEnabled_dark() {
+        userSettings.colorEnabled = true
+        captureIconScreenshot("src/test/screenshots/icon_color_enabled_dark.png")
+    }
 
     @Test
     @Config(qualifiers = "+night")
-    fun iconActivity_sizeSmall_dark() =
-        runTest {
-            updateUserSettings.invoke { it.copy(iconSize = UserSettings.MIN_ICON_SIZE) }
-            captureIconScreenshot("src/test/screenshots/icon_size_small_dark.png")
-        }
+    fun iconActivity_sizeSmall_dark() {
+        userSettings.iconSize = UserSettings.MIN_ICON_SIZE
+        captureIconScreenshot("src/test/screenshots/icon_size_small_dark.png")
+    }
 }

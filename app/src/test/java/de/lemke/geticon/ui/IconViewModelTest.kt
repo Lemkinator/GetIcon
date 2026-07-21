@@ -23,24 +23,22 @@ import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
+import de.lemke.commonutils.data.FakeSharedPreferences
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
-import de.lemke.geticon.domain.GetUserSettingsUseCase
 import de.lemke.geticon.domain.IconResult
-import de.lemke.geticon.domain.UpdateUserSettingsUseCase
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearMocks
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import java.io.File
 import java.io.IOException
@@ -55,40 +53,33 @@ class IconViewModelTest : ShouldSpec(
     {
         val mockContext = mockk<Context>(relaxed = true)
         val mockPackageManager = mockk<PackageManager>(relaxed = true)
-        val getUserSettings = mockk<GetUserSettingsUseCase>()
-        val updateUserSettings = mockk<UpdateUserSettingsUseCase>()
+        lateinit var userSettings: UserSettings
         val generateIcon = mockk<GenerateIconUseCase>()
 
-        val defaultSettings =
-            UserSettings(
-                iconSize = DEFAULT_ICON_SIZE,
-                maskEnabled = true,
-                colorEnabled = false,
-                recentForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR),
-                recentBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR),
-            )
+        val defaultIconSize = DEFAULT_ICON_SIZE
+        val defaultForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
+        val defaultBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
         val mockIconResult = IconResult(bitmap = mockk<Bitmap>(relaxed = true), isAdaptiveIcon = true, hasMaskedAppIcon = false)
 
         beforeEach {
-            clearMocks(getUserSettings, updateUserSettings, generateIcon)
+            clearMocks(generateIcon)
             every { mockContext.packageManager } returns mockPackageManager
             every { mockContext.cacheDir } returns File(System.getProperty("java.io.tmpdir") ?: "/tmp")
-            coEvery { getUserSettings() } returns defaultSettings
+            userSettings = UserSettings(FakeSharedPreferences())
             every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } returns mockIconResult
-            coEvery { updateUserSettings(any()) } answers {
-                val transform = firstArg<(UserSettings) -> UserSettings>()
-                transform(defaultSettings)
-            }
         }
 
-        fun buildViewModel(appInfo: ApplicationInfo? = null): IconViewModel {
+        fun buildViewModel(
+            appInfo: ApplicationInfo? = null,
+            settings: UserSettings = userSettings,
+        ): IconViewModel {
             val handle =
                 if (appInfo != null) {
                     SavedStateHandle(mapOf(IconActivity.KEY_APPLICATION_INFO to appInfo))
                 } else {
                     SavedStateHandle()
                 }
-            return IconViewModel(mockContext, handle, getUserSettings, updateUserSettings, generateIcon)
+            return IconViewModel(mockContext, handle, settings, generateIcon)
         }
 
         context("null applicationInfo") {
@@ -97,9 +88,13 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.events.test { awaitItem() shouldBe IconEvent.Finish }
             }
 
-            should("not call getUserSettings") {
-                buildViewModel(appInfo = null)
-                coVerify(exactly = 0) { getUserSettings() }
+            should("not read from userSettings") {
+                val spyPreferences = spyk(FakeSharedPreferences())
+                val viewModel = buildViewModel(appInfo = null, settings = UserSettings(spyPreferences))
+                viewModel.state.value shouldBe IconUiState()
+                verify(exactly = 0) { spyPreferences.getInt(any(), any()) }
+                verify(exactly = 0) { spyPreferences.getBoolean(any(), any()) }
+                verify(exactly = 0) { spyPreferences.getString(any(), any()) }
             }
 
             should("onMaskChanged does not call generateIcon when applicationInfo is null") {
@@ -116,16 +111,16 @@ class IconViewModelTest : ShouldSpec(
         context("valid applicationInfo") {
             val appInfo = mockk<ApplicationInfo>(relaxed = true).also { it.packageName = "com.example.test" }
 
-            should("load initial state from getUserSettings") {
+            should("load initial state from userSettings") {
                 val viewModel = buildViewModel(appInfo)
-                withClue("size should match defaultSettings.iconSize") {
-                    viewModel.state.value.size shouldBe defaultSettings.iconSize
+                withClue("size should match userSettings.iconSize") {
+                    viewModel.state.value.size shouldBe defaultIconSize
                 }
-                withClue("maskEnabled should match defaultSettings.maskEnabled") {
-                    viewModel.state.value.maskEnabled shouldBe defaultSettings.maskEnabled
+                withClue("maskEnabled should match userSettings.maskEnabled") {
+                    viewModel.state.value.maskEnabled shouldBe userSettings.maskEnabled
                 }
-                withClue("colorEnabled should match defaultSettings.colorEnabled") {
-                    viewModel.state.value.colorEnabled shouldBe defaultSettings.colorEnabled
+                withClue("colorEnabled should match userSettings.colorEnabled") {
+                    viewModel.state.value.colorEnabled shouldBe userSettings.colorEnabled
                 }
             }
 
@@ -138,12 +133,12 @@ class IconViewModelTest : ShouldSpec(
 
             should("set recentForegroundColors from settings") {
                 val viewModel = buildViewModel(appInfo)
-                viewModel.state.value.recentForegroundColors shouldBe defaultSettings.recentForegroundColors
+                viewModel.state.value.recentForegroundColors shouldBe defaultForegroundColors
             }
 
             should("set recentBackgroundColors from settings") {
                 val viewModel = buildViewModel(appInfo)
-                viewModel.state.value.recentBackgroundColors shouldBe defaultSettings.recentBackgroundColors
+                viewModel.state.value.recentBackgroundColors shouldBe defaultBackgroundColors
             }
 
             should("onMaskChanged updates maskEnabled in state") {
@@ -193,7 +188,7 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("onForegroundColorChanged deduplicates recent colors") {
-                val existingColor = defaultSettings.recentForegroundColors.first()
+                val existingColor = defaultForegroundColors.first()
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onForegroundColorChanged(existingColor)
                 val colors = viewModel.state.value.recentForegroundColors
@@ -210,22 +205,22 @@ class IconViewModelTest : ShouldSpec(
                     .first() shouldBe newColor
             }
 
-            should("onMaskChanged calls updateUserSettings") {
+            should("onMaskChanged writes maskEnabled to userSettings") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onMaskChanged(false)
-                coVerify(atLeast = 1) { updateUserSettings(any()) }
+                userSettings.maskEnabled shouldBe false
             }
 
-            should("onColorChanged calls updateUserSettings") {
+            should("onColorChanged writes colorEnabled to userSettings") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onColorChanged(true)
-                coVerify(atLeast = 1) { updateUserSettings(any()) }
+                userSettings.colorEnabled shouldBe true
             }
 
-            should("onSizeChanged calls updateUserSettings") {
+            should("onSizeChanged writes iconSize to userSettings") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onSizeChanged(256)
-                coVerify(atLeast = 1) { updateUserSettings(any()) }
+                userSettings.iconSize shouldBe 256
             }
 
             should("onCleared does nothing when sourceDir is null") {
@@ -272,8 +267,8 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.isLoading shouldBe false
             }
 
-            should("emit GenerateFailed when getUserSettings throws IOException") {
-                coEvery { getUserSettings() } throws IOException("io error")
+            should("emit GenerateFailed when generateIcon throws IOException in loadInitialState") {
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws IOException("io error")
                 val viewModel = buildViewModel(appInfo)
                 viewModel.events.test {
                     awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
@@ -329,8 +324,8 @@ class IconViewModelTest : ShouldSpec(
                 }
             }
 
-            should("does not emit GenerateFailed when getUserSettings throws CancellationException") {
-                coEvery { getUserSettings() } throws CancellationException("cancelled")
+            should("not emit GenerateFailed when generateIcon throws CancellationException in loadInitialState") {
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws CancellationException("cancelled")
                 val viewModel = buildViewModel(appInfo)
                 viewModel.events.test { expectNoEvents() }
             }

@@ -15,7 +15,7 @@ All commands run from the repo root on Windows (PowerShell or Git Bash):
 
 Unit tests exist: `IconViewModelTest`, `IconActivityScreenshotTest` (Roborazzi),
 `MainActivityScreenshotTest` (Roborazzi), plus Konsist architecture tests.
-Instrumented tests: `MainActivityTest`, `IconActivityTest`, `UserSettingsRepositoryInstrumentedTest`
+Instrumented tests: `MainActivityTest`, `IconActivityTest`
 — run via Gradle Managed Device (no physical device needed):
 
 ```powershell
@@ -58,14 +58,17 @@ Provide credentials via **one** of these (checked in order):
 Single-module (`:app`) Android app — extracts and exports app icons.
 Layered architecture (data/domain/ui) with ViewModels per activity:
 
-- **`data/`** — `UserSettingsRepository`: DataStore Preferences CRUD
-  (icon size, mask, colors)
-- **`domain/`** — thin use cases: `GetUserSettingsUseCase`,
-  `UpdateUserSettingsUseCase`, `AppPickerStrategy`
+- **`data/`** — `UserSettings`: a common-utils `SettingsRepository` subclass,
+  SharedPreferences-backed (icon size, mask, colors)
+- **`domain/`** — thin use cases: `GenerateIconUseCase`, `GetApplicationInfoUseCase`, `ProcessApkUseCase`.
 - **`ui/`** — two activities + two ViewModels: `MainActivity` / `MainViewModel`
   (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
-- **`App.kt`** — `@HiltAndroidApp` entry point, calls `common-utils` init
-- **`PersistenceModule.kt`** — Hilt singleton providing `DataStore<Preferences>`
+- **`App.kt`** — `@HiltAndroidApp` entry point; injects `settings: SettingsRepository`
+  and calls `settings.applyDarkMode()` in `onCreate()`
+- **`di/SettingsModule.kt`** — two Hilt modules: `SettingsProvideModule`
+  (`@Provides @Singleton` builds the single `UserSettings` instance) and
+  `SettingsBindModule` (`@Binds` redirects `SettingsRepository`-typed requests
+  to that instance)
 
 DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
 ViewBinding enabled. Activities collect `StateFlow<UiState>` and one-shot
@@ -88,18 +91,14 @@ to bypass OOBE and measure Main + Icon only; production `release` keeps it `fals
 ## Key Patterns
 
 **External libraries dominate UI logic.** Many helpers
-(`prepareActivityTransformationFrom()`, `toast`, `exportBitmap`,
-`commonUtilsSettings`) live in `io.github.lemkinator:common-utils`
+(`prepareActivityTransformationFrom()`, `toast`, `exportBitmap`)
+live in `io.github.lemkinator:common-utils`
 (imported as `de.lemke.commonutils`). When changing behavior, inspect
 call sites in `MainActivity.kt` / `IconActivity.kt` first.
 
 **Resource aliasing** — code imports
 `de.lemke.commonutils.R as commonutilsR` alongside the app's own `R`.
 Be aware when touching resource IDs.
-
-**Use cases over repositories** — prefer injecting
-`GetUserSettingsUseCase` / `UpdateUserSettingsUseCase` rather than
-`UserSettingsRepository` directly.
 
 **Dependency exclusions** — root `build.gradle.kts` excludes many AndroidX
 modules from subprojects to prevent duplicate packaging. Check
@@ -135,7 +134,7 @@ targeted message if `core.autocrlf=true` is detected.
 **After any change** — run the full local CI suite before declaring work done:
 
 ```powershell
-./gradlew spotlessCheck detekt lintDebug testDebugUnitTest koverVerifyDebug verifyRoborazziDebug pixel9Api35DebugAndroidTest assembleRelease
+./gradlew spotlessCheck detekt lintDebug testDebugUnitTest koverVerifyDebug koverHtmlReportDebug verifyRoborazziDebug pixel9Api35DebugAndroidTest assembleRelease
 ```
 
 If `spotlessCheck` fails, fix with `./gradlew spotlessApply` then re-run. Screenshot test failures (`verifyRoborazziDebug`) mean the code
@@ -162,11 +161,63 @@ community practice (NowInAndroid, Pokedex both use the inline form):
 
 ## Robolectric + JUnit 5
 
-`@RunWith(RobolectricTestRunner::class)` + `junit-vintage-engine` is correct — Robolectric has no
-native JUnit 5 support. Keep until Robolectric ships native JUnit 5.
+Both this repo and common-utils default to JUnit 5 (Kotest runs on the JUnit 5 platform —
+see `ArchitectureTest.kt`). JUnit 4 + `junit-vintage-engine` is used only for tests that need
+Robolectric, because Robolectric has no native JUnit 5 support. Neither repo uses a JUnit5
+bridge for Robolectric — common-utils used the experimental
+`tech.apter.junit5.jupiter:robolectric-extension` for a period but reverted to plain
+`@RunWith(RobolectricTestRunner::class)` after that bridge's per-class (not per-method) state
+isolation caused real test pollution; it now matches this repo's pattern exactly. GetIcon's
+Robolectric surface (Hilt activities, Roborazzi screenshots, Context-backed settings/use cases)
+is large, so most of the suite falls on the JUnit4 side — that's a consequence of what's under
+test, not a different policy than common-utils. Follow the rule per test (Kotest by default,
+JUnit4+Robolectric only when Robolectric is actually required); don't force everything onto one
+runner.
 
-## Finding Code
+**Test order independence**: `io.kotest.provided.ProjectConfig` sets
+`specExecutionOrder = SpecExecutionOrder.Random`, randomizing Kotest spec order run to run.
+This only covers Kotest's own engine — the JUnit4/Robolectric classes (run via
+`junit-vintage-engine`) have no equivalent native randomization hook through Gradle, so their
+order-independence relies on test hygiene (every test resets any shared/static state it
+touches, e.g. `AppCompatDelegate`'s static delegate registry via `ActivityScenario`'s
+auto-`close()`) rather than a randomizer.
 
-- Search `commonUtilsSettings` to find shared preference usage
-- APK extraction flow: `MainActivity.processApk()` → temp file →
-  `IconActivity` via intent with `ApplicationInfo`
+## Settings in Tests
+
+Tests never mock settings: every test uses the real `UserSettings` over an isolated, empty
+store, so defaults come from `UserSettings`'s own production delegates — no duplicated
+default values, no manual reset helpers, no per-field mock stubs.
+
+The only canonical way to get a fresh store in a test is `freshTestPreferences()` — published by
+common-utils from `lib/src/testFixtures` (`testImplementation(testFixtures(libs.common.utils))` /
+`androidTestImplementation(testFixtures(libs.common.utils))`). It returns a UUID-named
+`SharedPreferences` file, fresh by construction — no manual `.edit().clear()`, no caller-supplied
+names, no collision risk on a reused GMD device. Test code never calls `getSharedPreferences(...)`
+or `PreferenceManager.getDefaultSharedPreferences(...)` directly.
+
+- **`TestSettingsModule` twins** — `app/src/test/java/de/lemke/geticon/TestSettingsModule.kt`
+  and `app/src/androidTest/java/de/lemke/geticon/TestSettingsModule.kt`: same package, same
+  file name, byte-for-byte identical content. Each `@TestInstallIn`-replaces
+  `SettingsProvideModule` with `UserSettings(freshTestPreferences(context))`, so every
+  `@HiltAndroidTest` gets a real, empty `UserSettings` automatically. **Kept as twins
+  deliberately** — consolidating into a single `app/src/testFixtures` file was tried and
+  reverted: Hilt's kapt/ksp aggregation doesn't pick up a `@Module`/`@TestInstallIn` class
+  declared in the `testFixtures` source set for the `test` (Robolectric) side, even though it
+  compiles cleanly and silently falls back to the production module (verify via
+  `app/build/intermediates/javac/debugUnitTest/.../hilt_aggregated_deps` if revisiting this).
+- **`FakeSharedPreferences`** (published by common-utils from
+  `lib/src/testFixtures/java/de/lemke/commonutils/data/FakeSharedPreferences.kt`) — a pure-JVM
+  double used only by the one Kotest spec with no Context (`IconViewModelTest`); everywhere else
+  Robolectric's real `SharedPreferences` (via the module above) or a Context-backed file
+  (`UserSettingsTest`, using `freshTestPreferences()` directly) is used instead.
+- **`bypassOobe()`** — also published by common-utils testFixtures
+  (`de.lemke.commonutils.bypassOobe()`, a plain `SettingsRepository` extension), for any test
+  that launches `MainActivity`. GetIcon has no settings-test code of its own left beyond the
+  `TestSettingsModule` twins, which name GetIcon's own `UserSettings`/`SettingsProvideModule`
+  and can't move into common-utils.
+  **Per-test, not structural** — each `@HiltAndroidTest` gets its own fresh, isolated
+  `UserSettings` via `freshTestPreferences()` (a new UUID-named file).
+  Any new androidTest that launches `MainActivity` must call
+  `settings.bypassOobe()` itself (inject `SettingsRepository`, call it in `@Before`) —
+  see `app/src/androidTest/java/de/lemke/geticon/ui/MainActivityTest.kt`. Forgetting it
+  redirects the launch into OOBE and leaves the activity `DESTROYED` via `finishAfterTransition`.

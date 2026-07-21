@@ -14,20 +14,25 @@
  * limitations under the License.
  */
 
-package de.lemke.geticon.domain
+package de.lemke.geticon
 
 import android.content.Context
-import androidx.picker.helper.SeslAppInfoDataHelper
-import androidx.picker.model.AppData.GridAppDataBuilder
-import androidx.picker.model.AppInfoData
+import dagger.Module
+import dagger.Provides
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
+import dagger.hilt.components.SingletonComponent
+import dagger.hilt.testing.TestInstallIn
+import de.lemke.commonutils.freshTestPreferences
+import de.lemke.geticon.data.UserSettings
+import de.lemke.geticon.di.SettingsProvideModule
+import javax.inject.Singleton
 
-class GetInstalledAppsUseCase @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-) {
-    suspend operator fun invoke(): List<AppInfoData> =
-        SeslAppInfoDataHelper(context, GridAppDataBuilder::class.java)
-            .getPackages()
-            .onEach { it.subLabel = it.packageName }
+@Module
+@TestInstallIn(components = [SingletonComponent::class], replaces = [SettingsProvideModule::class])
+object TestSettingsModule {
+    @Provides
+    @Singleton
+    fun provideTestUserSettings(
+        @ApplicationContext context: Context,
+    ): UserSettings = UserSettings(freshTestPreferences(context))
 }

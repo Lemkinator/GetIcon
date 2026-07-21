@@ -22,9 +22,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.picker.model.AppInfoData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.lemke.commonutils.domain.GetApplicationInfoUseCase
+import de.lemke.commonutils.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ApkProcessResult
-import de.lemke.geticon.domain.GetApplicationInfoUseCase
-import de.lemke.geticon.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
