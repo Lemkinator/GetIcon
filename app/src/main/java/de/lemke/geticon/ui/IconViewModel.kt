@@ -104,14 +104,19 @@ class IconViewModel @Inject constructor(
             }
         }
         runCatching {
-            val fg = userSettings.recentForegroundColors.first()
-            val bg = userSettings.recentBackgroundColors.first()
+            val iconSize = userSettings.iconSize
+            val maskEnabled = userSettings.maskEnabled
+            val colorEnabled = userSettings.colorEnabled
+            val recentForegroundColors = userSettings.recentForegroundColors
+            val recentBackgroundColors = userSettings.recentBackgroundColors
+            val fg = recentForegroundColors.first()
+            val bg = recentBackgroundColors.first()
             val result =
                 generateIcon(
                     appInfo,
-                    userSettings.iconSize,
-                    userSettings.maskEnabled,
-                    userSettings.colorEnabled,
+                    iconSize,
+                    maskEnabled,
+                    colorEnabled,
                     fg,
                     bg,
                     context.packageManager,
@@ -120,16 +125,16 @@ class IconViewModel @Inject constructor(
                 IconUiState(
                     icon = result.bitmap,
                     appName = appInfo.loadLabel(context.packageManager).toString(),
-                    size = userSettings.iconSize,
-                    maskEnabled = userSettings.maskEnabled,
-                    colorEnabled = userSettings.colorEnabled,
+                    size = iconSize,
+                    maskEnabled = maskEnabled,
+                    colorEnabled = colorEnabled,
                     foregroundColor = fg,
                     backgroundColor = bg,
                     isAdaptiveIcon = result.isAdaptiveIcon,
                     hasMaskedAppIcon = result.hasMaskedAppIcon,
-                    fileName = buildFileName(appInfo.packageName, userSettings.maskEnabled, userSettings.colorEnabled),
-                    recentForegroundColors = userSettings.recentForegroundColors,
-                    recentBackgroundColors = userSettings.recentBackgroundColors,
+                    fileName = buildFileName(appInfo.packageName, maskEnabled, colorEnabled),
+                    recentForegroundColors = recentForegroundColors,
+                    recentBackgroundColors = recentBackgroundColors,
                     isLoading = false,
                 )
         }.onFailure { e ->
