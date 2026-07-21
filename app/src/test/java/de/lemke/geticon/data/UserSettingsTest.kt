@@ -154,4 +154,16 @@ class UserSettingsTest {
         prefs.edit().putString("recentBackgroundColors", "abc,$validColor").apply()
         reload().recentBackgroundColors shouldBe listOf(validColor)
     }
+
+    @Test
+    fun `recentForegroundColors falls back to default when assigned an empty list directly`() {
+        settings.recentForegroundColors = emptyList()
+        settings.recentForegroundColors shouldBe listOf(DEFAULT_FOREGROUND_COLOR)
+    }
+
+    @Test
+    fun `recentBackgroundColors falls back to default when assigned an empty list directly`() {
+        settings.recentBackgroundColors = emptyList()
+        settings.recentBackgroundColors shouldBe listOf(DEFAULT_BACKGROUND_COLOR)
+    }
 }

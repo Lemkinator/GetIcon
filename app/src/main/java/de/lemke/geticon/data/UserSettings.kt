@@ -30,10 +30,10 @@ class UserSettings(
     var colorEnabled: Boolean by preferences.delegates.boolean(false)
     var recentForegroundColors: List<Int> by preferences.delegates
         .intList(listOf(DEFAULT_FOREGROUND_COLOR))
-        .sanitized { it.take(MAX_RECENT_COLORS) }
+        .sanitized { it.take(MAX_RECENT_COLORS).ifEmpty { listOf(DEFAULT_FOREGROUND_COLOR) } }
     var recentBackgroundColors: List<Int> by preferences.delegates
         .intList(listOf(DEFAULT_BACKGROUND_COLOR))
-        .sanitized { it.take(MAX_RECENT_COLORS) }
+        .sanitized { it.take(MAX_RECENT_COLORS).ifEmpty { listOf(DEFAULT_BACKGROUND_COLOR) } }
 
     companion object {
         const val DEFAULT_FOREGROUND_COLOR = -1
