@@ -20,9 +20,9 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import androidx.picker.model.AppInfoData
 import app.cash.turbine.test
+import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ApkProcessResult
-import de.lemke.geticon.domain.GetApplicationInfoUseCase
 import de.lemke.geticon.domain.ProcessApkUseCase
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
