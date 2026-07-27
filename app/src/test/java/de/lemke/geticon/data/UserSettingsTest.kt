@@ -115,13 +115,6 @@ class UserSettingsTest {
     }
 
     @Test
-    fun `recentBackgroundColors round-trips`() {
-        val colors = listOf(0xFFFF0000.toInt(), 0xFF0000FF.toInt())
-        settings.recentBackgroundColors = colors
-        reload().recentBackgroundColors shouldBe colors
-    }
-
-    @Test
     fun `recentForegroundColors caps to MAX_RECENT_COLORS when more are written`() {
         val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
         settings.recentForegroundColors = colors
@@ -133,6 +126,32 @@ class UserSettingsTest {
         val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
         settings.recentForegroundColors = colors
         prefs.getString("recentForegroundColors", null) shouldBe colors.take(MAX_RECENT_COLORS).joinToString(",")
+    }
+
+    @Test
+    fun `recentForegroundColors falls back to default when stored string is all-invalid`() {
+        prefs.edit().putString("recentForegroundColors", "abc,,xyz").apply()
+        reload().recentForegroundColors shouldBe listOf(DEFAULT_FOREGROUND_COLOR)
+    }
+
+    @Test
+    fun `recentForegroundColors keeps only valid integers from mixed stored input`() {
+        val validColor = 0xFF0381FE.toInt()
+        prefs.edit().putString("recentForegroundColors", "abc,$validColor").apply()
+        reload().recentForegroundColors shouldBe listOf(validColor)
+    }
+
+    @Test
+    fun `recentForegroundColors falls back to default when assigned an empty list directly`() {
+        settings.recentForegroundColors = emptyList()
+        settings.recentForegroundColors shouldBe listOf(DEFAULT_FOREGROUND_COLOR)
+    }
+
+    @Test
+    fun `recentBackgroundColors round-trips`() {
+        val colors = listOf(0xFFFF0000.toInt(), 0xFF0000FF.toInt())
+        settings.recentBackgroundColors = colors
+        reload().recentBackgroundColors shouldBe colors
     }
 
     @Test
@@ -150,22 +169,9 @@ class UserSettingsTest {
     }
 
     @Test
-    fun `recentForegroundColors falls back to default when stored string is all-invalid`() {
-        prefs.edit().putString("recentForegroundColors", "abc,,xyz").apply()
-        reload().recentForegroundColors shouldBe listOf(DEFAULT_FOREGROUND_COLOR)
-    }
-
-    @Test
     fun `recentBackgroundColors falls back to default on empty stored string`() {
         prefs.edit().putString("recentBackgroundColors", "").apply()
         reload().recentBackgroundColors shouldBe listOf(DEFAULT_BACKGROUND_COLOR)
-    }
-
-    @Test
-    fun `recentForegroundColors keeps only valid integers from mixed stored input`() {
-        val validColor = 0xFF0381FE.toInt()
-        prefs.edit().putString("recentForegroundColors", "abc,$validColor").apply()
-        reload().recentForegroundColors shouldBe listOf(validColor)
     }
 
     @Test
@@ -179,12 +185,6 @@ class UserSettingsTest {
         val validColor = 0xFF0381FE.toInt()
         prefs.edit().putString("recentBackgroundColors", "abc,$validColor").apply()
         reload().recentBackgroundColors shouldBe listOf(validColor)
-    }
-
-    @Test
-    fun `recentForegroundColors falls back to default when assigned an empty list directly`() {
-        settings.recentForegroundColors = emptyList()
-        settings.recentForegroundColors shouldBe listOf(DEFAULT_FOREGROUND_COLOR)
     }
 
     @Test
