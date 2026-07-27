@@ -90,9 +90,21 @@ class UserSettingsTest {
     }
 
     @Test
+    fun `maskEnabled persists false against the raw key`() {
+        settings.maskEnabled = false
+        prefs.getBoolean("maskEnabled", true) shouldBe false
+    }
+
+    @Test
     fun `colorEnabled round-trips true`() {
         settings.colorEnabled = true
         reload().colorEnabled.shouldBeTrue()
+    }
+
+    @Test
+    fun `colorEnabled persists true against the raw key`() {
+        settings.colorEnabled = true
+        prefs.getBoolean("colorEnabled", false) shouldBe true
     }
 
     @Test
@@ -117,10 +129,24 @@ class UserSettingsTest {
     }
 
     @Test
+    fun `recentForegroundColors persists the capped value rather than the raw write`() {
+        val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
+        settings.recentForegroundColors = colors
+        prefs.getString("recentForegroundColors", null) shouldBe colors.take(MAX_RECENT_COLORS).joinToString(",")
+    }
+
+    @Test
     fun `recentBackgroundColors caps to MAX_RECENT_COLORS when more are written`() {
         val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
         settings.recentBackgroundColors = colors
         reload().recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
+    }
+
+    @Test
+    fun `recentBackgroundColors persists the capped value rather than the raw write`() {
+        val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
+        settings.recentBackgroundColors = colors
+        prefs.getString("recentBackgroundColors", null) shouldBe colors.take(MAX_RECENT_COLORS).joinToString(",")
     }
 
     @Test
