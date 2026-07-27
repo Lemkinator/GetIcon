@@ -34,11 +34,15 @@ class ArchitectureTest : ShouldSpec() {
                     it.hasImport { import -> import.name.startsWith("de.lemke.geticon.ui.") }
                 }
         }
-        should("data layer does not depend on domain") {
+        // data may depend on domain.model (repositories/mappers construct domain models from DB/DataStore rows)
+        // but not on domain use cases/business logic.
+        should("data layer does not depend on domain use cases") {
             codeScope.files
                 .withPackage("de.lemke.geticon.data..")
                 .assertFalse(testName = this.testCase.name.toString()) {
-                    it.hasImport { import -> import.name.startsWith("de.lemke.geticon.domain.") }
+                    it.hasImport { import ->
+                        import.name.startsWith("de.lemke.geticon.domain.") && !import.name.startsWith("de.lemke.geticon.domain.model.")
+                    }
                 }
         }
         should("domain layer does not depend on ui") {
