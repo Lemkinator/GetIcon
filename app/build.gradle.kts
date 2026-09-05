@@ -37,10 +37,19 @@ fun getProperty(key: String): String? = rootProject.findProperty(key)?.toString(
 
 android {
     namespace = "de.lemke.geticon"
-    compileSdk =
-        libs.versions.compileSdk
-            .get()
-            .toInt()
+    compileSdk {
+        version =
+            release(
+                libs.versions.compileSdk
+                    .get()
+                    .toInt(),
+            ) {
+                minorApiLevel =
+                    libs.versions.compileSdkMinor
+                        .get()
+                        .toInt()
+            }
+    }
     defaultConfig {
         applicationId = "de.lemke.geticon"
         minSdk = 26

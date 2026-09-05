@@ -88,7 +88,6 @@ class IconViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
         val sourceFile = applicationInfo?.sourceDir?.let { File(it) } ?: return
         val isInCache = runCatching { sourceFile.canonicalFile.startsWith(context.cacheDir.canonicalFile) }.getOrElse { false }
         if (isInCache) sourceFile.delete()
