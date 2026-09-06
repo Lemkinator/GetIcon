@@ -113,13 +113,14 @@ subprojects {
                 }
             }
 
-            // oneui-design replaces these AOSP AndroidX modules with Samsung forks; exclude them from
-            // com.android.application modules' non-test configs to prevent shadowing. androidTest is
-            // exempt — it needs real SESL (via :app's transitive deps) to launch SESL activities that
-            // call SESL-specific methods. com.android.test modules (e.g. :benchmarks) aren't matched
-            // and keep genuine AOSP AndroidX.
+            // oneui-design replaces these AOSP AndroidX modules with Samsung's SESL forks, which
+            // keep the original package names — exclude the AOSP originals everywhere to prevent
+            // shadowing. com.android.test modules (:benchmarks) are not matched and keep genuine
+            // AOSP AndroidX for UiAutomator/benchmark deps. androidTest specifically needs SESL:
+            // instrumented tests launch SESL activities calling SESL-only APIs (e.g.
+            // MenuItemCompat.setSeslNaviMenuItemType).
             plugins.withId("com.android.application") {
-                configurations.matching { !it.name.startsWith("test", ignoreCase = true) }.configureEach {
+                configurations.configureEach {
                     exclude(group = "androidx.core", module = "core")
                     exclude(group = "androidx.core", module = "core-ktx")
                     exclude(group = "androidx.customview", module = "customview")
@@ -135,6 +136,29 @@ subprojects {
                     exclude(group = "androidx.slidingpanelayout", module = "slidingpanelayout")
                     exclude(group = "androidx.swiperefreshlayout", module = "swiperefreshlayout")
                     exclude(group = "com.google.android.material", module = "material")
+                }
+
+                // exclude() alone is unreliable for androidx.core/core-ktx: several real,
+                // non-SESL-forked libraries (activity, compose.ui, emoji2, autofill, window,
+                // graphics, savedstate) each pull a different real core version, and once enough
+                // conflicting real versions are in one graph, Gradle stops honoring the exclude
+                // rule for this pair. Declaring the SESL fork as an alternate provider of the real
+                // capability, then selecting it, closes that gap.
+                dependencies {
+                    components {
+                        withModule("sesl.androidx.core:core") {
+                            allVariants { withCapabilities { addCapability("androidx.core", "core", id.version) } }
+                        }
+                        withModule("sesl.androidx.core:core-ktx") {
+                            allVariants { withCapabilities { addCapability("androidx.core", "core-ktx", id.version) } }
+                        }
+                    }
+                }
+                configurations.configureEach {
+                    resolutionStrategy.capabilitiesResolution {
+                        withCapability("androidx.core:core") { select(candidates.first { it.id.toString().startsWith("sesl.") }) }
+                        withCapability("androidx.core:core-ktx") { select(candidates.first { it.id.toString().startsWith("sesl.") }) }
+                    }
                 }
             }
         }
