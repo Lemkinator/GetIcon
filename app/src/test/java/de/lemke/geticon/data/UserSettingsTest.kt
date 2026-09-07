@@ -18,6 +18,7 @@ package de.lemke.geticon.data
 
 import android.app.Application
 import android.content.SharedPreferences
+import de.lemke.commonutils.data.assertDelegatedKeys
 import de.lemke.commonutils.freshTestPreferences
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
@@ -90,21 +91,9 @@ class UserSettingsTest {
     }
 
     @Test
-    fun `maskEnabled persists false against the raw key`() {
-        settings.maskEnabled = false
-        prefs.getBoolean("maskEnabled", true) shouldBe false
-    }
-
-    @Test
     fun `colorEnabled round-trips true`() {
         settings.colorEnabled = true
         reload().colorEnabled.shouldBeTrue()
-    }
-
-    @Test
-    fun `colorEnabled persists true against the raw key`() {
-        settings.colorEnabled = true
-        prefs.getBoolean("colorEnabled", false) shouldBe true
     }
 
     @Test
@@ -191,5 +180,13 @@ class UserSettingsTest {
     fun `recentBackgroundColors falls back to default when assigned an empty list directly`() {
         settings.recentBackgroundColors = emptyList()
         settings.recentBackgroundColors shouldBe listOf(DEFAULT_BACKGROUND_COLOR)
+    }
+
+    @Test
+    fun `delegated keys are pinned`() {
+        assertDelegatedKeys(
+            UserSettings::class.java,
+            setOf("iconSize", "maskEnabled", "colorEnabled", "recentForegroundColors", "recentBackgroundColors"),
+        )
     }
 }

@@ -128,7 +128,7 @@ class IconActivity :
     }
 
     private fun initViews() {
-        setCustomBackAnimation(binding.root, showInAppReviewIfPossible = true)
+        setCustomBackAnimation(binding.root, inAppReview = settings)
         binding.icon.translateYWithAppBar(binding.root.appBarLayout, this)
         binding.icon.setOnLongClickListener { onCopyButtonClick() }
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
