@@ -45,11 +45,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: check-formatting
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - name: Determine PR author
+        id: pr-author
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          author="${{ github.event.pull_request.user.login }}"
+          # merge_group carries no pull_request context; recover the PR number from its
+          # head_ref (refs/heads/gh-readonly-queue/<base>/pr-<number>-<sha>) instead.
+          if [ -z "$author" ] && [[ "$HEAD_REF" =~ /pr-([0-9]+)- ]]; then
+            author=$(gh pr view "${BASH_REMATCH[1]}" --repo "${{ github.repository }}" --json author -q .author.login)
+          fi
+          echo "login=$author" >> "$GITHUB_OUTPUT"
       - name: Copy CI gradle.properties
         run: mkdir -p ~/.gradle ; cp .github/ci-gradle.properties ~/.gradle/gradle.properties
       - name: Set up JDK
@@ -60,11 +76,17 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Run lint
-        run: chmod +x ./gradlew && ./gradlew lintDebug --stacktrace $LINT_ARGS
+        run: |
+          chmod +x ./gradlew
+          gradle_args=(lintDebug --stacktrace)
+          if [ "$AUTHOR_LOGIN" = "renovate[bot]" ]; then
+            gradle_args+=(-Plint.checkDependencyUpdates=false)
+          fi
+          ./gradlew "${gradle_args[@]}"
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          LINT_ARGS: ${{ github.event.pull_request.user.login == 'renovate[bot]' && '-Plint.checkDependencyUpdates=false' || '' }}
+          AUTHOR_LOGIN: ${{ steps.pr-author.outputs.login }}
       - name: Upload lint report
         if: always()
         uses: actions/upload-artifact@v7
