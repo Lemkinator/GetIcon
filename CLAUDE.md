@@ -100,10 +100,6 @@ call sites in `MainActivity.kt` / `IconActivity.kt` first.
 `de.lemke.commonutils.R as commonutilsR` alongside the app's own `R`.
 Be aware when touching resource IDs.
 
-**Dependency exclusions** — root `build.gradle.kts` excludes many AndroidX
-modules from subprojects to prevent duplicate packaging. Check
-`allprojects`/`subprojects` blocks when updating dependencies.
-
 ## Static Analysis
 
 Four tools run as part of `./gradlew build`:
@@ -140,15 +136,6 @@ targeted message if `core.autocrlf=true` is detected.
 If `spotlessCheck` fails, fix with `./gradlew spotlessApply` then re-run. Screenshot test failures (`verifyRoborazziDebug`) mean the code
 change broke a visual — do not analyze screenshots, ask the user to verify the changes.
 
-**Dependency analysis** — manual hygiene tool (not in CI). Invoke with:
-
-```powershell
-./gradlew buildHealth
-```
-
-Report at `build/reports/dependency-analysis/build-health-report.txt`.
-Review unused/misconfigured deps case-by-case.
-
 **ktlint rule overrides** — two rules disabled in `.editorconfig` to match
 community practice (NowInAndroid, Pokedex both use the inline form):
 
@@ -161,26 +148,17 @@ community practice (NowInAndroid, Pokedex both use the inline form):
 
 ## Robolectric + JUnit 5
 
-Both this repo and common-utils default to JUnit 5 (Kotest runs on the JUnit 5 platform —
-see `ArchitectureTest.kt`). JUnit 4 + `junit-vintage-engine` is used only for tests that need
-Robolectric, because Robolectric has no native JUnit 5 support. Neither repo uses a JUnit5
-bridge for Robolectric — common-utils used the experimental
+See the shared Robolectric/JUnit 5 policy in `A:\repo\android\CLAUDE.md`. Both this repo and
+common-utils default to JUnit 5 (Kotest runs on the JUnit 5 platform — see `ArchitectureTest.kt`);
+JUnit 4 + `junit-vintage-engine` is used only for tests that need Robolectric. Neither repo uses a
+JUnit 5 bridge for Robolectric — common-utils used the experimental
 `tech.apter.junit5.jupiter:robolectric-extension` for a period but reverted to plain
 `@RunWith(RobolectricTestRunner::class)` after that bridge's per-class (not per-method) state
 isolation caused real test pollution; it now matches this repo's pattern exactly. GetIcon's
-Robolectric surface (Hilt activities, Roborazzi screenshots, Context-backed settings/use cases)
-is large, so most of the suite falls on the JUnit4 side — that's a consequence of what's under
-test, not a different policy than common-utils. Follow the rule per test (Kotest by default,
-JUnit4+Robolectric only when Robolectric is actually required); don't force everything onto one
-runner.
-
-**Test order independence**: `io.kotest.provided.ProjectConfig` sets
-`specExecutionOrder = SpecExecutionOrder.Random`, randomizing Kotest spec order run to run.
-This only covers Kotest's own engine — the JUnit4/Robolectric classes (run via
-`junit-vintage-engine`) have no equivalent native randomization hook through Gradle, so their
-order-independence relies on test hygiene (every test resets any shared/static state it
-touches, e.g. `AppCompatDelegate`'s static delegate registry via `ActivityScenario`'s
-auto-`close()`) rather than a randomizer.
+Robolectric surface (Hilt activities, Roborazzi screenshots, Context-backed settings/use cases) is
+large, so most of the suite falls on the JUnit4 side — that's a consequence of what's under test,
+not a different policy than common-utils. Follow the rule per test (Kotest by default, JUnit4+
+Robolectric only when Robolectric is actually required); don't force everything onto one runner.
 
 ## Settings in Tests
 
