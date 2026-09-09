@@ -57,7 +57,7 @@ class MainActivityTest {
             .launch<MainActivity>(
                 Intent(ApplicationProvider.getApplicationContext(), MainActivity::class.java),
             ).use { scenario ->
-                scenario.state.isAtLeast(Lifecycle.State.CREATED) shouldBe true
+                scenario.state shouldBe Lifecycle.State.RESUMED
             }
     }
 }
