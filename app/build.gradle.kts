@@ -62,6 +62,11 @@ android {
         testInstrumentationRunner = "de.lemke.geticon.HiltTestRunner"
         buildConfigField("boolean", "FIRST_RUN_SKIPPABLE", "false")
     }
+    // Hosts the fake Hilt modules shared by testDebugUnitTest and connectedDebugAndroidTest.
+    @Suppress("UnstableApiUsage")
+    testFixtures {
+        enable = true
+    }
     @Suppress("UnstableApiUsage")
     androidResources.localeFilters += listOf("en", "de")
     signingConfigs {
@@ -160,6 +165,10 @@ dependencies {
     debugImplementation(libs.leakcanary)
 
     testImplementation(testFixtures(libs.common.utils))
+
+    testFixturesImplementation(libs.hilt.android.testing)
+    testFixturesImplementation(testFixtures(libs.common.utils))
+    kspTestFixtures(libs.hilt.compiler)
 
     testImplementation(libs.arch.core.testing)
     testImplementation(libs.bundles.unit.test)
