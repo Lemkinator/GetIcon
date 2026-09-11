@@ -55,8 +55,9 @@ class TestFixturesModuleInstallationTest {
 
     @Test
     fun injectedSettingsDoNotWriteThroughToProductionSharedPreferences() {
-        settings.maskEnabled = false
         val productionPrefs = PreferenceManager.getDefaultSharedPreferences(ApplicationProvider.getApplicationContext())
+        productionPrefs.edit().remove("maskEnabled").commit()
+        settings.maskEnabled = false
         assertFalse(
             "maskEnabled leaked into production SharedPreferences - TestSettingsModule (src/testFixtures) was " +
                 "NOT installed; production SettingsProvideModule won instead",
