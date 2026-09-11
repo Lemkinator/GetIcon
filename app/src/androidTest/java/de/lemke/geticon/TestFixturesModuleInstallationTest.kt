@@ -24,7 +24,7 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import de.lemke.geticon.data.UserSettings
 import javax.inject.Inject
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -56,12 +56,13 @@ class TestFixturesModuleInstallationTest {
     @Test
     fun injectedSettingsDoNotWriteThroughToProductionSharedPreferences() {
         val productionPrefs = PreferenceManager.getDefaultSharedPreferences(ApplicationProvider.getApplicationContext())
-        productionPrefs.edit().remove("maskEnabled").commit()
-        settings.maskEnabled = false
-        assertFalse(
-            "maskEnabled leaked into production SharedPreferences - TestSettingsModule (src/testFixtures) was " +
+        val maskEnabledBefore = productionPrefs.all["maskEnabled"]
+        settings.maskEnabled = !(maskEnabledBefore as? Boolean ?: false)
+        assertEquals(
+            "maskEnabled changed in production SharedPreferences - TestSettingsModule (src/testFixtures) was " +
                 "NOT installed; production SettingsProvideModule won instead",
-            productionPrefs.contains("maskEnabled"),
+            maskEnabledBefore,
+            productionPrefs.all["maskEnabled"],
         )
     }
 }
