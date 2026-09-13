@@ -62,6 +62,8 @@ import javax.inject.Inject
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
+private const val LIGHT_TEXT_LUMINANCE_THRESHOLD = 0.5
+
 @AndroidEntryPoint
 class IconActivity :
     AppCompatActivity(),
@@ -200,10 +202,14 @@ class IconActivity :
     private fun setButtonColors(state: IconUiState) {
         if (state.isAdaptiveIcon && state.colorEnabled) {
             binding.colorButtonBackground.isEnabled = true
-            binding.colorButtonBackground.setTextColor(if (state.backgroundColor.toColor().luminance() >= 0.5) BLACK else WHITE)
+            binding.colorButtonBackground.setTextColor(
+                if (state.backgroundColor.toColor().luminance() >= LIGHT_TEXT_LUMINANCE_THRESHOLD) BLACK else WHITE,
+            )
             binding.colorButtonBackground.backgroundTintList = valueOf(state.backgroundColor)
             binding.colorButtonForeground.isEnabled = true
-            binding.colorButtonForeground.setTextColor(if (state.foregroundColor.toColor().luminance() >= 0.5) BLACK else WHITE)
+            binding.colorButtonForeground.setTextColor(
+                if (state.foregroundColor.toColor().luminance() >= LIGHT_TEXT_LUMINANCE_THRESHOLD) BLACK else WHITE,
+            )
             binding.colorButtonForeground.backgroundTintList = valueOf(state.foregroundColor)
         } else {
             binding.colorButtonBackground.isEnabled = false
