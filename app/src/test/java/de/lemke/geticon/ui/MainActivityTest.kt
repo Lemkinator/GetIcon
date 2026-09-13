@@ -42,7 +42,6 @@ import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.COMMONUTILS_KEY_IS_SEARCH_MODE
 import de.lemke.commonutils.ui.widget.NoEntryView
-import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
@@ -69,6 +68,7 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowToast
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
+import dev.oneuiproject.oneui.design.R as oneuiDesignR
 
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
@@ -113,7 +113,12 @@ class MainActivityTest {
                 activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
             }
         }
+    }
 
+    @Test
+    fun onSaveInstanceState_ready_bundleContainsSearchModeKey() {
+        // onSaveInstanceState is a protected override; ActivityScenario has no public entry point
+        // to inspect the bundle it builds, so drive the lifecycle via ActivityController instead.
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
             controller.get().onOptionsItemSelected(mockk { every { itemId } returns R.id.menu_item_search })
@@ -347,10 +352,13 @@ class MainActivityTest {
 
     @Test
     @Config(sdk = [29])
-    fun initAppPicker_belowApiR_doesNotCrash() {
+    fun initAppPicker_belowApiR_skipsImmBottomPadding() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.state shouldBe Lifecycle.State.RESUMED
+            scenario.onActivity { activity ->
+                activity.findViewById<View>(R.id.appPicker).getTag(oneuiDesignR.id.tag_rv_imm_bottom_padding_listener) shouldBe null
+            }
         }
     }
 
@@ -360,7 +368,7 @@ class MainActivityTest {
             scenario.onActivity { activity ->
                 val item = activity.findViewById<DrawerNavigationView>(R.id.navigationView).findMenuItem(R.id.leaks_dest)!!
                 activity.setLeaksMenuItemVisibility(item)
-                item.isVisible shouldBe BuildConfig.DEBUG
+                item.isVisible shouldBe true
             }
         }
     }
@@ -400,10 +408,7 @@ class MainActivityTest {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 shadowOf(Looper.getMainLooper()).idle()
                 scenario.state shouldBe Lifecycle.State.RESUMED
-                scenario.onActivity {
-                    // rethrown CancellationException must not surface as a ShowLoadError toast
-                    ShadowToast.shownToastCount() shouldBe 0
-                }
+                ShadowToast.shownToastCount() shouldBe 0
             }
         } finally {
             unmockkConstructor(SeslAppInfoDataHelper::class)

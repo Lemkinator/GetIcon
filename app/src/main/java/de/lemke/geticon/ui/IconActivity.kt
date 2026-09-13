@@ -169,7 +169,7 @@ class IconActivity :
         }
     }
 
-    @SuppressLint("SetTextI18n", "PrivateResource")
+    @SuppressLint("SetTextI18n")
     private fun renderState(state: IconUiState) {
         isRendering = true
         if (state.appName.isNotEmpty()) binding.root.setTitle(state.appName)
@@ -194,12 +194,14 @@ class IconActivity :
             binding.colorButtonForeground.setTextColor(state.foregroundTextColor)
             binding.colorButtonForeground.backgroundTintList = valueOf(state.foregroundColor)
         } else {
+            @SuppressLint("PrivateResource")
+            val disabledTint = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
             binding.colorButtonBackground.isEnabled = false
             binding.colorButtonBackground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
-            binding.colorButtonBackground.backgroundTintList = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonBackground.backgroundTintList = disabledTint
             binding.colorButtonForeground.isEnabled = false
             binding.colorButtonForeground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
-            binding.colorButtonForeground.backgroundTintList = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
+            binding.colorButtonForeground.backgroundTintList = disabledTint
         }
         if (!suggestViewSet && state.icon != null) {
             binding.root.setAppBarSuggestView(createSuggestAppBarModel())

@@ -457,7 +457,7 @@ class IconActivityTest {
     }
 
     @Test
-    fun setButtonColors_brightBackground_usesBlackText() {
+    fun backgroundTextColor_brightBackground_usesBlackText() {
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
@@ -474,7 +474,7 @@ class IconActivityTest {
     }
 
     @Test
-    fun setButtonColors_darkForeground_usesWhiteText() {
+    fun foregroundTextColor_darkForeground_usesWhiteText() {
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
