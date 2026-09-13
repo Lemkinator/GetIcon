@@ -29,8 +29,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppInfo
-import androidx.picker.widget.SeslAppPickerGridView
-import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import dagger.hilt.android.testing.BindValue
@@ -49,14 +47,13 @@ import de.lemke.geticon.R
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
+import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.unmockkConstructor
-import io.mockk.verify
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import leakcanary.AppWatcher
@@ -115,6 +112,17 @@ class MainActivityTest {
             scenario.onActivity { activity ->
                 activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
             }
+        }
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            controller.get().onOptionsItemSelected(mockk { every { itemId } returns R.id.menu_item_search })
+            shadowOf(Looper.getMainLooper()).idle()
+            val outState = Bundle()
+            controller.pause().saveInstanceState(outState)
+            outState.getBoolean(COMMONUTILS_KEY_IS_SEARCH_MODE) shouldBe true
+        } finally {
+            controller.destroy()
         }
     }
 
@@ -318,7 +326,7 @@ class MainActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
-                activity.findViewById<View>(R.id.appPicker).transitionName shouldNotBe null
+                activity.findViewById<View>(R.id.appPicker).transitionName shouldBe "commonUtilsActivityTransitionName"
             }
         }
     }
@@ -339,12 +347,10 @@ class MainActivityTest {
 
     @Test
     @Config(sdk = [29])
-    fun initAppPicker_belowApiR_skipsImmBottomPadding() {
+    fun initAppPicker_belowApiR_doesNotCrash() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.findViewById<SeslAppPickerGridView>(R.id.appPicker).appListOrder shouldBe ORDER_ASCENDING
-            }
+            scenario.state shouldBe Lifecycle.State.RESUMED
         }
     }
 
@@ -352,20 +358,20 @@ class MainActivityTest {
     fun setLeaksMenuItemVisibility_nonNullItem_setsVisibility() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val item = mockk<MenuItem>(relaxed = true)
+                val item = activity.findViewById<DrawerNavigationView>(R.id.navigationView).findMenuItem(R.id.leaks_dest)!!
                 activity.setLeaksMenuItemVisibility(item)
-                verify { item.isVisible = BuildConfig.DEBUG }
+                item.isVisible shouldBe BuildConfig.DEBUG
             }
         }
     }
 
     @Test
     fun setLeaksMenuItemVisibility_nullItem_doesNothing() {
-        // item is null: there is nothing to hold state, so a no-crash check is the only assertion possible here.
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setLeaksMenuItemVisibility(null)
             }
+            scenario.state shouldBe Lifecycle.State.RESUMED
         }
     }
 
@@ -394,8 +400,9 @@ class MainActivityTest {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 shadowOf(Looper.getMainLooper()).idle()
                 scenario.state shouldBe Lifecycle.State.RESUMED
-                scenario.onActivity { activity ->
-                    ViewModelProvider(activity)[MainViewModel::class.java].installedApps.value shouldBe emptyList()
+                scenario.onActivity {
+                    // rethrown CancellationException must not surface as a ShowLoadError toast
+                    ShadowToast.shownToastCount() shouldBe 0
                 }
             }
         } finally {

@@ -17,6 +17,7 @@
 package de.lemke.geticon.ui
 
 import android.app.Activity
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -47,12 +48,15 @@ import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.IconResult
+import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import java.io.File
 import java.io.IOException
 import org.junit.Before
 import org.junit.Rule
@@ -114,6 +118,7 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_app_not_found)
+                activity.isFinishing shouldBe true
             }
         }
     }
@@ -135,6 +140,7 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(R.string.error_icon_generation_failed)
+                activity.isFinishing shouldBe true
             }
         }
     }
@@ -282,6 +288,9 @@ class IconActivityTest {
                 shadowOf(Looper.getMainLooper()).idle()
                 scenario.onActivity { activity ->
                     ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_copied_to_clipboard)
+                    val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip
+                    clip?.description?.label shouldBe "icon"
+                    clip?.getItemAt(0)?.uri shouldBe Uri.parse("content://test/icon.png")
                 }
             }
         } finally {
@@ -290,7 +299,7 @@ class IconActivityTest {
     }
 
     @Test
-    fun sizeEdittext_editorAction_updatesSizeAndHidesKeyboard() {
+    fun sizeEdittext_editorAction_updatesSize() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             onView(withId(R.id.size_edittext)).perform(replaceText("256"), pressImeActionButton())
@@ -334,9 +343,12 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.showColorPicker(isBackground = true)
-                ShadowDialog.getLatestDialog()?.isShowing shouldBe true
+                val backgroundDialog = ShadowDialog.getLatestDialog()
+                backgroundDialog?.isShowing shouldBe true
                 activity.showColorPicker(isBackground = false)
-                ShadowDialog.getLatestDialog()?.isShowing shouldBe true
+                val foregroundDialog = ShadowDialog.getLatestDialog()
+                foregroundDialog?.isShowing shouldBe true
+                foregroundDialog shouldNotBe backgroundDialog
             }
         }
     }
@@ -359,10 +371,12 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
-                // Intent() carries no data Uri, so this hits the same uri==null branch as
-                // onExportBitmapResult_resultOkNullData_callsSaveWithNullUri, not a real save.
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_creating_file)
+                val file = File(activity.cacheDir, "icon_export_test.png")
+                val intent = Intent().setData(Uri.fromFile(file))
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, intent))
+                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_image_saved)
+                file.exists() shouldBe true
+                file.length() shouldBeGreaterThan 0L
             }
         }
     }
