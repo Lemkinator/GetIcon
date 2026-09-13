@@ -29,6 +29,10 @@ import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.int
+import io.kotest.property.checkAll
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -83,6 +87,33 @@ class UserSettingsTest {
         settings.iconSize = MAX_ICON_SIZE + 500
         prefs.getInt("iconSize", -1) shouldBe MAX_ICON_SIZE
     }
+
+    @Test
+    fun `iconSize round-trips any value within range`() =
+        runTest {
+            checkAll(Arb.int(MIN_ICON_SIZE..MAX_ICON_SIZE)) { value ->
+                settings.iconSize = value
+                settings.iconSize shouldBe value
+            }
+        }
+
+    @Test
+    fun `iconSize clamps any value below range to MIN_ICON_SIZE`() =
+        runTest {
+            checkAll(Arb.int(Int.MIN_VALUE until MIN_ICON_SIZE)) { value ->
+                settings.iconSize = value
+                settings.iconSize shouldBe MIN_ICON_SIZE
+            }
+        }
+
+    @Test
+    fun `iconSize clamps any value above range to MAX_ICON_SIZE`() =
+        runTest {
+            checkAll(Arb.int((MAX_ICON_SIZE + 1)..Int.MAX_VALUE)) { value ->
+                settings.iconSize = value
+                settings.iconSize shouldBe MAX_ICON_SIZE
+            }
+        }
 
     @Test
     fun `maskEnabled round-trips false`() {
