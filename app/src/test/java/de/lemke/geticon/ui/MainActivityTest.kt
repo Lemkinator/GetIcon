@@ -16,14 +16,21 @@
 
 package de.lemke.geticon.ui
 
+import android.app.SearchManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.Uri
+import android.os.Bundle
 import android.os.Looper
 import android.view.MenuItem
+import android.view.View
+import android.widget.TextView
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker.helper.SeslAppInfoDataHelper
 import androidx.picker.model.AppInfo
+import androidx.picker.widget.SeslAppPickerGridView
+import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import dagger.hilt.android.testing.BindValue
@@ -32,15 +39,24 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.bypassOobe
 import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
+import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
+import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
+import de.lemke.commonutils.ui.utils.COMMONUTILS_KEY_IS_SEARCH_MODE
+import de.lemke.commonutils.ui.widget.NoEntryView
+import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.unmockkConstructor
+import io.mockk.verify
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import leakcanary.AppWatcher
@@ -53,6 +69,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowToast
+import androidx.appcompat.R as appcompatR
+import de.lemke.commonutils.R as commonutilsR
 
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
@@ -81,21 +100,35 @@ class MainActivityTest {
     @Test
     fun onCreate_onboardingRequired_returnsEarly() {
         settings.lastVersionCode = -1
-        ActivityScenario.launch(MainActivity::class.java).use { _ -> }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.state shouldBe Lifecycle.State.DESTROYED
+        }
     }
 
     @Test
     fun onSaveInstanceState_ready_savesState() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(mockk { every { itemId } returns R.id.menu_item_search })
+            }
             scenario.recreate()
+            scenario.onActivity { activity ->
+                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
+            }
         }
     }
 
     @Test
     fun onSaveInstanceState_notReady_returnsEarly() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity -> activity.isUIReady = false }
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(mockk { every { itemId } returns R.id.menu_item_search })
+                activity.isUIReady = false
+            }
             scenario.recreate()
+            scenario.onActivity { activity ->
+                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe false
+            }
         }
     }
 
@@ -103,8 +136,12 @@ class MainActivityTest {
     fun onNewIntent_actionSearch_setsQuery() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
-            controller.newIntent(Intent(Intent.ACTION_SEARCH))
+            val activity = controller.get()
+            activity.onOptionsItemSelected(mockk { every { itemId } returns R.id.menu_item_search })
             shadowOf(Looper.getMainLooper()).idle()
+            controller.newIntent(Intent(Intent.ACTION_SEARCH).putExtra(SearchManager.QUERY, "sometext"))
+            shadowOf(Looper.getMainLooper()).idle()
+            activity.findViewById<TextView>(appcompatR.id.search_src_text).text.toString() shouldBe "sometext"
         } finally {
             controller.destroy()
         }
@@ -114,8 +151,10 @@ class MainActivityTest {
     fun onNewIntent_nonSearch_doesNothing() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
+            val activity = controller.get()
             controller.newIntent(Intent("some.other.action"))
             shadowOf(Looper.getMainLooper()).idle()
+            activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe false
         } finally {
             controller.destroy()
         }
@@ -126,9 +165,11 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_search }
-                activity.onOptionsItemSelected(item)
+                activity.onOptionsItemSelected(item) shouldBe true
+                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
                 // End search mode to trigger onEnd lambda → applyFilter()
                 activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).endSearchMode()
+                activity.findViewById<NoEntryView>(R.id.noEntryView).visibility shouldBe View.GONE
             }
         }
     }
@@ -138,7 +179,7 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val item = mockk<MenuItem> { every { itemId } returns android.R.id.home }
-                activity.onOptionsItemSelected(item)
+                activity.onOptionsItemSelected(item) shouldBe false
             }
         }
     }
@@ -148,6 +189,7 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.applyFilter("test")
+                activity.findViewById<NoEntryView>(R.id.noEntryView).visibility shouldBe View.VISIBLE
             }
         }
     }
@@ -160,6 +202,9 @@ class MainActivityTest {
                 ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
             }
             shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_no_valid_file_selected)
+            }
         }
     }
 
@@ -173,6 +218,9 @@ class MainActivityTest {
                     .onApkPicked(Uri.parse("content://test"))
             }
             shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+            }
         }
     }
 
@@ -180,7 +228,10 @@ class MainActivityTest {
     fun navItem_extractApk_launchesFilePicker() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.extract_icon_from_apk_dest })
+                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.extract_icon_from_apk_dest })
+                result shouldBe true
+                shadowOf(activity).nextStartedActivityForResult?.intent?.type shouldBe
+                    "application/vnd.android.package-archive"
             }
         }
     }
@@ -189,7 +240,9 @@ class MainActivityTest {
     fun navItem_about_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_about_dest })
+                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_about_dest })
+                result shouldBe true
+                shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
             }
         }
     }
@@ -198,7 +251,9 @@ class MainActivityTest {
     fun navItem_aboutMe_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_about_me_dest })
+                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_about_me_dest })
+                result shouldBe true
+                shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsAboutMeActivity::class.java.name
             }
         }
     }
@@ -207,7 +262,9 @@ class MainActivityTest {
     fun navItem_settings_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_settings_dest })
+                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_settings_dest })
+                result shouldBe true
+                shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
             }
         }
     }
@@ -216,7 +273,13 @@ class MainActivityTest {
     fun navItem_leaks_opensLeakCanary() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.leaks_dest })
+                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.leaks_dest })
+                result shouldBe true
+                shadowOf(activity)
+                    .nextStartedActivity
+                    ?.component
+                    ?.className
+                    ?.contains("leakcanary", ignoreCase = true) shouldBe true
             }
         }
     }
@@ -225,7 +288,7 @@ class MainActivityTest {
     fun navItem_unknown_returnsFalse() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(mockk { every { itemId } returns -1 })
+                activity.onNavigationItemSelected(mockk { every { itemId } returns -1 }) shouldBe false
             }
         }
     }
@@ -235,9 +298,12 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                activity.onAppPickerItemClick(null, appInfo)
+                activity.onAppPickerItemClick(null, appInfo) shouldBe true
             }
             shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+            }
         }
     }
 
@@ -246,9 +312,14 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                activity.onAppPickerItemClick(activity.window.decorView, appInfo)
+                val view = activity.findViewById<View>(R.id.appPicker)
+                activity.onAppPickerItemClick(view, appInfo) shouldBe true
             }
             shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+                activity.findViewById<View>(R.id.appPicker).transitionName shouldNotBe null
+            }
         }
     }
 
@@ -257,17 +328,23 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
-                activity.onAppPickerItemClick(null, appInfo)
+                activity.onAppPickerItemClick(null, appInfo) shouldBe true
             }
             shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_app_not_found)
+            }
         }
     }
 
     @Test
     @Config(sdk = [29])
     fun initAppPicker_belowApiR_skipsImmBottomPadding() {
-        ActivityScenario.launch(MainActivity::class.java).use { _ ->
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<SeslAppPickerGridView>(R.id.appPicker).appListOrder shouldBe ORDER_ASCENDING
+            }
         }
     }
 
@@ -275,13 +352,16 @@ class MainActivityTest {
     fun setLeaksMenuItemVisibility_nonNullItem_setsVisibility() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setLeaksMenuItemVisibility(mockk(relaxed = true))
+                val item = mockk<MenuItem>(relaxed = true)
+                activity.setLeaksMenuItemVisibility(item)
+                verify { item.isVisible = BuildConfig.DEBUG }
             }
         }
     }
 
     @Test
     fun setLeaksMenuItemVisibility_nullItem_doesNothing() {
+        // item is null: there is nothing to hold state, so a no-crash check is the only assertion possible here.
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setLeaksMenuItemVisibility(null)
@@ -294,8 +374,12 @@ class MainActivityTest {
         mockkConstructor(SeslAppInfoDataHelper::class)
         every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws RuntimeException("test")
         try {
-            ActivityScenario.launch(MainActivity::class.java).use { _ ->
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 shadowOf(Looper.getMainLooper()).idle()
+                scenario.state shouldBe Lifecycle.State.RESUMED
+                scenario.onActivity { activity ->
+                    ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error)
+                }
             }
         } finally {
             unmockkConstructor(SeslAppInfoDataHelper::class)
@@ -307,8 +391,12 @@ class MainActivityTest {
         mockkConstructor(SeslAppInfoDataHelper::class)
         every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws CancellationException("cancelled")
         try {
-            ActivityScenario.launch(MainActivity::class.java).use { _ ->
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 shadowOf(Looper.getMainLooper()).idle()
+                scenario.state shouldBe Lifecycle.State.RESUMED
+                scenario.onActivity { activity ->
+                    ViewModelProvider(activity)[MainViewModel::class.java].installedApps.value shouldBe emptyList()
+                }
             }
         } finally {
             unmockkConstructor(SeslAppInfoDataHelper::class)
