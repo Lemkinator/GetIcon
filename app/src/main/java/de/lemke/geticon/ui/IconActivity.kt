@@ -20,8 +20,6 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.ColorStateList.valueOf
 import android.graphics.Bitmap
-import android.graphics.Color.BLACK
-import android.graphics.Color.WHITE
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -33,7 +31,6 @@ import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.toColor
 import androidx.picker3.app.SeslColorPickerDialog
 import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
@@ -61,8 +58,6 @@ import dev.oneuiproject.oneui.ktx.onProgressChanged
 import javax.inject.Inject
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
-
-private const val LIGHT_TEXT_LUMINANCE_THRESHOLD = 0.5
 
 @AndroidEntryPoint
 class IconActivity :
@@ -174,7 +169,7 @@ class IconActivity :
         }
     }
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint("SetTextI18n", "PrivateResource")
     private fun renderState(state: IconUiState) {
         isRendering = true
         if (state.appName.isNotEmpty()) binding.root.setTitle(state.appName)
@@ -191,25 +186,12 @@ class IconActivity :
             binding.sizeEdittext.setText(state.size.toString())
         }
         isRendering = false
-        setButtonColors(state)
-        if (!suggestViewSet && state.icon != null) {
-            binding.root.setAppBarSuggestView(createSuggestAppBarModel())
-            suggestViewSet = true
-        }
-    }
-
-    @SuppressLint("PrivateResource")
-    private fun setButtonColors(state: IconUiState) {
         if (state.isAdaptiveIcon && state.colorEnabled) {
             binding.colorButtonBackground.isEnabled = true
-            binding.colorButtonBackground.setTextColor(
-                if (state.backgroundColor.toColor().luminance() >= LIGHT_TEXT_LUMINANCE_THRESHOLD) BLACK else WHITE,
-            )
+            binding.colorButtonBackground.setTextColor(state.backgroundTextColor)
             binding.colorButtonBackground.backgroundTintList = valueOf(state.backgroundColor)
             binding.colorButtonForeground.isEnabled = true
-            binding.colorButtonForeground.setTextColor(
-                if (state.foregroundColor.toColor().luminance() >= LIGHT_TEXT_LUMINANCE_THRESHOLD) BLACK else WHITE,
-            )
+            binding.colorButtonForeground.setTextColor(state.foregroundTextColor)
             binding.colorButtonForeground.backgroundTintList = valueOf(state.foregroundColor)
         } else {
             binding.colorButtonBackground.isEnabled = false
@@ -218,6 +200,10 @@ class IconActivity :
             binding.colorButtonForeground.isEnabled = false
             binding.colorButtonForeground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
             binding.colorButtonForeground.backgroundTintList = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
+        }
+        if (!suggestViewSet && state.icon != null) {
+            binding.root.setAppBarSuggestView(createSuggestAppBarModel())
+            suggestViewSet = true
         }
     }
 
