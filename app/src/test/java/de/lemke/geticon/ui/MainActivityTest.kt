@@ -42,6 +42,7 @@ import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.COMMONUTILS_KEY_IS_SEARCH_MODE
 import de.lemke.commonutils.ui.widget.NoEntryView
+import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
@@ -367,8 +368,9 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val item = activity.findViewById<DrawerNavigationView>(R.id.navigationView).findMenuItem(R.id.leaks_dest)!!
+                item.isVisible = false
                 activity.setLeaksMenuItemVisibility(item)
-                item.isVisible shouldBe true
+                item.isVisible shouldBe BuildConfig.DEBUG
             }
         }
     }
