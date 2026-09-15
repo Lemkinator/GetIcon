@@ -44,7 +44,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-private const val LIGHT_BACKGROUND_LUMINANCE_THRESHOLD = 0.5
+private const val LIGHT_BACKGROUND_LUMINANCE_THRESHOLD = 0.17912878474
 
 data class IconUiState(
     val icon: Bitmap? = null,
