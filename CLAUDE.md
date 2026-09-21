@@ -13,9 +13,9 @@ All commands run from the repo root on Windows (PowerShell or Git Bash):
 ./gradlew installDebug           # install on connected device/emulator
 ```
 
-Unit tests exist: `IconViewModelTest`, `IconActivityScreenshotTest` (Roborazzi),
-`MainActivityScreenshotTest` (Roborazzi), plus Konsist architecture tests.
-Instrumented tests: `MainActivityTest`, `IconActivityTest`
+Unit tests live under `app/src/test/java/de/lemke/geticon/` (ViewModels, use cases, settings,
+Roborazzi screenshot tests, Konsist architecture tests). Instrumented tests
+(`MainActivityTest`, `IconActivityTest`) live under `app/src/androidTest/java/de/lemke/geticon/`
 — run via Gradle Managed Device (no physical device needed):
 
 ```powershell

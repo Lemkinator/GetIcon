@@ -53,7 +53,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import dev.oneuiproject.oneui.R as ouiR
 
-// sdk = [36]: Robolectric 4.16.1 max supported SDK; bump when 4.17+ adds SDK 37.
+// sdk = [36]: Robolectric 4.17 declares SDK 37 support, but shadows are incomplete there —
+// sdk = [37] throws NoSuchMethodException: android.hardware.input.InputManager.getInstance().
+// Bump once that shadow gap is fixed upstream.
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
