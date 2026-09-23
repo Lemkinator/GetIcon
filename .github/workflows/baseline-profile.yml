@@ -32,6 +32,14 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Check runner
+        # /dev/kvm may legitimately be absent here; that's what this step is diagnosing.
+        run: |
+          date -u
+          ls -l /dev/kvm || true
+          nproc
+          free -m
+          df -h /
       # automaticGenerationDuringBuild is unconditional for the release variant, so assembleRelease
       # itself is what exercises the real generator end to end - this is the same command the
       # release workflow runs, making this job an early-warning rehearsal for it.
@@ -39,12 +47,30 @@ jobs:
       # swangle (ANGLE on SwiftShader Vulkan) does not load that renderer.
       - name: Build release APK with a freshly generated baseline profile
         run: |
+          set -o pipefail
           chmod +x ./gradlew
           ./gradlew :app:assembleRelease \
-            -Pandroid.testoptions.manageddevices.emulator.gpu=swangle --stacktrace
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swangle \
+            -Pandroid.experimental.testOptions.managedDevices.emulator.showKernelLogging=true \
+            --info \
+            --stacktrace \
+            | tee gmd-build.log
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+      - name: Dump kernel log on failure
+        if: failure()
+        run: sudo dmesg --ctime | tail -n 200 || true
+      - name: Upload GMD diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gmd-diagnostics
+          if-no-files-found: ignore
+          path: |
+            ~/.android/avd/gradle-managed/**/*.txt
+            gmd-build.log
+            benchmarks/build/outputs/androidTest-results/managedDevice/
       - name: Verify baseline profile packaged
         run: |
           apk=app/build/outputs/apk/release/app-release.apk
