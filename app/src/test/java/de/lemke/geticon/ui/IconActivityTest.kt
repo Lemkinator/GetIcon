@@ -260,6 +260,12 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java].state.value.colorEnabled shouldBe true
                 activity.findViewById<CheckBox>(R.id.color_checkbox).isChecked shouldBe false
+                listOf(R.id.colorButtonBackground, R.id.colorButtonForeground).forEach { id ->
+                    val button = activity.findViewById<Button>(id)
+                    button.isEnabled shouldBe false
+                    button.backgroundTintList?.defaultColor shouldBe 0x66FFFFFF
+                    button.currentTextColor shouldBe 0xFF8C8C8C.toInt()
+                }
             }
         }
     }
@@ -525,8 +531,31 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 val button = activity.findViewById<Button>(R.id.colorButtonForeground)
+                button.isEnabled shouldBe true
                 button.backgroundTintList?.defaultColor shouldBe translucentBlack
                 button.currentTextColor shouldBe Color.BLACK
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "night")
+    fun foregroundColorButton_translucentDarkColorPicked_usesWhiteTextOverDarkWindow() {
+        val translucentBlack = Color.argb(0x40, 0, 0, 0)
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onColorPicked(translucentBlack, isBackground = false)
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val button = activity.findViewById<Button>(R.id.colorButtonForeground)
+                button.isEnabled shouldBe true
+                button.backgroundTintList?.defaultColor shouldBe translucentBlack
+                button.currentTextColor shouldBe Color.WHITE
             }
         }
     }
