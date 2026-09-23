@@ -18,7 +18,6 @@ package de.lemke.geticon.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.res.ColorStateList.valueOf
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.Menu
@@ -37,6 +36,7 @@ import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.commonutils.ui.utils.bindColorSwatch
 import de.lemke.commonutils.ui.utils.collectEvents
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.copyToClipboard
@@ -56,7 +56,6 @@ import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.onProgressChanged
 import javax.inject.Inject
-import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
@@ -186,23 +185,9 @@ class IconActivity :
             binding.sizeEdittext.setText(state.size.toString())
         }
         isRendering = false
-        if (state.isAdaptiveIcon && state.colorEnabled) {
-            binding.colorButtonBackground.isEnabled = true
-            binding.colorButtonBackground.setTextColor(state.backgroundTextColor)
-            binding.colorButtonBackground.backgroundTintList = valueOf(state.backgroundColor)
-            binding.colorButtonForeground.isEnabled = true
-            binding.colorButtonForeground.setTextColor(state.foregroundTextColor)
-            binding.colorButtonForeground.backgroundTintList = valueOf(state.foregroundColor)
-        } else {
-            @SuppressLint("PrivateResource")
-            val disabledTint = valueOf(getColor(appcompatR.color.sesl_show_button_shapes_color_disabled))
-            binding.colorButtonBackground.isEnabled = false
-            binding.colorButtonBackground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
-            binding.colorButtonBackground.backgroundTintList = disabledTint
-            binding.colorButtonForeground.isEnabled = false
-            binding.colorButtonForeground.setTextColor(getColor(commonutilsR.color.commonutils_secondary_text_icon_color))
-            binding.colorButtonForeground.backgroundTintList = disabledTint
-        }
+        val colorButtonsEnabled = state.isAdaptiveIcon && state.colorEnabled
+        binding.colorButtonBackground.bindColorSwatch(state.backgroundColor, colorButtonsEnabled)
+        binding.colorButtonForeground.bindColorSwatch(state.foregroundColor, colorButtonsEnabled)
         if (!suggestViewSet && state.icon != null) {
             binding.root.setAppBarSuggestView(createSuggestAppBarModel())
             suggestViewSet = true

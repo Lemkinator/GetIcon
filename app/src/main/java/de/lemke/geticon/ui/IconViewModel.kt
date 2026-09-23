@@ -19,9 +19,6 @@ package de.lemke.geticon.ui
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
-import android.graphics.Color.BLACK
-import android.graphics.Color.WHITE
-import androidx.core.graphics.toColor
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,8 +41,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-private const val LIGHT_BACKGROUND_LUMINANCE_THRESHOLD = 0.17912878474
-
 data class IconUiState(
     val icon: Bitmap? = null,
     val appName: String = "",
@@ -60,12 +55,7 @@ data class IconUiState(
     val recentForegroundColors: List<Int> = listOf(DEFAULT_FOREGROUND_COLOR),
     val recentBackgroundColors: List<Int> = listOf(DEFAULT_BACKGROUND_COLOR),
     val isLoading: Boolean = true,
-) {
-    val backgroundTextColor: Int get() = textColorFor(backgroundColor)
-    val foregroundTextColor: Int get() = textColorFor(foregroundColor)
-}
-
-private fun textColorFor(color: Int): Int = if (color.toColor().luminance() >= LIGHT_BACKGROUND_LUMINANCE_THRESHOLD) BLACK else WHITE
+)
 
 sealed class IconEvent {
     data object Finish : IconEvent()

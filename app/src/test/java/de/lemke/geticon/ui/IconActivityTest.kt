@@ -457,7 +457,22 @@ class IconActivityTest {
     }
 
     @Test
-    fun backgroundTextColor_brightBackground_usesBlackText() {
+    fun colorButtons_colorDisabled_showDisabledPresentation() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                listOf(R.id.colorButtonBackground, R.id.colorButtonForeground).forEach { id ->
+                    val button = activity.findViewById<Button>(id)
+                    button.isEnabled shouldBe false
+                    button.backgroundTintList?.defaultColor shouldBe 0x66FFFFFF
+                    button.currentTextColor shouldBe 0xFF8C8C8C.toInt()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun backgroundColorButton_brightColorPicked_showsColorWithBlackText() {
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
@@ -468,13 +483,16 @@ class IconActivityTest {
             }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.findViewById<Button>(R.id.colorButtonBackground).currentTextColor shouldBe Color.BLACK
+                val button = activity.findViewById<Button>(R.id.colorButtonBackground)
+                button.isEnabled shouldBe true
+                button.backgroundTintList?.defaultColor shouldBe Color.WHITE
+                button.currentTextColor shouldBe Color.BLACK
             }
         }
     }
 
     @Test
-    fun foregroundTextColor_darkForeground_usesWhiteText() {
+    fun foregroundColorButton_darkColorPicked_showsColorWithWhiteText() {
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
@@ -485,7 +503,30 @@ class IconActivityTest {
             }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.findViewById<Button>(R.id.colorButtonForeground).currentTextColor shouldBe Color.WHITE
+                val button = activity.findViewById<Button>(R.id.colorButtonForeground)
+                button.isEnabled shouldBe true
+                button.backgroundTintList?.defaultColor shouldBe Color.BLACK
+                button.currentTextColor shouldBe Color.WHITE
+            }
+        }
+    }
+
+    @Test
+    fun foregroundColorButton_translucentDarkColorPicked_usesBlackTextOverLightWindow() {
+        val translucentBlack = Color.argb(0x40, 0, 0, 0)
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onColorPicked(translucentBlack, isBackground = false)
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val button = activity.findViewById<Button>(R.id.colorButtonForeground)
+                button.backgroundTintList?.defaultColor shouldBe translucentBlack
+                button.currentTextColor shouldBe Color.BLACK
             }
         }
     }
