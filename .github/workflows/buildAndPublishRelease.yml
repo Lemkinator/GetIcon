@@ -70,13 +70,13 @@ jobs:
 
       - name: Setup GMD
         if: steps.version_info.outputs.changed == 'true'
-        run: chmod +x ./gradlew && ./gradlew :benchmarks:pixel9Api35Setup -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+        run: chmod +x ./gradlew && ./gradlew :benchmarks:pixel9Api35Setup -Pandroid.testoptions.manageddevices.emulator.gpu=swangle
 
       - name: Build APK
         if: steps.version_info.outputs.changed == 'true'
         run: |
           chmod +x ./gradlew && ./gradlew :app:assembleRelease \
-            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect --stacktrace
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swangle --stacktrace
 
       - name: Verify baseline profile packaged
         if: steps.version_info.outputs.changed == 'true'

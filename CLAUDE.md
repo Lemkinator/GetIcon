@@ -33,11 +33,13 @@ PR CI passes `-Pandroidx.baselineprofile.skipgeneration` so a PR's `assembleRele
 GMD; the release workflow and a weekly smoke test (`baseline-profile.yml`) don't, so they always
 generate fresh. `./gradlew :app:generateBaselineProfile` still works standalone as a local diagnostic
 (same GMD device — image already cached if you ran instrumented tests) — run it in the background,
-not a foreground shell with a short timeout; it takes ~9-10 minutes:
+not a foreground shell with a short timeout; it takes ~9-10 minutes. Use `gpu=swangle`, never
+`swiftshader_indirect`: the legacy SwiftShader GLES renderer crashes the emulator host process mid-run,
+which surfaces only as `Test failed with status -1`:
 
 ```powershell
 ./gradlew :app:generateBaselineProfile `
-  -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+  -Pandroid.testoptions.manageddevices.emulator.gpu=swangle
 ```
 
 Run macrobenchmarks manually on a **connected physical device**, never the GMD (the library flags an
