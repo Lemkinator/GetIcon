@@ -56,6 +56,12 @@ jobs:
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+      - name: Print generator HWUI renderer
+        if: always()
+        run: |
+          grep -rh --include='logcat-*.txt' 'BaselineProfileGenerator: HWUI renderer' \
+            benchmarks/build/outputs/androidTest-results/managedDevice/ \
+            || echo "no renderer line found"
       - name: Dump kernel log on failure
         if: failure()
         run: sudo dmesg --ctime | tail -n 200 || true

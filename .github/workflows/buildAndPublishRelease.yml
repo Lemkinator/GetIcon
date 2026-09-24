@@ -94,6 +94,13 @@ jobs:
             --stacktrace \
             | tee gmd-build.log
 
+      - name: Print generator HWUI renderer
+        if: always() && steps.version_info.outputs.changed == 'true'
+        run: |
+          grep -rh --include='logcat-*.txt' 'BaselineProfileGenerator: HWUI renderer' \
+            benchmarks/build/outputs/androidTest-results/managedDevice/ \
+            || echo "no renderer line found"
+
       - name: Dump kernel log on failure
         if: failure() && steps.version_info.outputs.changed == 'true'
         run: sudo dmesg --ctime | tail -n 200 || true
