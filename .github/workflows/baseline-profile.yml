@@ -43,14 +43,12 @@ jobs:
       # automaticGenerationDuringBuild is unconditional for the release variant, so assembleRelease
       # itself is what exercises the real generator end to end - this is the same command the
       # release workflow runs, making this job an early-warning rehearsal for it.
-      # swiftshader_indirect (legacy SwiftShader GLES) crashes the emulator host process mid-generation;
-      # swangle (ANGLE on SwiftShader Vulkan) does not load that renderer.
       - name: Build release APK with a freshly generated baseline profile
         run: |
           set -o pipefail
           chmod +x ./gradlew
           ./gradlew :app:assembleRelease \
-            -Pandroid.testoptions.manageddevices.emulator.gpu=swangle \
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
             -Pandroid.experimental.testOptions.managedDevices.emulator.showKernelLogging=true \
             --info \
             --stacktrace \
