@@ -16,21 +16,39 @@
 
 package de.lemke.geticon.benchmarks
 
+import android.content.pm.PackageManager.FEATURE_VULKAN_HARDWARE_VERSION
+import android.os.Build
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+
+private const val VULKAN_1_1 = 0x401000
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 class BaselineProfileGenerator {
     @get:Rule
     val rule = BaselineProfileRule()
+
+    // The emulator's SwiftShader GLES translator crashes the emulator process when the app list draws its
+    // first hardware layers. Vulkan rendering bypasses that translator for every app process started later.
+    @Before
+    fun renderWithVulkanOnEmulator() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val packageManager = instrumentation.context.packageManager
+        if (Build.HARDWARE == "ranchu" && packageManager.hasSystemFeature(FEATURE_VULKAN_HARDWARE_VERSION, VULKAN_1_1)) {
+            UiDevice.getInstance(instrumentation).executeShellCommand("setprop debug.hwui.renderer skiavk")
+        }
+    }
 
     // Startup profile drives dex layout optimization, so it must stay limited to the actual
     // cold-start path — a secondary screen here would bloat startup-prof.txt with non-startup code.
