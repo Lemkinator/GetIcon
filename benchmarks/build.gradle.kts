@@ -37,17 +37,6 @@ android {
     }
     targetProjectPath = ":app"
     experimentalProperties["android.experimental.self-instrumenting"] = true
-
-    // The emulator's SwiftShader GLES translator crashes the qemu host process during GetIcon cold
-    // launches. ATD images set debug.hwui.drawing_enabled=0, so the app issues no GPU draws there.
-    testOptions.managedDevices.localDevices {
-        register("pixel9Api35Atd") {
-            device = "Pixel 9"
-            apiLevel = 35
-            systemImageSource = "aosp-atd"
-            testedAbi = "x86_64"
-        }
-    }
 }
 
 dependencies {
@@ -61,7 +50,7 @@ baselineProfile {
     @Suppress("UnstableApiUsage")
     enableEmulatorDisplay = false
     managedDevices.clear()
-    managedDevices += "pixel9Api35Atd"
+    managedDevices += "pixel9Api35"
     useConnectedDevices = false
 }
 
