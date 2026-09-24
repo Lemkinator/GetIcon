@@ -68,12 +68,6 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # Emulator host composition on the SwiftShader GLES renderer crashes the emulator process
-      # during GetIcon cold launches.
-      - name: Disable emulator host composition
-        if: steps.version_info.outputs.changed == 'true'
-        run: mkdir -p ~/.android && echo 'HostComposition = off' >> ~/.android/advancedFeatures.ini
-
       - name: Setup GMD
         if: steps.version_info.outputs.changed == 'true'
         run: chmod +x ./gradlew && ./gradlew :benchmarks:pixel9Api35Setup -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
