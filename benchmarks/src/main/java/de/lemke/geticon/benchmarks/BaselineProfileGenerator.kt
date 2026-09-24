@@ -16,22 +16,28 @@
 
 package de.lemke.geticon.benchmarks
 
+import android.app.UiAutomation
 import android.content.pm.PackageManager.FEATURE_VULKAN_HARDWARE_VERSION
 import android.os.Build
+import android.os.ParcelFileDescriptor
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
-import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 private const val VULKAN_1_1 = 0x401000
+private const val RENDERER_PROPERTY = "debug.hwui.renderer"
+private const val TAG = "BaselineProfileGenerator"
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
@@ -39,14 +45,31 @@ class BaselineProfileGenerator {
     @get:Rule
     val rule = BaselineProfileRule()
 
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private var previousRenderer: String? = null
+
     // The emulator's SwiftShader GLES translator crashes the emulator process when the app list draws its
     // first hardware layers. Vulkan rendering bypasses that translator for every app process started later.
     @Before
     fun renderWithVulkanOnEmulator() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val packageManager = instrumentation.context.packageManager
-        if (Build.HARDWARE == "ranchu" && packageManager.hasSystemFeature(FEATURE_VULKAN_HARDWARE_VERSION, VULKAN_1_1)) {
-            UiDevice.getInstance(instrumentation).executeShellCommand("setprop debug.hwui.renderer skiavk")
+        if (Build.HARDWARE != "ranchu") return
+        val hasVulkan11 = instrumentation.context.packageManager.hasSystemFeature(FEATURE_VULKAN_HARDWARE_VERSION, VULKAN_1_1)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasVulkan11) {
+            val uiAutomation = instrumentation.uiAutomation
+            previousRenderer = uiAutomation.shell("getprop $RENDERER_PROPERTY")
+            val renderer = uiAutomation.shell("setprop $RENDERER_PROPERTY skiavk; getprop $RENDERER_PROPERTY")
+            Log.i(TAG, "HWUI renderer: $renderer")
+        } else {
+            Log.i(TAG, "HWUI renderer: GLES fallback, Vulkan 1.1 on API 31+ unavailable")
+        }
+    }
+
+    @After
+    fun restoreRenderer() {
+        val previous = previousRenderer ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val restored = instrumentation.uiAutomation.shell("setprop $RENDERER_PROPERTY '$previous'; getprop $RENDERER_PROPERTY")
+            Log.i(TAG, "HWUI renderer restored: '$restored'")
         }
     }
 
@@ -73,6 +96,14 @@ class BaselineProfileGenerator {
             startActivityAndSkipOnboarding()
             navigateToIconAndBack()
         }
+}
+
+// UiAutomation splits a command on whitespace and runs it without a shell, so quoted or empty arguments need sh on stdin.
+@RequiresApi(Build.VERSION_CODES.S)
+private fun UiAutomation.shell(script: String): String {
+    val (stdout, stdin) = executeShellCommandRw("sh")
+    ParcelFileDescriptor.AutoCloseOutputStream(stdin).use { it.write(script.toByteArray()) }
+    return ParcelFileDescriptor.AutoCloseInputStream(stdout).use { it.readBytes().decodeToString().trim() }
 }
 
 private fun MacrobenchmarkScope.navigateToIconAndBack() {
