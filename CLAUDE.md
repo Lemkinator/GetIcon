@@ -33,12 +33,24 @@ PR CI passes `-Pandroidx.baselineprofile.skipgeneration` so a PR's `assembleRele
 GMD; the release workflow and a weekly smoke test (`baseline-profile.yml`) don't, so they always
 generate fresh. `./gradlew :app:generateBaselineProfile` still works standalone as a local diagnostic
 (same GMD device — image already cached if you ran instrumented tests) — run it in the background,
-not a foreground shell with a short timeout; it takes ~9-10 minutes:
+not a foreground shell with a short timeout; it takes ~9-10 minutes.
+
+Emulator host composition on the SwiftShader GLES renderer (every software
+`-gpu` mode) crashes the emulator process during GetIcon cold launches. The
+generator then reports only `Test failed with status -1`. Both workflows write
+`HostComposition = off` to `~/.android/advancedFeatures.ini` before the GMD
+starts. Locally, point `ANDROID_EMULATOR_HOME` at a directory holding that file
+plus a copy of `~/.android/adbkey.pub`. Run with `--no-daemon` so the emulator
+inherits the variable:
 
 ```powershell
-./gradlew :app:generateBaselineProfile `
+$env:ANDROID_EMULATOR_HOME = "<dir with advancedFeatures.ini>"
+./gradlew --no-daemon :app:generateBaselineProfile `
   -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 ```
+
+A feature change makes the emulator discard the GMD snapshot. The next GMD
+setup recreates it.
 
 Run macrobenchmarks manually on a **connected physical device**, never the GMD (the library flags an
 emulator as an `EMULATOR` error condition) — never in CI, only after touching the startup path or a

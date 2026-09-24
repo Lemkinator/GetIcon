@@ -32,6 +32,10 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      # Emulator host composition on the SwiftShader GLES renderer crashes the emulator process
+      # during GetIcon cold launches.
+      - name: Disable emulator host composition
+        run: mkdir -p ~/.android && echo 'HostComposition = off' >> ~/.android/advancedFeatures.ini
       - name: Check runner
         # /dev/kvm may legitimately be absent here; that's what this step is diagnosing.
         run: |
