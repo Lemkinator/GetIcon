@@ -70,7 +70,7 @@ jobs:
 
       - name: Setup GMD
         if: steps.version_info.outputs.changed == 'true'
-        run: chmod +x ./gradlew && ./gradlew :benchmarks:pixel9Api35Setup -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+        run: chmod +x ./gradlew && ./gradlew :benchmarks:pixel9Api35AtdSetup -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: Build APK
         if: steps.version_info.outputs.changed == 'true'

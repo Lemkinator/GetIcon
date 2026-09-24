@@ -23,7 +23,15 @@ Roborazzi screenshot tests, Konsist architecture tests). Instrumented tests
 ```
 
 The GMD device (`pixel9Api35`: Pixel 9 / API 35 / aosp / x86_64) is declared once in root
-`build.gradle.kts` and shared by `:app` instrumented tests and `:benchmarks` baseline profile generation.
+`build.gradle.kts` for `:app` instrumented tests.
+
+Baseline profile generation runs on `pixel9Api35Atd` (same device on the
+`aosp-atd` image), declared in `benchmarks/build.gradle.kts`. The emulator's
+SwiftShader GLES translator (every software `-gpu` mode) crashes the emulator
+process during GetIcon cold launches. The generator then reports only
+`Test failed with status -1`. ATD images disable app GPU drawing
+(`debug.hwui.drawing_enabled=0`), so the crash cannot occur there. The ATD
+profile lacks the splash-exit and inset-animation paths (about 1% of rules).
 
 ### Baseline Profile & Benchmarks
 
@@ -32,7 +40,7 @@ and nothing committed to git (`app/build.gradle.kts`'s `baselineProfile { varian
 PR CI passes `-Pandroidx.baselineprofile.skipgeneration` so a PR's `assembleRelease` never boots the
 GMD; the release workflow and a weekly smoke test (`baseline-profile.yml`) don't, so they always
 generate fresh. `./gradlew :app:generateBaselineProfile` still works standalone as a local diagnostic
-(same GMD device — image already cached if you ran instrumented tests) — run it in the background,
+(ATD image, downloaded on first run) — run it in the background,
 not a foreground shell with a short timeout; it takes ~9-10 minutes:
 
 ```powershell
