@@ -25,14 +25,6 @@ Roborazzi screenshot tests, Konsist architecture tests). Instrumented tests
 The GMD device (`pixel9Api35`: Pixel 9 / API 35 / aosp / x86_64) is declared once in root
 `build.gradle.kts` and shared by `:app` instrumented tests and `:benchmarks` baseline profile generation.
 
-`BaselineProfileGenerator` sets `debug.hwui.renderer=skiavk` on emulators
-before it starts the app. Every software `-gpu` mode uses the emulator's
-SwiftShader GLES translator. That translator crashes the emulator process
-when the app list draws its first hardware layers (the picker's shimmer
-skeletons). Gradle then reports only `Test failed with status -1`. Vulkan
-rendering bypasses that translator and keeps drawing enabled, so the
-profile keeps the splash-exit and inset-animation paths.
-
 ### Baseline Profile & Benchmarks
 
 The baseline profile is generated automatically as part of every `assembleRelease` — no manual step
@@ -47,6 +39,15 @@ not a foreground shell with a short timeout; it takes ~9-10 minutes:
 ./gradlew :app:generateBaselineProfile `
   -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 ```
+
+On emulators with API 31+ and Vulkan 1.1, `BaselineProfileGenerator` sets
+`debug.hwui.renderer=skiavk` before each test and restores the old value
+after it. Other emulators keep the GLES renderer. Every software `-gpu` mode
+uses the emulator's SwiftShader GLES translator. That translator can crash
+the emulator process when the app list draws its first hardware layers (the
+picker's shimmer skeletons). Gradle then reports only
+`Test failed with status -1`. The logcat tag `BaselineProfileGenerator`
+shows which renderer ran.
 
 Run macrobenchmarks manually on a **connected physical device**, never the GMD (the library flags an
 emulator as an `EMULATOR` error condition) — never in CI, only after touching the startup path or a
