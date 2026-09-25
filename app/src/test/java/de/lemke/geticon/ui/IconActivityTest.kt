@@ -55,7 +55,6 @@ import io.mockk.mockk
 import io.mockk.verify
 import java.io.File
 import java.io.IOException
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -83,7 +82,6 @@ class IconActivityTest {
 
     @Before
     fun setup() {
-        resetFileProviderCache()
         hiltRule.inject()
         every {
             generateIconStub(
@@ -97,9 +95,6 @@ class IconActivityTest {
             )
         } returns testIconResult
     }
-
-    @After
-    fun tearDown() = resetFileProviderCache()
 
     private fun launchWithAppInfo(): ActivityScenario<IconActivity> {
         val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
@@ -286,16 +281,18 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.registerPngTypeProvider()
                 activity.onSeekbarProgressChanged(256)
                 activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
             }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_copied_to_clipboard)
-                val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip
-                clip?.description?.label shouldBe "icon"
-                clip?.getItemAt(0)?.uri shouldBe activity.iconContentUri("icon.png")
+                val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip!!
+                val uri = activity.iconContentUri("icon.png")
+                clip.description.label shouldBe "icon"
+                clip.description.getMimeType(0) shouldBe "image/png"
+                clip.getItemAt(0).uri shouldBe uri
+                activity.contentResolver.getType(uri) shouldBe "image/png"
             }
         }
     }
