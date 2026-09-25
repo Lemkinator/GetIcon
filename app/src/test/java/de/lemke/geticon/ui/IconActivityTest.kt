@@ -25,7 +25,6 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Looper
-import android.view.MenuItem
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.ImageView
@@ -65,6 +64,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.fakes.RoboMenuItem
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowToast
 import de.lemke.commonutils.R as commonutilsR
@@ -154,7 +154,7 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
-                val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_save_as_image }
+                val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
                 activity.onOptionsItemSelected(item) shouldBe true
                 // default imageSaveLocation is CUSTOM, so save routes through the document-picker launcher.
                 val startedIntent = shadowOf(activity).nextStartedActivityForResult?.intent
@@ -170,7 +170,7 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
-                val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_share }
+                val item = RoboMenuItem(R.id.menu_item_icon_share)
                 activity.onOptionsItemSelected(item) shouldBe true
                 val startedIntent = shadowOf(activity).nextStartedActivity
                 startedIntent?.action shouldBe Intent.ACTION_CHOOSER
@@ -189,7 +189,7 @@ class IconActivityTest {
         // No appInfo → loadInitialState never runs, so state.icon stays null.
         launchWithoutAppInfo().use { scenario ->
             scenario.onActivity { activity ->
-                val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_save_as_image }
+                val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
                 activity.onOptionsItemSelected(item) shouldBe false
             }
         }
@@ -201,7 +201,7 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
-                val item = mockk<MenuItem> { every { itemId } returns android.R.id.home }
+                val item = RoboMenuItem(android.R.id.home)
                 activity.onOptionsItemSelected(item) shouldBe false
             }
         }
