@@ -25,12 +25,10 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Looper
-import android.view.MenuItem
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.ImageView
 import androidx.activity.result.ActivityResult
-import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
@@ -44,6 +42,7 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import de.lemke.commonutils.ShadowFileProvider
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
@@ -53,11 +52,10 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
 import io.mockk.verify
 import java.io.File
 import java.io.IOException
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -66,13 +64,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.fakes.RoboMenuItem
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowToast
 import de.lemke.commonutils.R as commonutilsR
 
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = HiltTestApplication::class, sdk = [36])
+@Config(application = HiltTestApplication::class, sdk = [36], shadows = [ShadowFileProvider::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class IconActivityTest {
     @get:Rule(order = 0)
@@ -84,6 +83,7 @@ class IconActivityTest {
 
     @Before
     fun setup() {
+        resetFileProviderCache()
         hiltRule.inject()
         every {
             generateIconStub(
@@ -97,6 +97,9 @@ class IconActivityTest {
             )
         } returns testIconResult
     }
+
+    @After
+    fun tearDown() = resetFileProviderCache()
 
     private fun launchWithAppInfo(): ActivityScenario<IconActivity> {
         val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
@@ -151,7 +154,7 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
-                val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_save_as_image }
+                val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
                 activity.onOptionsItemSelected(item) shouldBe true
                 // default imageSaveLocation is CUSTOM, so save routes through the document-picker launcher.
                 val startedIntent = shadowOf(activity).nextStartedActivityForResult?.intent
@@ -163,23 +166,21 @@ class IconActivityTest {
 
     @Test
     fun onOptionsItemSelected_share() {
-        mockkStatic(FileProvider::class)
-        every { FileProvider.getUriForFile(any(), any(), any()) } returns Uri.parse("content://test/icon.png")
-        try {
-            launchWithAppInfo().use { scenario ->
-                shadowOf(Looper.getMainLooper()).idle()
-                scenario.onActivity { activity ->
-                    activity.onSeekbarProgressChanged(256)
-                    val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_share }
-                    activity.onOptionsItemSelected(item) shouldBe true
-                    val startedIntent = shadowOf(activity).nextStartedActivity
-                    startedIntent?.action shouldBe Intent.ACTION_CHOOSER
-                    val innerIntent = IntentCompat.getParcelableExtra(startedIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
-                    innerIntent?.type shouldBe "image/png"
-                }
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onSeekbarProgressChanged(256)
+                val item = RoboMenuItem(R.id.menu_item_icon_share)
+                activity.onOptionsItemSelected(item) shouldBe true
+                val startedIntent = shadowOf(activity).nextStartedActivity
+                startedIntent?.action shouldBe Intent.ACTION_CHOOSER
+                val innerIntent = IntentCompat.getParcelableExtra(startedIntent!!, Intent.EXTRA_INTENT, Intent::class.java)!!
+                innerIntent.type shouldBe "image/png"
+                val stream = IntentCompat.getParcelableExtra(innerIntent, Intent.EXTRA_STREAM, Uri::class.java)
+                stream shouldBe activity.iconContentUri("icon.png")
+                File(activity.cacheDir, "icon.png").length() shouldBeGreaterThan 0L
+                innerIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION shouldBe Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
-        } finally {
-            unmockkStatic(FileProvider::class)
         }
     }
 
@@ -188,7 +189,7 @@ class IconActivityTest {
         // No appInfo → loadInitialState never runs, so state.icon stays null.
         launchWithoutAppInfo().use { scenario ->
             scenario.onActivity { activity ->
-                val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_icon_save_as_image }
+                val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
                 activity.onOptionsItemSelected(item) shouldBe false
             }
         }
@@ -200,7 +201,7 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
-                val item = mockk<MenuItem> { every { itemId } returns android.R.id.home }
+                val item = RoboMenuItem(android.R.id.home)
                 activity.onOptionsItemSelected(item) shouldBe false
             }
         }
@@ -282,25 +283,20 @@ class IconActivityTest {
 
     @Test
     fun icon_longClick_copiesClipboard() {
-        mockkStatic(FileProvider::class)
-        every { FileProvider.getUriForFile(any(), any(), any()) } returns Uri.parse("content://test/icon.png")
-        try {
-            launchWithAppInfo().use { scenario ->
-                shadowOf(Looper.getMainLooper()).idle()
-                scenario.onActivity { activity ->
-                    activity.onSeekbarProgressChanged(256)
-                    activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
-                }
-                shadowOf(Looper.getMainLooper()).idle()
-                scenario.onActivity { activity ->
-                    ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_copied_to_clipboard)
-                    val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip
-                    clip?.description?.label shouldBe "icon"
-                    clip?.getItemAt(0)?.uri shouldBe Uri.parse("content://test/icon.png")
-                }
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.registerPngTypeProvider()
+                activity.onSeekbarProgressChanged(256)
+                activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
             }
-        } finally {
-            unmockkStatic(FileProvider::class)
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_copied_to_clipboard)
+                val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip
+                clip?.description?.label shouldBe "icon"
+                clip?.getItemAt(0)?.uri shouldBe activity.iconContentUri("icon.png")
+            }
         }
     }
 
