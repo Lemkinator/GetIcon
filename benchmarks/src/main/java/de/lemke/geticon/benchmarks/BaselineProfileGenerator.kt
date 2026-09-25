@@ -39,7 +39,8 @@ class BaselineProfileGenerator {
     @get:Rule
     val rule = BaselineProfileRule()
 
-    // The emulator's SwiftShader GLES translator crashes when the app list draws hardware layers.
+    // While icons load, SeslAppPickerGridView cells show Shimmer placeholders drawn as hardware layers.
+    // The emulator's SwiftShader GLES translator crashes on those layers during a cold start.
     @Before
     fun renderWithVulkanOnEmulator() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
