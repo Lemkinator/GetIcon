@@ -287,12 +287,12 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_copied_to_clipboard)
-                val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip
-                clip?.description?.label shouldBe "icon"
-                clip?.description?.getMimeType(0) shouldBe "image/png"
-                val uri = clip?.getItemAt(0)?.uri
-                uri shouldBe activity.iconContentUri("icon.png")
-                activity.contentResolver.getType(uri!!) shouldBe "image/png"
+                val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip!!
+                val uri = activity.iconContentUri("icon.png")
+                clip.description.label shouldBe "icon"
+                clip.description.getMimeType(0) shouldBe "image/png"
+                clip.getItemAt(0).uri shouldBe uri
+                activity.contentResolver.getType(uri) shouldBe "image/png"
             }
         }
     }
