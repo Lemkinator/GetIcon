@@ -164,8 +164,6 @@ dependencies {
     implementation(libs.oneui.design)
     implementation(libs.oneui.icons)
     implementation(libs.common.utils)
-    // Lifts kotlinx-coroutines-core on the app runtime classpath to the version androidTest's coroutines-test needs;
-    // the app and test APKs must share one core.
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

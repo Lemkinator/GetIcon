@@ -37,17 +37,13 @@ private fun Context.fileProviderAuthority(): String =
 
 internal fun Context.iconContentUri(fileName: String): Uri = "content://${fileProviderAuthority()}/icons/$fileName".toUri()
 
-// The published ShadowFileProvider resolves its roots through FileProvider's static per-authority
-// cache, which outlives the cache dir of the Robolectric test that filled it.
 internal fun resetFileProviderCache() {
     val sCache = FileProvider::class.java.getDeclaredField("sCache")
     sCache.isAccessible = true
     (sCache.get(null) as MutableMap<*, *>).clear()
 }
 
-// ClipData.newUri asks the provider for the MIME type. The stock FileProvider maps the URI back to a
-// File with '/'-only root matching and throws SecurityException on Windows; ShadowFileProvider only
-// shadows getUriForFile.
+// Stock FileProvider.getType throws SecurityException for Windows paths.
 internal fun Context.registerPngTypeProvider() {
     Robolectric.setupContentProvider(PngTypeProvider::class.java, fileProviderAuthority())
 }
