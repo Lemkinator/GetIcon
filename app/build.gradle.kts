@@ -203,7 +203,6 @@ dependencies {
 spotless {
     kotlin {
         target("src/**/*.kt")
-        targetExclude("**/build/**", "**/generated/**")
         licenseHeaderFile(rootProject.file("config/spotless/apache-2.0.kt"))
         ktlint(libs.versions.ktlint.get())
         trimTrailingWhitespace()
@@ -211,7 +210,6 @@ spotless {
     }
     format("xml") {
         target("src/**/*.xml")
-        targetExclude("**/build/**")
         licenseHeaderFile(rootProject.file("config/spotless/apache-2.0.xml"), "(<[^!?])")
         trimTrailingWhitespace()
         endWithNewline()
@@ -268,6 +266,9 @@ kover {
                     "*_MembersInjector",
                     "dagger.hilt.*",
                     "hilt_aggregated_deps.*",
+                    "*_Impl",
+                    "*_Impl\$*",
+                    "*ComposableSingletons\$*",
                 )
             }
         }
