@@ -227,6 +227,14 @@ jobs:
                 failed=$((failed + 10#${BASH_REMATCH[1]}))
               fi
             done
+            if [ "$failed" -gt 0 ]; then
+              echo "::error::$module: the managed-device report lists $failed failed or errored instrumented tests"
+              status=1
+            fi
+            if [ "$executed" -eq 0 ]; then
+              echo "::error::$module: the managed device ran 0 instrumented tests"
+              status=1
+            fi
             apk="$module/build/outputs/apk/androidTest/debug/${module##*/}-debug-androidTest.apk"
             if [ ! -f "$apk" ]; then
               echo "::error::$module: no compiled test APK at $apk"
@@ -240,17 +248,23 @@ jobs:
               status=1
               continue
             fi
-            if ! expected=$("$dexdump" -a "$dex_dir"/classes*.dex | awk '/^  VISIBILITY_RUNTIME Lorg\/junit\/Test;/ { n++ } END { print n + 0 }'); then
+            dexes=()
+            for dex in "$dex_dir"/classes*.dex; do
+              if grep -qF 'Lorg/junit/Test;' "$dex"; then
+                dexes+=("$dex")
+              fi
+            done
+            expected=0
+            if [ ${#dexes[@]} -gt 0 ] && ! expected=$("$dexdump" -a "${dexes[@]}" | awk '/^  VISIBILITY_RUNTIME Lorg\/junit\/Test;/ { n++ } END { print n + 0 }'); then
               echo "::error::$module: $dexdump failed on the dex files of $apk"
               status=1
               continue
             fi
             echo "$module: Executed $executed instrumented tests (expected ≥ $expected from the test APK)"
-            if [ "$failed" -gt 0 ]; then
-              echo "::error::$module: the managed-device report lists $failed failed or errored instrumented tests"
+            if [ "$expected" -eq 0 ]; then
+              echo "::error::$module: no org.junit.Test methods in $apk"
               status=1
-            fi
-            if [ "$executed" -eq 0 ] || [ "$executed" -lt "$expected" ]; then
+            elif [ "$executed" -gt 0 ] && [ "$executed" -lt "$expected" ]; then
               echo "::error::$module: the managed device ran $executed instrumented tests, expected at least $expected"
               status=1
             fi
