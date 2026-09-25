@@ -178,6 +178,7 @@ class IconActivityTest {
                 innerIntent.type shouldBe "image/png"
                 val stream = IntentCompat.getParcelableExtra(innerIntent, Intent.EXTRA_STREAM, Uri::class.java)
                 stream shouldBe activity.iconContentUri("icon.png")
+                File(activity.cacheDir, "icon.png").length() shouldBeGreaterThan 0L
                 innerIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION shouldBe Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
         }
