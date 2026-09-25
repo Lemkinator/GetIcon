@@ -40,6 +40,10 @@ not a foreground shell with a short timeout; it takes ~9-10 minutes:
   -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 ```
 
+On emulators with Vulkan 1.1, `BaselineProfileGenerator` sets `debug.hwui.renderer=skiavk`. Under
+GLES, the emulator's SwiftShader translator crashes on the app list's hardware layers. Gradle then
+reports only `Test failed with status -1`.
+
 Run macrobenchmarks manually on a **connected physical device**, never the GMD (the library flags an
 emulator as an `EMULATOR` error condition) — never in CI, only after touching the startup path or a
 benchmarked journey:
