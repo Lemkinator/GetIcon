@@ -19,9 +19,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:ignore="AppCompatResource,AlwaysShowAction">
 
-    <!-- Lint reports AlwaysShowAction here only if no earlier menu file suppresses it,
-         so a clean lint run does not prove this entry stale. -->
-
     <item
         android:id="@+id/extract_icon_from_apk_dest"
         android:icon="@drawable/ic_oui_apk"

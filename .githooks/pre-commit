@@ -1,7 +1,6 @@
 #!/bin/sh
 # Runs static analysis (Spotless + Detekt) before allowing a commit.
 # Opt in: `git config core.hooksPath .githooks` (one-time per clone).
-# PRECOMMIT_GRADLE overrides the Gradle command, e.g. to queue for a shared build slot.
 
 set -e
 
