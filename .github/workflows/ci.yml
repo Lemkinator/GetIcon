@@ -195,13 +195,13 @@ jobs:
             executed=0
             for report in "${reports[@]}"; do
               if [[ $(<"$report") =~ $pattern ]]; then
-                executed=$((executed + BASH_REMATCH[1]))
+                executed=$((executed + 10#${BASH_REMATCH[1]}))
               else
                 echo "::error::$module: no <testsuites tests=\"N\"> in $report"
                 status=1
               fi
             done
-            expected=$({ grep -rhE '^[[:space:]]*@Test([^[:alnum:]_]|$)' "$module/src/androidTest" || true; } | wc -l)
+            expected=$({ grep -rhoE --include='*.kt' --include='*.java' '(^|[[:space:]])@(org\.junit\.)?Test\b' "$module/src/androidTest" || true; } | wc -l)
             echo "$module: Executed $executed instrumented tests (expected ≥ $expected)"
             if [ "$executed" -eq 0 ] || [ "$executed" -lt "$expected" ]; then
               echo "::error::$module: the managed device ran $executed instrumented tests, expected at least $expected"
