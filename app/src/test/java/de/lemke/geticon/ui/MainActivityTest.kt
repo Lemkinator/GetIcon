@@ -24,6 +24,7 @@ import android.os.Bundle
 import android.os.Looper
 import android.view.View
 import android.widget.TextView
+import androidx.core.content.IntentCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker.helper.SeslAppInfoDataHelper
@@ -225,7 +226,7 @@ class MainActivityTest {
 
     @Test
     fun collectEvents_navigateToApkIcon_startsIconActivity() {
-        val appInfo = mockk<ApplicationInfo>(relaxed = true).also { it.packageName = "com.test" }
+        val appInfo = ApplicationInfo().apply { packageName = "com.test" }
         coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
@@ -234,7 +235,10 @@ class MainActivityTest {
             }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+                val started = shadowOf(activity).nextStartedActivity!!
+                val extra = IntentCompat.getParcelableExtra(started, IconActivity.KEY_APPLICATION_INFO, ApplicationInfo::class.java)!!
+                started.component!!.className shouldBe IconActivity::class.java.name
+                extra.packageName shouldBe "com.test"
             }
         }
     }
