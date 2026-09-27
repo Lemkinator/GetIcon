@@ -138,6 +138,7 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search))
+                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
                 activity.isUIReady = false
             }
             scenario.recreate()
@@ -190,7 +191,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun onOptionsItemSelected_unknownItem_callsSuper() {
+    fun onOptionsItemSelected_unknownItem_returnsFalseWithoutSearch() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val item = RoboMenuItem(android.R.id.home)
@@ -236,8 +237,8 @@ class MainActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 val started = shadowOf(activity).nextStartedActivity!!
-                val extra = IntentCompat.getParcelableExtra(started, IconActivity.KEY_APPLICATION_INFO, ApplicationInfo::class.java)!!
                 started.component!!.className shouldBe IconActivity::class.java.name
+                val extra = IntentCompat.getParcelableExtra(started, IconActivity.KEY_APPLICATION_INFO, ApplicationInfo::class.java)!!
                 extra.packageName shouldBe "com.test"
             }
         }
