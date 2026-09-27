@@ -21,8 +21,13 @@ import androidx.lifecycle.viewModelScope
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.setMain
 
 private fun mainResolves() = runCatching { Dispatchers.Main.immediate }.isSuccess
 
@@ -35,6 +40,7 @@ private class InitLaunchViewModel : ViewModel() {
     }
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherExtensionTest : ShouldSpec(
     {
         var mainResolvedInBeforeEach = false
@@ -66,6 +72,19 @@ class MainDispatcherExtensionTest : ShouldSpec(
 
             should("keep Dispatchers.Main in the container after a nested test ends") {
                 mainResolvedAfterNestedTest shouldBe true
+            }
+        }
+
+        context("a container that installs its own Main") {
+            val scheduler = TestCoroutineScheduler()
+            Dispatchers.setMain(StandardTestDispatcher(scheduler))
+
+            should("keep that Main in a nested test") {
+                var launched = false
+                CoroutineScope(Dispatchers.Main).launch { launched = true }
+                launched shouldBe false
+                scheduler.runCurrent()
+                launched shouldBe true
             }
         }
     },

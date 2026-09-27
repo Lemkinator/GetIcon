@@ -18,6 +18,7 @@ package de.lemke.geticon
 
 import io.kotest.core.extensions.TestCaseExtension
 import io.kotest.core.test.TestCase
+import io.kotest.core.test.isRootTest
 import io.kotest.engine.test.TestResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,17 +26,19 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 
+/** Spec bodies, beforeSpec and afterSpec run outside every TestCaseExtension, so Main is not set there. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherExtension : TestCaseExtension {
     override suspend fun intercept(
         testCase: TestCase,
         execute: suspend (TestCase) -> TestResult,
     ): TestResult {
+        if (!testCase.isRootTest()) return execute(testCase)
         Dispatchers.setMain(UnconfinedTestDispatcher())
         return try {
             execute(testCase)
         } finally {
-            if (testCase.parent == null) Dispatchers.resetMain()
+            Dispatchers.resetMain()
         }
     }
 }
