@@ -22,9 +22,9 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Bundle
 import android.os.Looper
-import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
+import androidx.core.content.IntentCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker.helper.SeslAppInfoDataHelper
@@ -66,6 +66,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.fakes.RoboMenuItem
 import org.robolectric.shadows.ShadowToast
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
@@ -107,7 +108,7 @@ class MainActivityTest {
     fun onSaveInstanceState_ready_savesState() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onOptionsItemSelected(mockk { every { itemId } returns R.id.menu_item_search })
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search))
             }
             scenario.recreate()
             scenario.onActivity { activity ->
@@ -122,7 +123,7 @@ class MainActivityTest {
         // to inspect the bundle it builds, so drive the lifecycle via ActivityController instead.
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
-            controller.get().onOptionsItemSelected(mockk { every { itemId } returns R.id.menu_item_search })
+            controller.get().onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search))
             shadowOf(Looper.getMainLooper()).idle()
             val outState = Bundle()
             controller.pause().saveInstanceState(outState)
@@ -136,7 +137,8 @@ class MainActivityTest {
     fun onSaveInstanceState_notReady_returnsEarly() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onOptionsItemSelected(mockk { every { itemId } returns R.id.menu_item_search })
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search))
+                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
                 activity.isUIReady = false
             }
             scenario.recreate()
@@ -151,7 +153,7 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
             val activity = controller.get()
-            activity.onOptionsItemSelected(mockk { every { itemId } returns R.id.menu_item_search })
+            activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search))
             shadowOf(Looper.getMainLooper()).idle()
             controller.newIntent(Intent(Intent.ACTION_SEARCH).putExtra(SearchManager.QUERY, "sometext"))
             shadowOf(Looper.getMainLooper()).idle()
@@ -178,7 +180,7 @@ class MainActivityTest {
     fun onOptionsItemSelected_searchItem_startsSearch() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val item = mockk<MenuItem> { every { itemId } returns R.id.menu_item_search }
+                val item = RoboMenuItem(R.id.menu_item_search)
                 activity.onOptionsItemSelected(item) shouldBe true
                 activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
                 // End search mode to trigger onEnd lambda → applyFilter()
@@ -189,11 +191,12 @@ class MainActivityTest {
     }
 
     @Test
-    fun onOptionsItemSelected_unknownItem_callsSuper() {
+    fun onOptionsItemSelected_unknownItem_returnsFalseWithoutSearch() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val item = mockk<MenuItem> { every { itemId } returns android.R.id.home }
+                val item = RoboMenuItem(android.R.id.home)
                 activity.onOptionsItemSelected(item) shouldBe false
+                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe false
             }
         }
     }
@@ -224,7 +227,7 @@ class MainActivityTest {
 
     @Test
     fun collectEvents_navigateToApkIcon_startsIconActivity() {
-        val appInfo = mockk<ApplicationInfo>(relaxed = true).also { it.packageName = "com.test" }
+        val appInfo = ApplicationInfo().apply { packageName = "com.test" }
         coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
@@ -233,7 +236,10 @@ class MainActivityTest {
             }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+                val started = shadowOf(activity).nextStartedActivity!!
+                started.component!!.className shouldBe IconActivity::class.java.name
+                val extra = IntentCompat.getParcelableExtra(started, IconActivity.KEY_APPLICATION_INFO, ApplicationInfo::class.java)!!
+                extra.packageName shouldBe "com.test"
             }
         }
     }
@@ -242,7 +248,7 @@ class MainActivityTest {
     fun navItem_extractApk_launchesFilePicker() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.extract_icon_from_apk_dest })
+                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest))
                 result shouldBe true
                 shadowOf(activity).nextStartedActivityForResult?.intent?.type shouldBe
                     "application/vnd.android.package-archive"
@@ -254,7 +260,7 @@ class MainActivityTest {
     fun navItem_about_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_about_dest })
+                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_about_dest))
                 result shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
             }
@@ -265,7 +271,7 @@ class MainActivityTest {
     fun navItem_aboutMe_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_about_me_dest })
+                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_about_me_dest))
                 result shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsAboutMeActivity::class.java.name
             }
@@ -276,7 +282,7 @@ class MainActivityTest {
     fun navItem_settings_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.commonutils_settings_dest })
+                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_settings_dest))
                 result shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
             }
@@ -287,7 +293,7 @@ class MainActivityTest {
     fun navItem_leaks_opensLeakCanary() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(mockk { every { itemId } returns R.id.leaks_dest })
+                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.leaks_dest))
                 result shouldBe true
                 shadowOf(activity)
                     .nextStartedActivity
@@ -302,7 +308,8 @@ class MainActivityTest {
     fun navItem_unknown_returnsFalse() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(mockk { every { itemId } returns -1 }) shouldBe false
+                activity.onNavigationItemSelected(RoboMenuItem(-1)) shouldBe false
+                shadowOf(activity).nextStartedActivity shouldBe null
             }
         }
     }
