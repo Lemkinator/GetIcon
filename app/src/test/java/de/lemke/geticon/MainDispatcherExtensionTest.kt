@@ -43,8 +43,13 @@ private class InitLaunchViewModel : ViewModel() {
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherExtensionTest : ShouldSpec(
     {
+        var mainResolvedInBeforeContainer = false
         var mainResolvedInBeforeEach = false
         lateinit var viewModel: InitLaunchViewModel
+
+        beforeContainer {
+            mainResolvedInBeforeContainer = mainResolves()
+        }
 
         beforeEach {
             mainResolvedInBeforeEach = mainResolves()
@@ -55,17 +60,26 @@ class MainDispatcherExtensionTest : ShouldSpec(
             mainResolves() shouldBe true
         }
 
+        afterContainer {
+            mainResolves() shouldBe true
+        }
+
+        afterSpec {
+            mainResolves() shouldBe false
+        }
+
         should("resolve Dispatchers.Main in beforeEach") {
             mainResolvedInBeforeEach shouldBe true
         }
 
         should("run a viewModelScope launch from beforeEach on the constructing thread") {
+            viewModel.launchedOnConstructingThread.isCompleted shouldBe true
             viewModel.launchedOnConstructingThread.await() shouldBe true
         }
 
         context("a container") {
-            should("resolve Dispatchers.Main in a nested test") {
-                mainResolves() shouldBe true
+            should("resolve Dispatchers.Main in beforeContainer") {
+                mainResolvedInBeforeContainer shouldBe true
             }
 
             val mainResolvedAfterNestedTest = mainResolves()
