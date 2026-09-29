@@ -16,7 +16,6 @@
 
 package de.lemke.geticon.ui
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -55,6 +54,7 @@ import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.onProgressChanged
+import java.util.Locale
 import javax.inject.Inject
 import de.lemke.commonutils.R as commonutilsR
 
@@ -168,7 +168,6 @@ class IconActivity :
         }
     }
 
-    @SuppressLint("SetTextI18n")
     private fun renderState(state: IconUiState) {
         isRendering = true
         if (state.appName.isNotEmpty()) binding.root.setTitle(state.appName)
@@ -182,7 +181,7 @@ class IconActivity :
                 .toString()
                 .toIntOrNull() != state.size
         ) {
-            binding.sizeEdittext.setText(state.size.toString())
+            binding.sizeEdittext.setText("%d".format(Locale.getDefault(), state.size))
         }
         isRendering = false
         val colorButtonsEnabled = state.isAdaptiveIcon && state.colorEnabled

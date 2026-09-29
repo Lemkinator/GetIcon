@@ -27,6 +27,7 @@ import android.net.Uri
 import android.os.Looper
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.ImageView
 import androidx.activity.result.ActivityResult
 import androidx.core.content.IntentCompat
@@ -302,6 +303,32 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             onView(withId(R.id.size_edittext)).perform(replaceText("256"), pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 256
+            }
+        }
+    }
+
+    @Test
+    fun sizeEdittext_showsDefaultSize() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "512"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "ar-rEG")
+    fun sizeEdittext_arabicLocale_showsLocaleDigitsAndParsesThemBack() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٥١٢"
+            }
+            onView(withId(R.id.size_edittext)).perform(replaceText("٢٥٦"), pressImeActionButton())
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 256
