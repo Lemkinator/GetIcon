@@ -23,10 +23,10 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build.VERSION_CODES.TIRAMISU
-import androidx.annotation.RequiresApi
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.reflect.app.SeslApplicationPackageManagerReflector
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.filters.SdkSuppress
 import de.lemke.geticon.App
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -112,7 +112,7 @@ class GenerateIconUseCaseTest {
             result.bitmap shouldNotBe null
         }
 
-    @RequiresApi(TIRAMISU)
+    @SdkSuppress(minSdkVersion = TIRAMISU)
     @Test
     fun `colorEnabled applies tint to monochrome layer when icon has monochrome`() =
         runTest {
