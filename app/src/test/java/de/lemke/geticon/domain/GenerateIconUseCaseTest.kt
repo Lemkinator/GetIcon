@@ -16,13 +16,14 @@
 
 package de.lemke.geticon.domain
 
-import android.annotation.SuppressLint
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build.VERSION_CODES.TIRAMISU
+import androidx.annotation.RequiresApi
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.reflect.app.SeslApplicationPackageManagerReflector
 import androidx.test.core.app.ApplicationProvider
@@ -111,7 +112,7 @@ class GenerateIconUseCaseTest {
             result.bitmap shouldNotBe null
         }
 
-    @SuppressLint("NewApi")
+    @RequiresApi(TIRAMISU)
     @Test
     fun `colorEnabled applies tint to monochrome layer when icon has monochrome`() =
         runTest {
@@ -207,7 +208,6 @@ class GenerateIconUseCaseTest {
             result.bitmap shouldNotBe null
         }
 
-    @SuppressLint("NewApi")
     @Test
     fun `colorEnabled on API 33+ with no monochrome layer skips monochrome assignment`() =
         runTest {
