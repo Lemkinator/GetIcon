@@ -137,7 +137,10 @@ class IconActivity :
             textView.text
                 .toString()
                 .toIntOrNull()
-                ?.let { viewModel.onSizeChanged(it) }
+                ?.let {
+                    textView.text = "%d".format(Locale.getDefault(), it)
+                    viewModel.onSizeChanged(it)
+                }
             hideSoftInput()
             true
         }
