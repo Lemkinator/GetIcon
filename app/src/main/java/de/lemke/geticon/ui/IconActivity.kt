@@ -133,14 +133,8 @@ class IconActivity :
         binding.colorCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (!isRendering) viewModel.onColorChanged(isChecked)
         }
-        binding.sizeEdittext.setOnEditorActionListener { textView, _, _ ->
-            textView.text
-                .toString()
-                .toIntOrNull()
-                ?.let {
-                    textView.text = "%d".format(Locale.getDefault(), it)
-                    viewModel.onSizeChanged(it)
-                }
+        binding.sizeEdittext.setOnEditorActionListener { _, _, _ ->
+            onSizeSubmitted()
             hideSoftInput()
             true
         }
@@ -197,6 +191,21 @@ class IconActivity :
             binding.root.setAppBarSuggestView(createSuggestAppBarModel())
             suggestViewSet = true
         }
+    }
+
+    private fun onSizeSubmitted() {
+        val field = binding.sizeEdittext
+        val size =
+            field.text
+                .toString()
+                .toIntOrNull()
+                ?.coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE) ?: return
+        val formatted = "%d".format(Locale.getDefault(), size)
+        if (field.text.toString() != formatted) {
+            field.setText(formatted)
+            field.setSelection(formatted.length)
+        }
+        viewModel.onSizeChanged(size)
     }
 
     @VisibleForTesting(otherwise = PRIVATE)

@@ -368,6 +368,55 @@ class IconActivityTest {
     }
 
     @Test
+    fun sizeEdittext_editorAction_aboveMaxAtMaxSize_showsClampedSizeWithCursorAtEnd() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(1024) }
+            shadowOf(Looper.getMainLooper()).idle()
+            onView(withId(R.id.size_edittext)).perform(replaceText("5000"), pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val field = activity.findViewById<EditText>(R.id.size_edittext)
+                field.text.toString() shouldBe "1024"
+                field.selectionStart shouldBe 4
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 1024
+            }
+        }
+    }
+
+    @Test
+    fun sizeEdittext_editorAction_belowMinAtMinSize_showsClampedSize() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(16) }
+            shadowOf(Looper.getMainLooper()).idle()
+            onView(withId(R.id.size_edittext)).perform(replaceText("3"), pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "16"
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 16
+            }
+        }
+    }
+
+    @Test
+    fun sizeEdittext_editorAction_sameSizeSubmitted_keepsTextAndCursorAtEnd() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            onView(withId(R.id.size_edittext)).perform(replaceText("512"))
+            scenario.onActivity { activity -> activity.findViewById<EditText>(R.id.size_edittext).setSelection(3) }
+            onView(withId(R.id.size_edittext)).perform(pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val field = activity.findViewById<EditText>(R.id.size_edittext)
+                field.text.toString() shouldBe "512"
+                field.selectionStart shouldBe 3
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 512
+            }
+        }
+    }
+
+    @Test
     fun sizeEdittext_editorAction_nonNumericText_doesNotUpdateSize() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
