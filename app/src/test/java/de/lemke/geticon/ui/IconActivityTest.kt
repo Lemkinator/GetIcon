@@ -581,8 +581,52 @@ class IconActivityTest {
     }
 
     @Test
-    fun icon_hasContentDescription() {
+    fun icon_contentDescription_namesApp() {
         launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Get Icon (Debug) icon"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "de")
+    fun icon_contentDescription_namesApp_inGerman() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Get Icon (Debug)"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "land")
+    fun icon_contentDescription_namesApp_inLandscape() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Get Icon (Debug) icon"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "de-land")
+    fun icon_contentDescription_namesApp_inGermanLandscape() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Get Icon (Debug)"
+            }
+        }
+    }
+
+    @Test
+    fun icon_contentDescription_withoutAppName_keepsGenericFallback() {
+        launchWithoutAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App icon"
             }
@@ -591,20 +635,11 @@ class IconActivityTest {
 
     @Test
     @Config(qualifiers = "de")
-    fun icon_hasGermanContentDescription() {
-        launchWithAppInfo().use { scenario ->
+    fun icon_contentDescription_withoutAppName_keepsGermanGenericFallback() {
+        launchWithoutAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App-Icon"
-            }
-        }
-    }
-
-    @Test
-    @Config(qualifiers = "land")
-    fun icon_hasContentDescription_inLandscape() {
-        launchWithAppInfo().use { scenario ->
-            scenario.onActivity { activity ->
-                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App icon"
             }
         }
     }

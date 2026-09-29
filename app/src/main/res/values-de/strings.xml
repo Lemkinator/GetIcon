@@ -24,5 +24,6 @@
     <string name="copy_icon">Icon kopieren</string>
     <string name="extract_icon_from_apk">Icon aus APK extrahieren</string>
     <string name="app_icon">App-Icon</string>
+    <string name="app_icon_of">Icon von %1$s</string>
 
 </resources>

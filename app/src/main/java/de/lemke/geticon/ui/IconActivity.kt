@@ -170,7 +170,10 @@ class IconActivity :
 
     private fun renderState(state: IconUiState) {
         isRendering = true
-        if (state.appName.isNotEmpty()) binding.root.setTitle(state.appName)
+        if (state.appName.isNotEmpty()) {
+            binding.root.setTitle(state.appName)
+            binding.icon.contentDescription = getString(R.string.app_icon_of, state.appName)
+        }
         state.icon?.let { binding.icon.setImageBitmap(it) }
         binding.maskedCheckbox.isChecked = state.maskEnabled && state.hasMaskedAppIcon
         binding.maskedCheckbox.isEnabled = state.hasMaskedAppIcon
