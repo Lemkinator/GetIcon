@@ -553,6 +553,35 @@ class IconActivityTest {
         }
     }
 
+    @Test
+    fun icon_hasContentDescription() {
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App icon"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "de")
+    fun icon_hasGermanContentDescription() {
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App-Icon"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "land")
+    fun icon_hasContentDescription_inLandscape() {
+        launchWithAppInfo().use { scenario ->
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App icon"
+            }
+        }
+    }
+
     companion object {
         private val testBitmap: Bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
         private val testIconResult = IconResult(bitmap = testBitmap, isAdaptiveIcon = true, hasMaskedAppIcon = true)
