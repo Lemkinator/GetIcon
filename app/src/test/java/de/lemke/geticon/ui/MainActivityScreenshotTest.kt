@@ -94,7 +94,6 @@ class MainActivityScreenshotTest {
     companion object {
         private const val ICON_SIZE = 192
 
-        @Suppress("MagicNumber")
         private val FAKE_APPS =
             listOf(
                 FakeApp("OneURL", "de.lemke.oneurl", 0xFF8766C5.toInt(), ouiR.drawable.ic_oui_open_split_view),
@@ -160,7 +159,6 @@ class MainActivityScreenshotTest {
         }
     }
 
-    @Suppress("MagicNumber")
     private fun makeIcon(
         context: Context,
         bgColor: Int,
@@ -180,7 +178,6 @@ class MainActivityScreenshotTest {
         return bitmap
     }
 
-    @Suppress("MagicNumber")
     private fun squirclePath(): Path {
         // Squircle cubic bezier from ic_splash.xml (100×100 viewport), scaled to bitmap size.
         val s = ICON_SIZE / 100f
