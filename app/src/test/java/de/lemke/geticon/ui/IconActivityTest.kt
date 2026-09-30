@@ -45,7 +45,6 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.ShadowFileProvider
 import de.lemke.geticon.R
-import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.IconResult
 import io.kotest.matchers.longs.shouldBeGreaterThan
@@ -423,7 +422,7 @@ class IconActivityTest {
             onView(withId(R.id.size_edittext)).perform(replaceText("abc"), pressImeActionButton())
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe DEFAULT_ICON_SIZE
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 512
             }
         }
     }
