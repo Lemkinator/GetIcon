@@ -27,6 +27,7 @@ import android.net.Uri
 import android.os.Looper
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.ImageView
 import androidx.activity.result.ActivityResult
 import androidx.core.content.IntentCompat
@@ -44,7 +45,6 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.lemke.commonutils.ShadowFileProvider
 import de.lemke.geticon.R
-import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.IconResult
 import io.kotest.matchers.longs.shouldBeGreaterThan
@@ -310,13 +310,119 @@ class IconActivityTest {
     }
 
     @Test
+    fun sizeEdittext_showsDefaultSize() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "512"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "ar-rEG")
+    fun sizeEdittext_arabicLocale_showsLocaleDigitsAndParsesThemBack() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٥١٢"
+            }
+            onView(withId(R.id.size_edittext)).perform(replaceText("٢٥٦"), pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 256
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "ar-rEG")
+    fun sizeEdittext_arabicLocale_mixedDigitsForCurrentSize_reformatsWithLocaleDigits() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٥١٢"
+            }
+            onView(withId(R.id.size_edittext)).perform(replaceText("٥١2"), pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٥١٢"
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 512
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "ar-rEG")
+    fun sizeEdittext_arabicLocale_mixedDigitsForNewSize_reformatsWithLocaleDigits() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            onView(withId(R.id.size_edittext)).perform(replaceText("٢٥6"), pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٢٥٦"
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 256
+            }
+        }
+    }
+
+    @Test
+    fun sizeEdittext_editorAction_aboveMaxAtMaxSize_showsClampedSizeWithCursorAtEnd() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(1024) }
+            shadowOf(Looper.getMainLooper()).idle()
+            onView(withId(R.id.size_edittext)).perform(replaceText("5000"), pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val field = activity.findViewById<EditText>(R.id.size_edittext)
+                field.text.toString() shouldBe "1024"
+                field.selectionStart shouldBe 4
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 1024
+            }
+        }
+    }
+
+    @Test
+    fun sizeEdittext_editorAction_belowMinAtMinSize_showsClampedSize() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(16) }
+            shadowOf(Looper.getMainLooper()).idle()
+            onView(withId(R.id.size_edittext)).perform(replaceText("3"), pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "16"
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 16
+            }
+        }
+    }
+
+    @Test
+    fun sizeEdittext_editorAction_sameSizeSubmitted_keepsTextAndCursorAtEnd() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            onView(withId(R.id.size_edittext)).perform(replaceText("512"))
+            scenario.onActivity { activity -> activity.findViewById<EditText>(R.id.size_edittext).setSelection(3) }
+            onView(withId(R.id.size_edittext)).perform(pressImeActionButton())
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val field = activity.findViewById<EditText>(R.id.size_edittext)
+                field.text.toString() shouldBe "512"
+                field.selectionStart shouldBe 3
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 512
+            }
+        }
+    }
+
+    @Test
     fun sizeEdittext_editorAction_nonNumericText_doesNotUpdateSize() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             onView(withId(R.id.size_edittext)).perform(replaceText("abc"), pressImeActionButton())
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe DEFAULT_ICON_SIZE
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 512
             }
         }
     }
@@ -549,6 +655,70 @@ class IconActivityTest {
                 button.isEnabled shouldBe true
                 button.backgroundTintList?.defaultColor shouldBe translucentBlack
                 button.currentTextColor shouldBe Color.WHITE
+            }
+        }
+    }
+
+    @Test
+    fun icon_contentDescription_namesApp() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Get Icon (Debug) icon"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "de")
+    fun icon_contentDescription_namesApp_inGerman() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Get Icon (Debug)"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "land")
+    fun icon_contentDescription_namesApp_inLandscape() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Get Icon (Debug) icon"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "de-land")
+    fun icon_contentDescription_namesApp_inGermanLandscape() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Get Icon (Debug)"
+            }
+        }
+    }
+
+    @Test
+    fun icon_contentDescription_withoutAppName_keepsGenericFallback() {
+        launchWithoutAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App icon"
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "de")
+    fun icon_contentDescription_withoutAppName_keepsGermanGenericFallback() {
+        launchWithoutAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App-Icon"
             }
         }
     }

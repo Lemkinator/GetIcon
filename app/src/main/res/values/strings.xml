@@ -31,5 +31,7 @@
     <string name="long_press_icon_to_copy_to_clipboard">Long press icon to copy to clipboard</string>
     <string name="copy_icon">Copy icon</string>
     <string name="extract_icon_from_apk">Extract icon from APK</string>
+    <string name="app_icon">App icon</string>
+    <string name="app_icon_of">%1$s icon</string>
 
 </resources>

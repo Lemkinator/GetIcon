@@ -23,5 +23,7 @@
     <string name="long_press_icon_to_copy_to_clipboard">Halte das Icon gedrückt, um es in die Zwischenablage zu kopieren</string>
     <string name="copy_icon">Icon kopieren</string>
     <string name="extract_icon_from_apk">Icon aus APK extrahieren</string>
+    <string name="app_icon">App-Icon</string>
+    <string name="app_icon_of">Icon von %1$s</string>
 
 </resources>

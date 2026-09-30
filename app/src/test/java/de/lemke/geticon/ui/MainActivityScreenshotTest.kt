@@ -20,9 +20,9 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ActivityInfo
+import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
-import android.content.pm.ResolveInfo
+import android.content.pm.PackageInfo
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -94,7 +94,6 @@ class MainActivityScreenshotTest {
     companion object {
         private const val ICON_SIZE = 192
 
-        @Suppress("MagicNumber")
         private val FAKE_APPS =
             listOf(
                 FakeApp("OneURL", "de.lemke.oneurl", 0xFF8766C5.toInt(), ouiR.drawable.ic_oui_open_split_view),
@@ -127,40 +126,28 @@ class MainActivityScreenshotTest {
             )
     }
 
-    @Suppress("DEPRECATION")
     private fun installFakeApps() {
         val context = ApplicationProvider.getApplicationContext<Application>()
         val shadowPm = shadowOf(context.packageManager)
-        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        shadowPm.setResolveInfosForIntent(
-            launcherIntent,
-            FAKE_APPS.map { app ->
-                ResolveInfo().apply {
-                    nonLocalizedLabel = app.label
-                    activityInfo =
-                        ActivityInfo().apply {
-                            packageName = app.packageName
-                            name = "${app.packageName}.MainActivity"
-                            applicationInfo =
-                                ApplicationInfo().apply {
-                                    packageName = app.packageName
-                                    nonLocalizedLabel = app.label
-                                    flags = ApplicationInfo.FLAG_INSTALLED
-                                }
-                        }
-                }
-            },
-        )
+        val launcherFilter = IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
         FAKE_APPS.forEach { app ->
-            val bitmap = makeIcon(context, app.bgColor, app.iconRes)
-            shadowPm.addActivityIcon(
-                ComponentName(app.packageName, "${app.packageName}.MainActivity"),
-                BitmapDrawable(context.resources, bitmap),
+            val component = ComponentName(app.packageName, "${app.packageName}.MainActivity")
+            shadowPm.installPackage(
+                PackageInfo().apply {
+                    packageName = app.packageName
+                    applicationInfo =
+                        ApplicationInfo().apply {
+                            packageName = app.packageName
+                            nonLocalizedLabel = app.label
+                        }
+                },
             )
+            shadowPm.addActivityIfNotPresent(component)
+            shadowPm.addIntentFilterForActivity(component, launcherFilter)
+            shadowPm.addActivityIcon(component, BitmapDrawable(context.resources, makeIcon(context, app.bgColor, app.iconRes)))
         }
     }
 
-    @Suppress("MagicNumber")
     private fun makeIcon(
         context: Context,
         bgColor: Int,
@@ -180,7 +167,6 @@ class MainActivityScreenshotTest {
         return bitmap
     }
 
-    @Suppress("MagicNumber")
     private fun squirclePath(): Path {
         // Squircle cubic bezier from ic_splash.xml (100×100 viewport), scaled to bitmap size.
         val s = ICON_SIZE / 100f

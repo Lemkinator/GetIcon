@@ -16,7 +16,6 @@
 
 package de.lemke.geticon.ui
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -55,6 +54,7 @@ import dev.oneuiproject.oneui.delegates.AppBarAwareYTranslator
 import dev.oneuiproject.oneui.delegates.ViewYTranslator
 import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.onProgressChanged
+import java.util.Locale
 import javax.inject.Inject
 import de.lemke.commonutils.R as commonutilsR
 
@@ -133,11 +133,8 @@ class IconActivity :
         binding.colorCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (!isRendering) viewModel.onColorChanged(isChecked)
         }
-        binding.sizeEdittext.setOnEditorActionListener { textView, _, _ ->
-            textView.text
-                .toString()
-                .toIntOrNull()
-                ?.let { viewModel.onSizeChanged(it) }
+        binding.sizeEdittext.setOnEditorActionListener { _, _, _ ->
+            onSizeSubmitted()
             hideSoftInput()
             true
         }
@@ -168,10 +165,12 @@ class IconActivity :
         }
     }
 
-    @SuppressLint("SetTextI18n")
     private fun renderState(state: IconUiState) {
         isRendering = true
-        if (state.appName.isNotEmpty()) binding.root.setTitle(state.appName)
+        if (state.appName.isNotEmpty()) {
+            binding.root.setTitle(state.appName)
+            binding.icon.contentDescription = getString(R.string.app_icon_of, state.appName)
+        }
         state.icon?.let { binding.icon.setImageBitmap(it) }
         binding.maskedCheckbox.isChecked = state.maskEnabled && state.hasMaskedAppIcon
         binding.maskedCheckbox.isEnabled = state.hasMaskedAppIcon
@@ -182,7 +181,7 @@ class IconActivity :
                 .toString()
                 .toIntOrNull() != state.size
         ) {
-            binding.sizeEdittext.setText(state.size.toString())
+            binding.sizeEdittext.setText("%d".format(Locale.getDefault(), state.size))
         }
         isRendering = false
         val colorButtonsEnabled = state.isAdaptiveIcon && state.colorEnabled
@@ -192,6 +191,21 @@ class IconActivity :
             binding.root.setAppBarSuggestView(createSuggestAppBarModel())
             suggestViewSet = true
         }
+    }
+
+    private fun onSizeSubmitted() {
+        val field = binding.sizeEdittext
+        val size =
+            field.text
+                .toString()
+                .toIntOrNull()
+                ?.coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE) ?: return
+        val formatted = "%d".format(Locale.getDefault(), size)
+        if (field.text.toString() != formatted) {
+            field.setText(formatted)
+            field.setSelection(formatted.length)
+        }
+        viewModel.onSizeChanged(size)
     }
 
     @VisibleForTesting(otherwise = PRIVATE)
