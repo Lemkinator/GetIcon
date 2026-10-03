@@ -172,8 +172,8 @@ class IconActivityTest {
                 val innerIntent = IntentCompat.getParcelableExtra(startedIntent!!, Intent.EXTRA_INTENT, Intent::class.java)!!
                 innerIntent.type shouldBe "image/png"
                 val stream = IntentCompat.getParcelableExtra(innerIntent, Intent.EXTRA_STREAM, Uri::class.java)
-                stream shouldBe activity.iconContentUri("icon.png")
-                File(activity.cacheDir, "icon.png").length() shouldBeGreaterThan 0L
+                stream shouldBe activity.iconContentUri("share/icon.png")
+                File(activity.cacheDir, "share/icon.png").length() shouldBeGreaterThan 0L
                 innerIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION shouldBe Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
         }
@@ -288,7 +288,7 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_copied_to_clipboard)
                 val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip!!
-                val uri = activity.iconContentUri("icon.png")
+                val uri = activity.iconContentUri("clipboard/icon.png")
                 clip.description.label shouldBe "icon"
                 clip.description.getMimeType(0) shouldBe "image/png"
                 clip.getItemAt(0).uri shouldBe uri

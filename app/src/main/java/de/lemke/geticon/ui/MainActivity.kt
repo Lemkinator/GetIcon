@@ -42,7 +42,7 @@ import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.collectEvents
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.configureCommonUtilsSplashScreen
-import de.lemke.commonutils.ui.utils.onNavigationSingleClick
+import de.lemke.commonutils.ui.utils.onSingleLaunchItemSelected
 import de.lemke.commonutils.ui.utils.onboardIfNeeded
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationFrom
 import de.lemke.commonutils.ui.utils.restoreSearchAndActionMode
@@ -188,7 +188,7 @@ class MainActivity :
 
     private fun initDrawer() {
         setLeaksMenuItemVisibility(binding.navigationView.findMenuItem(R.id.leaks_dest))
-        binding.navigationView.onNavigationSingleClick { item -> onNavigationItemSelected(item) }
+        binding.navigationView.onSingleLaunchItemSelected(::onNavigationItemSelected)
         binding.drawerLayout.setTitle(getString(R.string.app_name))
         binding.drawerLayout.setupHeaderAndNavRail(getString(R.string.about_app))
         binding.drawerLayout.isImmersiveScroll = true
