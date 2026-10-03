@@ -31,6 +31,16 @@ class CodingConventionsTest : ShouldSpec() {
     private val codeScope = Konsist.scopeFromProduction()
 
     init {
+        should("launch activities only through the launch latch") {
+            codeScope.files.assertTrue(testName = this.testCase.name.toString()) { file ->
+                LaunchLatchConventions.rawLaunches(file.text).isEmpty()
+            }
+        }
+        should("show dialogs only through showOnce") {
+            codeScope.files.assertTrue(testName = this.testCase.name.toString()) { file ->
+                LaunchLatchConventions.rawDialogShows(file.text, file.imports.map { it.name }).isEmpty()
+            }
+        }
         should("properties declared before functions in class body") {
             codeScope
                 .classes()

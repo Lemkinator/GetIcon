@@ -130,7 +130,13 @@ Four tools run as part of `./gradlew build`:
   Kover XML (`.github/scripts/strip-zero-instruction-lines.py`) before the Codecov upload.
 - **Konsist** — architecture rules in
   `app/src/test/java/de/lemke/geticon/ArchitectureTest.kt`. Enforces
-  `data/domain/ui` layering. Runs as part of `./gradlew test`.
+  `data/domain/ui` layering. Runs as part of `./gradlew test`. `CodingConventionsTest.kt` also
+  enforces the common-utils launch latch (`LaunchLatchConventions.kt`): it bans `startActivity(`,
+  `startActivityForResult(`, `startIntentSender(` and `registerForActivityResult(`, and a dialog
+  `.show(` whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
+  `singleLaunchActivity`, `transformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
+  input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
+  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`.
 
 **Pre-commit hook** — blocks commits with formatting violations. Opt in
 once per clone:
