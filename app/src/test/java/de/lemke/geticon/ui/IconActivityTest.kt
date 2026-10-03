@@ -24,6 +24,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
+import android.os.Environment
 import android.os.Looper
 import android.widget.Button
 import android.widget.CheckBox
@@ -43,8 +44,13 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import dagger.hilt.android.testing.UninstallModules
 import de.lemke.commonutils.ShadowFileProvider
+import de.lemke.commonutils.data.SaveLocation
+import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.geticon.R
+import de.lemke.geticon.di.DispatchersModule
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.IconResult
 import io.kotest.matchers.longs.shouldBeGreaterThan
@@ -55,6 +61,9 @@ import io.mockk.mockk
 import io.mockk.verify
 import java.io.File
 import java.io.IOException
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -72,6 +81,7 @@ import de.lemke.commonutils.R as commonutilsR
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36], shadows = [ShadowFileProvider::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@UninstallModules(DispatchersModule::class)
 class IconActivityTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
@@ -79,6 +89,14 @@ class IconActivityTest {
     @BindValue
     @JvmField
     val generateIconStub: GenerateIconUseCase = mockk()
+
+    @BindValue
+    @IoDispatcher
+    @JvmField
+    val ioDispatcher: CoroutineDispatcher = Dispatchers.Main
+
+    @Inject
+    lateinit var settings: SettingsRepository
 
     @Before
     fun setup() {
@@ -210,6 +228,40 @@ class IconActivityTest {
     }
 
     @Test
+    fun saveAsImage_fixedLocation_doubleTap_writesOneFileAndShowsOneToast() {
+        settings.imageSaveLocation = SaveLocation.DOWNLOADS
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
+                activity.onOptionsItemSelected(item) shouldBe true
+                activity.onOptionsItemSelected(item) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).listFiles()?.size shouldBe 1
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved: Downloads"
+        }
+    }
+
+    @Test
+    @Config(sdk = [29])
+    fun saveAsImage_fixedLocationBelowApiR_launchesDocumentPicker() {
+        settings.imageSaveLocation = SaveLocation.DOWNLOADS
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivityForResult?.intent?.action shouldBe Intent.ACTION_CREATE_DOCUMENT
+            }
+            ShadowToast.shownToastCount() shouldBe 0
+        }
+    }
+
+    @Test
     fun onOptionsItemSelected_nullIcon_callsSuper() {
         // No appInfo → loadInitialState never runs, so state.icon stays null.
         launchWithoutAppInfo().use { scenario ->
@@ -324,6 +376,40 @@ class IconActivityTest {
                 clip.getItemAt(0).uri shouldBe uri
                 activity.contentResolver.getType(uri) shouldBe "image/png"
             }
+        }
+    }
+
+    @Test
+    fun icon_doubleLongClick_copiesOneClipWithOneToast() {
+        launchWithAppInfo().use { scenario ->
+            var clipChanges = 0
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.getSystemService(ClipboardManager::class.java).addPrimaryClipChangedListener { clipChanges++ }
+                val icon = activity.findViewById<ImageView>(R.id.icon)
+                icon.performLongClick() shouldBe true
+                icon.performLongClick() shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            clipChanges shouldBe 1
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Copied to clipboard"
+        }
+    }
+
+    @Test
+    fun icon_longClickWhileShareSheetPending_copiesNothing() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
+                activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.getSystemService(ClipboardManager::class.java).hasPrimaryClip() shouldBe false
+            }
+            ShadowToast.shownToastCount() shouldBe 0
         }
     }
 
@@ -503,79 +589,53 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_nullIcon_returnsEarly() {
+    fun onExportBitmapResult_nullIcon_showsWriteError() {
         // No appInfo → loadInitialState never runs, so state.icon stays null.
         launchWithoutAppInfo().use { scenario ->
             scenario.onActivity { activity ->
-                val before = ShadowToast.shownToastCount()
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
-                ShadowToast.shownToastCount() shouldBe before
-            }
-        }
-    }
-
-    @Test
-    fun onExportBitmapResult_resultOk_callsSave() {
-        launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
                 val file = File(activity.cacheDir, "icon_export_test.png")
-                val intent = Intent().setData(Uri.fromFile(file))
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, intent))
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_image_saved)
-                file.exists() shouldBe true
-                file.length() shouldBeGreaterThan 0L
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file))))
             }
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.getTextOfLatestToast() shouldBe "Error creating file"
         }
     }
 
     @Test
-    fun onExportBitmapResult_resultCanceled_doesNothing() {
+    fun onExportBitmapResult_resultOk_savesIcon() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            val file = File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png")
+            scenario.onActivity { activity ->
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file))))
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
+            file.length() shouldBeGreaterThan 0L
+        }
+    }
+
+    @Test
+    fun onExportBitmapResult_resultCanceled_showsNoToast() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
-                val before = ShadowToast.shownToastCount()
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_CANCELED, null))
-                ShadowToast.shownToastCount() shouldBe before
             }
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 0
         }
     }
 
     @Test
-    fun onExportBitmapResult_nullResult_showsErrorToast() {
+    fun onExportBitmapResult_resultOkWithoutUri_showsNoToast() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
-                activity.onExportBitmapResult(null)
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_saving_image)
-            }
-        }
-    }
-
-    @Test
-    fun onExportBitmapResult_resultOkNullData_callsSaveWithNullUri() {
-        launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, null))
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_creating_file)
             }
-        }
-    }
-
-    @Test
-    fun onExportBitmapResult_otherCode_showsErrorToast() {
-        launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
-                activity.onExportBitmapResult(ActivityResult(99, null))
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_saving_image)
-            }
+            ShadowToast.shownToastCount() shouldBe 0
         }
     }
 

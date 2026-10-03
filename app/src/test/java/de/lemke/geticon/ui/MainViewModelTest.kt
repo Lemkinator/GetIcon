@@ -41,7 +41,7 @@ class MainViewModelTest : ShouldSpec(
 
         beforeEach {
             coEvery { getInstalledApps() } returns emptyList()
-            every { getApplicationInfo(any()) } returns null
+            coEvery { getApplicationInfo(any()) } returns null
             viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo, UnconfinedTestDispatcher())
         }
 
@@ -112,13 +112,13 @@ class MainViewModelTest : ShouldSpec(
 
         should("findApplicationInfo return the ApplicationInfo of an installed package") {
             val appInfo = mockk<ApplicationInfo>()
-            every { getApplicationInfo("com.example.test") } returns appInfo
+            coEvery { getApplicationInfo("com.example.test") } returns appInfo
 
             viewModel.findApplicationInfo("com.example.test") shouldBe appInfo
         }
 
         should("findApplicationInfo return null for a package that is not installed") {
-            every { getApplicationInfo("com.nonexistent.pkg") } returns null
+            coEvery { getApplicationInfo("com.nonexistent.pkg") } returns null
 
             viewModel.findApplicationInfo("com.nonexistent.pkg") shouldBe null
         }

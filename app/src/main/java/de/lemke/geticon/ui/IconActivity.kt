@@ -29,26 +29,33 @@ import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
 import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
+import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.commonutils.di.IoDispatcher
+import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.bindColorSwatch
 import de.lemke.commonutils.ui.utils.collectEvents
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.copyToClipboard
+import de.lemke.commonutils.ui.utils.createBitmapClip
 import de.lemke.commonutils.ui.utils.exportBitmap
 import de.lemke.commonutils.ui.utils.onSingleLaunchClick
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationTo
 import de.lemke.commonutils.ui.utils.registerForSingleLaunchResult
+import de.lemke.commonutils.ui.utils.saveBitmapToDirectory
 import de.lemke.commonutils.ui.utils.saveBitmapToUri
 import de.lemke.commonutils.ui.utils.setCustomBackAnimation
 import de.lemke.commonutils.ui.utils.setWindowTransparent
 import de.lemke.commonutils.ui.utils.shareBitmap
 import de.lemke.commonutils.ui.utils.showOnce
 import de.lemke.commonutils.ui.utils.singleLaunchMenuItem
+import de.lemke.commonutils.ui.utils.singleLaunchSuspending
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
@@ -60,6 +67,8 @@ import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.onProgressChanged
 import java.util.Locale
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.launch
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
@@ -68,6 +77,10 @@ class IconActivity :
     ViewYTranslator by AppBarAwareYTranslator() {
     @Inject
     lateinit var settings: SettingsRepository
+
+    @Inject
+    @IoDispatcher
+    lateinit var ioDispatcher: CoroutineDispatcher
 
     private lateinit var binding: ActivityIconBinding
     private val viewModel: IconViewModel by viewModels()
@@ -95,7 +108,7 @@ class IconActivity :
         val icon = state.icon ?: return super.onOptionsItemSelected(item)
         return when (item.itemId) {
             R.id.menu_item_icon_save_as_image -> {
-                singleLaunchMenuItem { exportBitmap(settings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher) }
+                saveIcon(icon, state.fileName)
             }
 
             R.id.menu_item_icon_share -> {
@@ -108,27 +121,40 @@ class IconActivity :
         }
     }
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onExportBitmapResult(result: ActivityResult?) {
-        val icon = viewModel.state.value.icon ?: return
-        saveIconToUri(result, icon)
+    private fun saveIcon(
+        icon: Bitmap,
+        fileName: String,
+    ): Boolean {
+        val saveLocation = settings.imageSaveLocation
+        if (saveLocation == SaveLocation.CUSTOM) return singleLaunchMenuItem { exportBitmap(fileName, exportBitmapResultLauncher) }
+        singleLaunchSuspending(
+            work = { saveBitmapToDirectory(saveLocation, icon, fileName, ioDispatcher) },
+            then = { result ->
+                when (result) {
+                    is BitmapSaveResult.Finished -> toast(result)
+                    BitmapSaveResult.NeedsPicker -> exportBitmap(fileName, exportBitmapResultLauncher)
+                }
+            },
+        )
+        return true
     }
 
-    private fun saveIconToUri(
-        result: ActivityResult?,
-        icon: Bitmap,
-    ) {
-        if (result?.resultCode == RESULT_OK) {
-            saveBitmapToUri(result.data?.data, icon)
-        } else if (result?.resultCode != RESULT_CANCELED) {
-            toast(commonutilsR.string.commonutils_error_saving_image)
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun onExportBitmapResult(result: ActivityResult) {
+        val uri = result.data?.data?.takeIf { result.resultCode == RESULT_OK }
+        val icon = viewModel.state.value.icon
+        lifecycleScope.launch {
+            when (val saveResult = saveBitmapToUri(uri, icon, createdDocument = true, ioDispatcher)) {
+                is BitmapSaveResult.Finished -> toast(saveResult)
+                BitmapSaveResult.Canceled -> Unit
+            }
         }
     }
 
     private fun initViews() {
         setCustomBackAnimation(binding.root, inAppReview = settings)
         binding.icon.translateYWithAppBar(binding.root.appBarLayout, this)
-        binding.icon.setOnLongClickListener { onCopyButtonClick() }
+        binding.icon.setOnLongClickListener { copyIcon() }
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (!isRendering) viewModel.onMaskChanged(isChecked)
         }
@@ -244,9 +270,14 @@ class IconActivity :
         dialog.showOnce(if (isBackground) BACKGROUND_COLOR_PICKER_TAG else FOREGROUND_COLOR_PICKER_TAG)
     }
 
-    private fun onCopyButtonClick(): Boolean =
-        viewModel.state.value.icon
-            ?.copyToClipboard(this, "icon", "icon.png") ?: false
+    private fun copyIcon(): Boolean {
+        val icon = viewModel.state.value.icon ?: return false
+        singleLaunchSuspending(
+            work = { createBitmapClip(icon, "icon", "icon.png", ioDispatcher) },
+            then = { copyToClipboard(it) },
+        )
+        return true
+    }
 
     private fun createSuggestAppBarModel(): SuggestAppBarModel<SuggestAppBarView> =
         SuggestAppBarModel
@@ -258,7 +289,7 @@ class IconActivity :
                     arrayListOf(
                         ButtonModel(
                             text = getString(R.string.copy_icon),
-                            clickListener = { _, _ -> onCopyButtonClick() },
+                            clickListener = { _, _ -> copyIcon() },
                         ),
                     ),
                 )
