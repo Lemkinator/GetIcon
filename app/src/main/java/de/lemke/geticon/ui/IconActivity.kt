@@ -40,11 +40,15 @@ import de.lemke.commonutils.ui.utils.collectEvents
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.copyToClipboard
 import de.lemke.commonutils.ui.utils.exportBitmap
+import de.lemke.commonutils.ui.utils.onSingleLaunchClick
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationTo
+import de.lemke.commonutils.ui.utils.registerForSingleLaunchResult
 import de.lemke.commonutils.ui.utils.saveBitmapToUri
 import de.lemke.commonutils.ui.utils.setCustomBackAnimation
 import de.lemke.commonutils.ui.utils.setWindowTransparent
 import de.lemke.commonutils.ui.utils.shareBitmap
+import de.lemke.commonutils.ui.utils.showOnce
+import de.lemke.commonutils.ui.utils.singleLaunchMenuItem
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
@@ -71,7 +75,7 @@ class IconActivity :
     private var suggestViewSet = false
 
     private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
-        registerForActivityResult(StartActivityForResult()) { onExportBitmapResult(it) }
+        registerForSingleLaunchResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         prepareActivityTransformationTo()
@@ -91,13 +95,11 @@ class IconActivity :
         val icon = state.icon ?: return super.onOptionsItemSelected(item)
         return when (item.itemId) {
             R.id.menu_item_icon_save_as_image -> {
-                exportBitmap(settings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher)
-                true
+                singleLaunchMenuItem { exportBitmap(settings.imageSaveLocation, icon, state.fileName, exportBitmapResultLauncher) }
             }
 
             R.id.menu_item_icon_share -> {
-                shareBitmap(icon, "icon.png")
-                true
+                singleLaunchMenuItem { shareBitmap(icon, "icon.png") }
             }
 
             else -> {
@@ -141,8 +143,8 @@ class IconActivity :
         binding.sizeSeekbar.min = MIN_ICON_SIZE
         binding.sizeSeekbar.max = MAX_ICON_SIZE
         binding.sizeSeekbar.onProgressChanged { onSeekbarProgressChanged(it) }
-        binding.colorButtonBackground.setOnClickListener { showColorPicker(isBackground = true) }
-        binding.colorButtonForeground.setOnClickListener { showColorPicker(isBackground = false) }
+        binding.colorButtonBackground.onSingleLaunchClick { showColorPicker(isBackground = true) }
+        binding.colorButtonForeground.onSingleLaunchClick { showColorPicker(isBackground = false) }
     }
 
     private fun collectState() {
@@ -239,7 +241,7 @@ class IconActivity :
                 true,
             )
         dialog.setTransparencyControlEnabled(true)
-        dialog.show()
+        dialog.showOnce(if (isBackground) BACKGROUND_COLOR_PICKER_TAG else FOREGROUND_COLOR_PICKER_TAG)
     }
 
     private fun onCopyButtonClick(): Boolean =
@@ -264,5 +266,7 @@ class IconActivity :
 
     companion object {
         const val KEY_APPLICATION_INFO = "applicationInfo"
+        private const val BACKGROUND_COLOR_PICKER_TAG = "backgroundColorPicker"
+        private const val FOREGROUND_COLOR_PICKER_TAG = "foregroundColorPicker"
     }
 }
