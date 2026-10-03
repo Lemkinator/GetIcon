@@ -410,6 +410,40 @@ class MainActivityTest {
     }
 
     @Test
+    fun onAppPickerItemClick_detachedView_launchesWithoutTransition() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            lateinit var view: View
+            scenario.onActivity { activity ->
+                view = View(activity)
+                activity.onAppPickerItemClick(view, AppInfo(packageName = activity.packageName, activityName = ""))
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+            }
+            view.transitionName shouldBe null
+        }
+    }
+
+    @Test
+    fun onAppPickerItemClick_activityStoppedBeforeLookupEnds_launchesWithoutTransition() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            val activity = controller.get()
+            val view = activity.findViewById<View>(R.id.appPicker)
+            activity.onAppPickerItemClick(view, AppInfo(packageName = activity.packageName, activityName = ""))
+            controller.pause().stop()
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.restart().start().resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+            view.transitionName shouldBe null
+        } finally {
+            controller.destroy()
+        }
+    }
+
+    @Test
     fun onAppPickerItemClick_doubleTap_startsIconActivityOnce() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
