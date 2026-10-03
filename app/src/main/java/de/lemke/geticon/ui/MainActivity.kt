@@ -38,6 +38,7 @@ import androidx.picker.model.AppInfo
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
@@ -78,6 +79,9 @@ class MainActivity :
     ViewYTranslator by AppBarAwareYTranslator() {
     @Inject
     lateinit var settings: SettingsRepository
+
+    @Inject
+    lateinit var getApplicationInfo: GetApplicationInfoUseCase
 
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
@@ -228,7 +232,7 @@ class MainActivity :
     ): Boolean {
         hideSoftInput()
         singleLaunchSuspending(
-            work = { viewModel.findApplicationInfo(appInfo.packageName) },
+            work = { getApplicationInfo(appInfo.packageName) },
             then = { applicationInfo ->
                 if (applicationInfo == null) {
                     toast(commonutilsR.string.commonutils_error_app_not_found)
