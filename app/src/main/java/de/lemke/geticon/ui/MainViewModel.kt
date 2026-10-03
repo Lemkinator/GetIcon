@@ -22,12 +22,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.picker.model.AppInfoData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.flow.Flow
@@ -35,17 +37,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed class MainEvent {
-    data class NavigateToIcon(val applicationInfo: ApplicationInfo) : MainEvent()
-
     data class NavigateToApkIcon(val applicationInfo: ApplicationInfo) : MainEvent()
 
     data object ShowError : MainEvent()
 
     data object ShowLoadError : MainEvent()
-
-    data object ShowAppNotFoundError : MainEvent()
 }
 
 @HiltViewModel
@@ -53,6 +52,7 @@ class MainViewModel @Inject constructor(
     private val processApk: ProcessApkUseCase,
     private val getInstalledApps: GetInstalledAppsUseCase,
     private val getApplicationInfo: GetApplicationInfoUseCase,
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
     private val _events = Channel<MainEvent>(BUFFERED)
     val events: Flow<MainEvent> = _events.receiveAsFlow()
@@ -83,14 +83,5 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun onAppSelected(packageName: String) {
-        viewModelScope.launch {
-            val appInfo = getApplicationInfo(packageName)
-            if (appInfo == null) {
-                _events.send(MainEvent.ShowAppNotFoundError)
-            } else {
-                _events.send(MainEvent.NavigateToIcon(appInfo))
-            }
-        }
-    }
+    suspend fun findApplicationInfo(packageName: String): ApplicationInfo? = withContext(ioDispatcher) { getApplicationInfo(packageName) }
 }

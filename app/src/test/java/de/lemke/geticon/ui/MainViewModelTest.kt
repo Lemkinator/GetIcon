@@ -30,6 +30,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 class MainViewModelTest : ShouldSpec(
     {
@@ -41,19 +42,19 @@ class MainViewModelTest : ShouldSpec(
         beforeEach {
             coEvery { getInstalledApps() } returns emptyList()
             every { getApplicationInfo(any()) } returns null
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo, UnconfinedTestDispatcher())
         }
 
         should("installedApps emits loaded list") {
             val app = mockk<AppInfoData>()
             coEvery { getInstalledApps() } returns listOf(app)
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo, UnconfinedTestDispatcher())
             viewModel.installedApps.value shouldBe listOf(app)
         }
 
         should("emit ShowLoadError when getInstalledApps throws") {
             coEvery { getInstalledApps() } throws RuntimeException("load failed")
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo, UnconfinedTestDispatcher())
             viewModel.events.test {
                 awaitItem() shouldBe MainEvent.ShowLoadError
             }
@@ -109,23 +110,17 @@ class MainViewModelTest : ShouldSpec(
             }
         }
 
-        should("emit NavigateToIcon when onAppSelected finds the package") {
+        should("findApplicationInfo return the ApplicationInfo of an installed package") {
             val appInfo = mockk<ApplicationInfo>()
-            every { getApplicationInfo(any()) } returns appInfo
-            viewModel.events.test {
-                viewModel.onAppSelected("com.example.test")
-                val event = awaitItem()
-                event.shouldBeInstanceOf<MainEvent.NavigateToIcon>()
-                event.applicationInfo shouldBe appInfo
-            }
+            every { getApplicationInfo("com.example.test") } returns appInfo
+
+            viewModel.findApplicationInfo("com.example.test") shouldBe appInfo
         }
 
-        should("emit ShowAppNotFoundError when onAppSelected package not found") {
-            every { getApplicationInfo(any()) } returns null
-            viewModel.events.test {
-                viewModel.onAppSelected("com.nonexistent.pkg")
-                awaitItem() shouldBe MainEvent.ShowAppNotFoundError
-            }
+        should("findApplicationInfo return null for a package that is not installed") {
+            every { getApplicationInfo("com.nonexistent.pkg") } returns null
+
+            viewModel.findApplicationInfo("com.nonexistent.pkg") shouldBe null
         }
     },
 )

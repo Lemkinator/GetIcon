@@ -18,6 +18,7 @@ package de.lemke.geticon.ui
 
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
+import android.content.pm.ApplicationInfo
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
@@ -32,6 +33,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle.State.RESUMED
 import androidx.picker.model.AppInfo
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
@@ -45,12 +47,14 @@ import de.lemke.commonutils.ui.utils.configureCommonUtilsSplashScreen
 import de.lemke.commonutils.ui.utils.onSingleLaunchItemSelected
 import de.lemke.commonutils.ui.utils.onboardIfNeeded
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationFrom
+import de.lemke.commonutils.ui.utils.registerForSingleLaunchResult
 import de.lemke.commonutils.ui.utils.restoreSearchAndActionMode
 import de.lemke.commonutils.ui.utils.saveSearchAndActionMode
 import de.lemke.commonutils.ui.utils.setupCommonUtilsAboutActivity
 import de.lemke.commonutils.ui.utils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.setupHeaderAndNavRail
 import de.lemke.commonutils.ui.utils.showSoftInput
+import de.lemke.commonutils.ui.utils.singleLaunchSuspending
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.commonutils.ui.utils.transformToActivity
 import de.lemke.geticon.BuildConfig
@@ -65,7 +69,6 @@ import dev.oneuiproject.oneui.layout.ToolbarLayout.SearchModeOnBackBehavior.DISM
 import dev.oneuiproject.oneui.layout.startSearchMode
 import dev.oneuiproject.oneui.recyclerview.ktx.configureImmBottomPadding
 import dev.oneuiproject.oneui.recyclerview.ktx.hideSoftInputOnScroll
-import java.lang.ref.WeakReference
 import javax.inject.Inject
 import de.lemke.commonutils.R as commonutilsR
 
@@ -79,8 +82,7 @@ class MainActivity :
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
 
-    private var pickApkActivityResultLauncher = registerForActivityResult(GetContent()) { viewModel.onApkPicked(it) }
-    private var lastTransitionView: WeakReference<View>? = null
+    private val pickApkActivityResultLauncher = registerForSingleLaunchResult(GetContent()) { viewModel.onApkPicked(it) }
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal var isUIReady = false
@@ -133,21 +135,10 @@ class MainActivity :
         }
 
     private fun collectEvents() {
-        collectEvents(viewModel.events) { event ->
+        collectEvents(viewModel.events, minActiveState = RESUMED) { event ->
             when (event) {
-                is MainEvent.NavigateToIcon -> {
-                    val intent =
-                        Intent(this@MainActivity, IconActivity::class.java)
-                            .putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
-                    transformToActivity(lastTransitionView?.get(), intent)
-                    lastTransitionView = null
-                }
-
                 is MainEvent.NavigateToApkIcon -> {
-                    val intent =
-                        Intent(this@MainActivity, IconActivity::class.java)
-                            .putExtra(KEY_APPLICATION_INFO, event.applicationInfo)
-                    transformToActivity(null, intent)
+                    openIcon(event.applicationInfo)
                 }
 
                 MainEvent.ShowError -> {
@@ -157,12 +148,15 @@ class MainActivity :
                 MainEvent.ShowLoadError -> {
                     toast(commonutilsR.string.commonutils_error)
                 }
-
-                MainEvent.ShowAppNotFoundError -> {
-                    toast(commonutilsR.string.commonutils_error_app_not_found)
-                }
             }
         }
+    }
+
+    private fun openIcon(
+        applicationInfo: ApplicationInfo,
+        transitionView: View? = null,
+    ) {
+        transformToActivity(transitionView, Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, applicationInfo))
     }
 
     @VisibleForTesting(otherwise = PRIVATE)
@@ -233,8 +227,16 @@ class MainActivity :
         appInfo: AppInfo,
     ): Boolean {
         hideSoftInput()
-        lastTransitionView = view?.let { WeakReference(it) }
-        viewModel.onAppSelected(appInfo.packageName)
+        singleLaunchSuspending(
+            work = { viewModel.findApplicationInfo(appInfo.packageName) },
+            then = { applicationInfo ->
+                if (applicationInfo == null) {
+                    toast(commonutilsR.string.commonutils_error_app_not_found)
+                } else {
+                    openIcon(applicationInfo, transitionView = view)
+                }
+            },
+        )
         return true
     }
 }
