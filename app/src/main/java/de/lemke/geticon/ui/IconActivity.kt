@@ -35,7 +35,6 @@ import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
-import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
@@ -108,7 +107,7 @@ class IconActivity :
         val icon = state.icon ?: return super.onOptionsItemSelected(item)
         return when (item.itemId) {
             R.id.menu_item_icon_save_as_image -> {
-                saveIcon(icon, state.fileName)
+                saveIcon(icon, state.fileName).let { true }
             }
 
             R.id.menu_item_icon_share -> {
@@ -124,11 +123,9 @@ class IconActivity :
     private fun saveIcon(
         icon: Bitmap,
         fileName: String,
-    ): Boolean {
-        val saveLocation = settings.imageSaveLocation
-        if (saveLocation == SaveLocation.CUSTOM) return singleLaunchMenuItem { exportBitmap(fileName, exportBitmapResultLauncher) }
+    ) {
         singleLaunchSuspending(
-            work = { saveBitmapToDirectory(saveLocation, icon, fileName, ioDispatcher) },
+            work = { saveBitmapToDirectory(settings.imageSaveLocation, icon, fileName, ioDispatcher) },
             then = { result ->
                 when (result) {
                     is BitmapSaveResult.Finished -> toast(result)
@@ -136,12 +133,11 @@ class IconActivity :
                 }
             },
         )
-        return true
     }
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun onExportBitmapResult(result: ActivityResult) {
-        val uri = result.data?.data?.takeIf { result.resultCode == RESULT_OK }
+        val uri = result.data?.data.takeIf { result.resultCode == RESULT_OK }
         val icon = viewModel.state.value.icon
         lifecycleScope.launch {
             when (val saveResult = saveBitmapToUri(uri, icon, createdDocument = true, ioDispatcher)) {

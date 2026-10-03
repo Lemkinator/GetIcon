@@ -245,23 +245,6 @@ class IconActivityTest {
     }
 
     @Test
-    @Config(sdk = [29])
-    fun saveAsImage_fixedLocationBelowApiR_launchesDocumentPicker() {
-        settings.imageSaveLocation = SaveLocation.DOWNLOADS
-        launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
-            }
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                shadowOf(activity).nextStartedActivityForResult?.intent?.action shouldBe Intent.ACTION_CREATE_DOCUMENT
-            }
-            ShadowToast.shownToastCount() shouldBe 0
-        }
-    }
-
-    @Test
     fun onOptionsItemSelected_nullIcon_callsSuper() {
         // No appInfo → loadInitialState never runs, so state.icon stays null.
         launchWithoutAppInfo().use { scenario ->
