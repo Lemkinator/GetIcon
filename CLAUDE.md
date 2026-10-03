@@ -76,7 +76,7 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
 
 - **`data/`** — `UserSettings`: a common-utils `SettingsRepository` subclass,
   SharedPreferences-backed (icon size, mask, colors)
-- **`domain/`** — thin use cases: `GenerateIconUseCase`, `GetApplicationInfoUseCase`, `ProcessApkUseCase`.
+- **`domain/`** — thin use cases: `GenerateIconUseCase`, `ProcessApkUseCase`.
 - **`ui/`** — two activities + two ViewModels: `MainActivity` / `MainViewModel`
   (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
 - **`App.kt`** — `@HiltAndroidApp` entry point; injects `settings: SettingsRepository`
