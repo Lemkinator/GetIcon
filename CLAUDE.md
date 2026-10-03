@@ -131,9 +131,9 @@ Four tools run as part of `./gradlew build`:
 - **Konsist** — architecture rules in
   `app/src/test/java/de/lemke/geticon/ArchitectureTest.kt`. Enforces
   `data/domain/ui` layering. Runs as part of `./gradlew test`. `CodingConventionsTest.kt` also
-  enforces the common-utils launch latch (`LaunchLatchConventions.kt`): it bans `startActivity(`,
-  `startActivityForResult(`, `startIntentSender(` and `registerForActivityResult(`, and a dialog
-  `.show(` whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
+  enforces the common-utils launch latch through `assertLaunchLatchConventions()` from the
+  common-utils testFixtures: it bans raw activity launches and result registration by name, and a
+  `show`/`showNow` call whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
   `singleLaunchActivity`, `transformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
   `singleLaunchSuspending`); show dialogs with `showOnce(tag)`.

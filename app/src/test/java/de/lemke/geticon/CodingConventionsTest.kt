@@ -25,21 +25,15 @@ import com.lemonappdev.konsist.api.declaration.KoInterfaceDeclaration
 import com.lemonappdev.konsist.api.declaration.KoObjectDeclaration
 import com.lemonappdev.konsist.api.declaration.KoPropertyDeclaration
 import com.lemonappdev.konsist.api.verify.assertTrue
+import de.lemke.commonutils.assertLaunchLatchConventions
 import io.kotest.core.spec.style.ShouldSpec
 
 class CodingConventionsTest : ShouldSpec() {
     private val codeScope = Konsist.scopeFromProduction()
 
     init {
-        should("launch activities only through the launch latch") {
-            codeScope.files.assertTrue(testName = this.testCase.name.toString()) { file ->
-                LaunchLatchConventions.rawLaunches(file.text).isEmpty()
-            }
-        }
-        should("show dialogs only through showOnce") {
-            codeScope.files.assertTrue(testName = this.testCase.name.toString()) { file ->
-                LaunchLatchConventions.rawDialogShows(file.text, file.imports.map { it.name }).isEmpty()
-            }
+        should("launch activities and show dialogs only through the launch latch") {
+            codeScope.assertLaunchLatchConventions()
         }
         should("properties declared before functions in class body") {
             codeScope
