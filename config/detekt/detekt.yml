@@ -33,6 +33,8 @@ complexity:
     # Class size is a review concern, not a lint gate.
   ComplexCondition:
     allowedConditions: 4
+  LargeClass:
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
 
 style:
   active: true

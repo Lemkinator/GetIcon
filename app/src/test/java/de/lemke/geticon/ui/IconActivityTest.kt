@@ -180,6 +180,36 @@ class IconActivityTest {
     }
 
     @Test
+    fun saveAsImage_doubleTap_launchesDocumentPickerOnce() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
+                activity.onOptionsItemSelected(item) shouldBe true
+                activity.onOptionsItemSelected(item) shouldBe true
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivityForResult?.intent?.action shouldBe Intent.ACTION_CREATE_DOCUMENT
+                shadowActivity.nextStartedActivityForResult shouldBe null
+            }
+        }
+    }
+
+    @Test
+    fun share_doubleTap_opensShareSheetOnce() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val item = RoboMenuItem(R.id.menu_item_icon_share)
+                activity.onOptionsItemSelected(item) shouldBe true
+                activity.onOptionsItemSelected(item) shouldBe true
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
+                shadowActivity.nextStartedActivity shouldBe null
+            }
+        }
+    }
+
+    @Test
     fun onOptionsItemSelected_nullIcon_callsSuper() {
         // No appInfo → loadInitialState never runs, so state.icon stays null.
         launchWithoutAppInfo().use { scenario ->
@@ -454,6 +484,20 @@ class IconActivityTest {
                 val foregroundDialog = ShadowDialog.getLatestDialog()
                 foregroundDialog?.isShowing shouldBe true
                 foregroundDialog shouldNotBe backgroundDialog
+            }
+        }
+    }
+
+    @Test
+    fun colorButton_doubleTap_showsOneColorPicker() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val button = activity.findViewById<Button>(R.id.colorButtonBackground)
+                button.performClick()
+                button.performClick()
+                ShadowDialog.getShownDialogs().size shouldBe 1
+                ShadowDialog.getLatestDialog().isShowing shouldBe true
             }
         }
     }
