@@ -126,7 +126,8 @@ Four tools run as part of `./gradlew build`:
 - **Detekt** — static analysis; config at `config/detekt/detekt.yml`.
   `autoCorrect = false` — fixes are manual.
 - **Kover** — 100% INSTRUCTION + BRANCH coverage required.
-  Verify: `./gradlew koverVerifyDebug`.
+  Verify: `./gradlew koverVerifyDebug`. CI strips zero-instruction `<line>` entries from the
+  Kover XML (`.github/scripts/strip-zero-instruction-lines.py`) before the Codecov upload.
 - **Konsist** — architecture rules in
   `app/src/test/java/de/lemke/geticon/ArchitectureTest.kt`. Enforces
   `data/domain/ui` layering. Runs as part of `./gradlew test`.
