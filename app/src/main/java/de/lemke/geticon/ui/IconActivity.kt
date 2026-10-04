@@ -87,7 +87,7 @@ class IconActivity :
         collectState(viewModel.state) { renderState(it) }
         collectState(viewModel.export) { renderExportControls(it) }
         collectState(viewModel.export, minActiveState = RESUMED) { if (it is IconExport.Result) onExportResult(it) }
-        collectState(viewModel.exit) { if (it is IconExit.Reason) onExit(it) }
+        collectState(viewModel.exit, minActiveState = RESUMED) { if (it is IconExit.Reason) onExit(it) }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }

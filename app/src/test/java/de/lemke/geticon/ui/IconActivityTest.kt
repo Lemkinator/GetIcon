@@ -196,6 +196,30 @@ class IconActivityTest {
         }
     }
 
+    @Test
+    fun exit_regenerationFailsWhilePaused_waitsForResumeThenFinishes() {
+        val controller = Robolectric.buildActivity(IconActivity::class.java, appInfoIntent()).setup()
+        try {
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.pause()
+            stubGenerateIconFailure()
+            val activity = controller.get()
+            ViewModelProvider(activity)[IconViewModel::class.java].onMaskChanged(false)
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 0
+            activity.isFinishing shouldBe false
+            ViewModelProvider(activity)[IconViewModel::class.java].exit.value shouldBe IconExit.GenerateFailed
+            controller.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe activity.getString(R.string.error_icon_generation_failed)
+            activity.isFinishing shouldBe true
+            ViewModelProvider(activity)[IconViewModel::class.java].exit.value shouldBe IconExit.None
+        } finally {
+            controller.destroy()
+        }
+    }
+
     private fun stubGenerateIconFailure() {
         every {
             generateIconStub(
