@@ -34,12 +34,15 @@ import kotlinx.coroutines.CompletableDeferred
 
 class MainViewModelTest : ShouldSpec(
     {
-        val processApk = mockk<ProcessApkUseCase>()
-        val getInstalledApps = mockk<GetInstalledAppsUseCase>()
-        val getApplicationInfo = mockk<GetApplicationInfoUseCase>()
+        lateinit var processApk: ProcessApkUseCase
+        lateinit var getInstalledApps: GetInstalledAppsUseCase
+        lateinit var getApplicationInfo: GetApplicationInfoUseCase
         lateinit var viewModel: MainViewModel
 
         beforeEach {
+            processApk = mockk()
+            getInstalledApps = mockk()
+            getApplicationInfo = mockk()
             coEvery { getInstalledApps() } returns emptyList()
             viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
         }
