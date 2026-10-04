@@ -92,7 +92,8 @@ ViewBinding enabled. Activities collect `StateFlow<UiState>` and one-shot
 
 **Tap-driven async work runs in the Activity, never in a ViewModel.** Save, copy and share run through
 the launch latch (`singleLaunchSuspending`), which drops every other tap until the first one's `then`
-returns. The IO dispatcher comes in by field injection (`@Inject @IoDispatcher lateinit var ioDispatcher`).
+returns. The picker result write runs outside it, because `singleLaunchSuspending` drops inputs while the
+activity is not RESUMED. The IO dispatcher comes in by field injection (`@Inject @IoDispatcher lateinit var ioDispatcher`).
 
 **Multi-activity (not single-activity).** OneUI (sesl-androidx) is activity-oriented;
 single-activity + Navigation Component was tried and reverted (buggy menu, leaky
