@@ -70,6 +70,24 @@ class ArchitectureTest : ShouldSpec() {
                     it.hasParent { parent -> parent.name == "ViewModel" }
                 }
         }
+        should("ViewModel files expose state only, without Channel or SharedFlow events") {
+            codeScope.files
+                .filter { file -> file.classes().any { it.hasParent { parent -> parent.name == "ViewModel" } } }
+                .assertFalse(testName = this.testCase.name.toString()) {
+                    it.hasImport { import ->
+                        import.name.startsWith("kotlinx.coroutines.channels.") ||
+                            import.name.endsWith("SharedFlow") ||
+                            import.name == "kotlinx.coroutines.flow.receiveAsFlow"
+                    }
+                }
+        }
+        should("ui collects no event flows") {
+            codeScope.files
+                .withPackage("de.lemke.geticon.ui..")
+                .assertFalse(testName = this.testCase.name.toString()) {
+                    it.hasImport { import -> import.name == "de.lemke.commonutils.ui.utils.collectEvents" }
+                }
+        }
         should("HiltViewModel classes use Inject constructor") {
             codeScope
                 .classes()
