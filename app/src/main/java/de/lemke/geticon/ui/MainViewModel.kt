@@ -29,6 +29,7 @@ import de.lemke.geticon.domain.ProcessApkUseCase
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.getAndUpdate
@@ -86,6 +87,8 @@ class MainViewModel @Inject constructor(
     val appLookup: StateFlow<AppLookup>
         field = MutableStateFlow<AppLookup>(AppLookup.Idle)
 
+    private var apkImportJob: Job? = null
+
     init {
         viewModelScope.launch { loadInstalledApps() }
     }
@@ -119,14 +122,16 @@ class MainViewModel @Inject constructor(
 
     fun onApkPicked(uri: Uri?) {
         if (uri == null) return
-        viewModelScope.launch {
-            val result =
-                when (val processed = processApk(uri)) {
-                    is ApkProcessResult.Success -> ApkImport.Imported(processed.applicationInfo)
-                    is ApkProcessResult.InvalidApk, is ApkProcessResult.Error -> ApkImport.Invalid
-                }
-            apkImport.getAndUpdate { result }.discard()
-        }
+        apkImportJob?.cancel()
+        apkImportJob =
+            viewModelScope.launch {
+                val result =
+                    when (val processed = processApk(uri)) {
+                        is ApkProcessResult.Success -> ApkImport.Imported(processed.applicationInfo)
+                        is ApkProcessResult.InvalidApk, is ApkProcessResult.Error -> ApkImport.Invalid
+                    }
+                apkImport.getAndUpdate { result }.discard()
+            }
     }
 
     fun onApkImportHandled(result: ApkImport.Result) {

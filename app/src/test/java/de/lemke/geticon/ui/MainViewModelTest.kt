@@ -150,6 +150,20 @@ class MainViewModelTest : ShouldSpec(
             File(second.sourceDir).exists() shouldBe true
         }
 
+        should("a newer pick cancels an older import that would otherwise finish after it") {
+            val newer = cachedApk()
+            val olderUri = mockk<Uri>()
+            val newerUri = mockk<Uri>()
+            val olderGate = CompletableDeferred<ApkProcessResult>()
+            coEvery { processApk(olderUri) } coAnswers { olderGate.await() }
+            coEvery { processApk(newerUri) } returns ApkProcessResult.Success(newer)
+            viewModel.onApkPicked(olderUri)
+            viewModel.onApkPicked(newerUri)
+            olderGate.complete(ApkProcessResult.Success(cachedApk()))
+            viewModel.apkImport.value shouldBe ApkImport.Imported(newer)
+            File(newer.sourceDir).exists() shouldBe true
+        }
+
         should("an Invalid result superseding an Imported one deletes its cached APK") {
             val imported = cachedApk()
             val importedUri = mockk<Uri>()
