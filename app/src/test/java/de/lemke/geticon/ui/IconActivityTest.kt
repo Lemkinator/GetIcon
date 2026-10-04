@@ -692,14 +692,15 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_resultOkWithoutUri_showsNoToast() {
+    fun onExportBitmapResult_resultOkWithoutUri_showsCreateError() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, null))
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
             }
             shadowOf(Looper.getMainLooper()).idle()
-            ShadowToast.shownToastCount() shouldBe 0
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Error creating file"
         }
     }
 

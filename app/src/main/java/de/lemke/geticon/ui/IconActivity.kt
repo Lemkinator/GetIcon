@@ -16,8 +16,10 @@
 
 package de.lemke.geticon.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -144,10 +146,16 @@ class IconActivity :
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun onExportBitmapResult(result: ActivityResult) {
-        val uri = result.data?.data.takeIf { result.resultCode == RESULT_OK }
+        val document = result.toDocumentPick()
         val icon = viewModel.state.value.icon
         lifecycleScope.launch {
-            when (val saveResult = saveBitmapToUri(uri, icon, createdDocument = true, ioDispatcher)) {
+            val saveResult =
+                when (document) {
+                    DocumentPick.Canceled -> BitmapSaveResult.Canceled
+                    DocumentPick.MissingUri -> BitmapSaveResult.WriteFailed
+                    is DocumentPick.Created -> saveBitmapToUri(document.uri, icon, createdDocument = true, ioDispatcher)
+                }
+            when (saveResult) {
                 is BitmapSaveResult.Finished -> toast(saveResult)
                 BitmapSaveResult.Canceled -> Unit
             }
@@ -302,5 +310,24 @@ class IconActivity :
         const val KEY_APPLICATION_INFO = "applicationInfo"
         private const val BACKGROUND_COLOR_PICKER_TAG = "backgroundColorPicker"
         private const val FOREGROUND_COLOR_PICKER_TAG = "foregroundColorPicker"
+    }
+}
+
+private sealed interface DocumentPick {
+    data class Created(
+        val uri: Uri,
+    ) : DocumentPick
+
+    data object MissingUri : DocumentPick
+
+    data object Canceled : DocumentPick
+}
+
+private fun ActivityResult.toDocumentPick(): DocumentPick {
+    val uri = data?.data
+    return when {
+        resultCode != Activity.RESULT_OK -> DocumentPick.Canceled
+        uri == null -> DocumentPick.MissingUri
+        else -> DocumentPick.Created(uri)
     }
 }
