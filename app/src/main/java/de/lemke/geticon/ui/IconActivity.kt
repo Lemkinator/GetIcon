@@ -51,7 +51,6 @@ import de.lemke.commonutils.ui.utils.onSingleLaunchClick
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationTo
 import de.lemke.commonutils.ui.utils.registerForSingleLaunchResult
 import de.lemke.commonutils.ui.utils.saveBitmapToDirectory
-import de.lemke.commonutils.ui.utils.saveBitmapToUri
 import de.lemke.commonutils.ui.utils.setCustomBackAnimation
 import de.lemke.commonutils.ui.utils.setWindowTransparent
 import de.lemke.commonutils.ui.utils.shareBitmap
@@ -84,6 +83,9 @@ class IconActivity :
     @Inject
     @IoDispatcher
     lateinit var ioDispatcher: CoroutineDispatcher
+
+    @Inject
+    lateinit var pickedDocumentWriter: PickedDocumentWriter
 
     private lateinit var binding: ActivityIconBinding
     private val viewModel: IconViewModel by viewModels()
@@ -154,7 +156,7 @@ class IconActivity :
                 when (document) {
                     DocumentPick.Canceled -> BitmapSaveResult.Canceled
                     DocumentPick.MissingUri -> BitmapSaveResult.WriteFailed
-                    is DocumentPick.Created -> saveBitmapToUri(document.uri, awaitIcon(), createdDocument = true, ioDispatcher)
+                    is DocumentPick.Created -> pickedDocumentWriter.write(document.uri, awaitIcon())
                 }
             when (saveResult) {
                 is BitmapSaveResult.Finished -> toast(saveResult)

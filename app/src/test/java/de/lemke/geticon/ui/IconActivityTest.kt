@@ -50,6 +50,7 @@ import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.geticon.R
+import de.lemke.geticon.di.ApplicationScope
 import de.lemke.geticon.di.DispatchersModule
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.IconResult
@@ -65,7 +66,9 @@ import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -98,6 +101,11 @@ class IconActivityTest {
     @IoDispatcher
     @JvmField
     val ioDispatcher: CoroutineDispatcher = pausableIoDispatcher
+
+    @BindValue
+    @ApplicationScope
+    @JvmField
+    val applicationScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     @Inject
     lateinit var settings: SettingsRepository
@@ -675,19 +683,20 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_rotationDuringWrite_cancelsWriteAndAdmitsNextSave() {
+    fun onExportBitmapResult_rotationDuringWrite_finishesWriteAndAdmitsNextSave() {
+        val document = createPickedDocument()
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
-            val file = File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png")
             pausableIoDispatcher.pause()
             scenario.onActivity { activity ->
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file))))
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(document))))
             }
+            shadowOf(Looper.getMainLooper()).idle()
+            document.length() shouldBe 0L
             scenario.recreate()
             pausableIoDispatcher.resume()
             shadowOf(Looper.getMainLooper()).idle()
-            file.exists() shouldBe false
-            ShadowToast.shownToastCount() shouldBe 0
+            document.readBytes().take(PNG_SIGNATURE.size) shouldBe PNG_SIGNATURE
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
             }
