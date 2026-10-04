@@ -38,7 +38,6 @@ import androidx.picker.model.AppInfo
 import androidx.picker.widget.SeslAppPickerView.Companion.ORDER_ASCENDING
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.data.SettingsRepository
-import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
@@ -55,7 +54,7 @@ import de.lemke.commonutils.ui.utils.setupCommonUtilsAboutActivity
 import de.lemke.commonutils.ui.utils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.setupHeaderAndNavRail
 import de.lemke.commonutils.ui.utils.showSoftInput
-import de.lemke.commonutils.ui.utils.singleLaunchSuspending
+import de.lemke.commonutils.ui.utils.singleLaunch
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.commonutils.ui.utils.transformToActivity
 import de.lemke.geticon.BuildConfig
@@ -80,13 +79,11 @@ class MainActivity :
     @Inject
     lateinit var settings: SettingsRepository
 
-    @Inject
-    lateinit var getApplicationInfo: GetApplicationInfoUseCase
-
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
 
     private val pickApkActivityResultLauncher = registerForSingleLaunchResult(GetContent()) { viewModel.onApkPicked(it) }
+    private var transitionView: View? = null
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal var isUIReady = false
@@ -115,6 +112,7 @@ class MainActivity :
         initAppPicker()
         collectEvents()
         collectState(viewModel.installedApps) { binding.appPicker.submitList(it) }
+        collectState(viewModel.appLookup, minActiveState = RESUMED) { if (it is AppLookup.Result) onAppLookupResult(it) }
         savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
         isUIReady = true
     }
@@ -123,6 +121,11 @@ class MainActivity :
         super.onSaveInstanceState(outState)
         if (!isUIReady) return
         outState.saveSearchAndActionMode(isSearchMode = binding.drawerLayout.isSearchMode)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        transitionView = null
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -156,12 +159,21 @@ class MainActivity :
         }
     }
 
+    private fun onAppLookupResult(result: AppLookup.Result) {
+        val handled =
+            when (result) {
+                is AppLookup.Found -> openIcon(result.applicationInfo, transitionView)
+                AppLookup.NotFound -> true.also { toast(commonutilsR.string.commonutils_error_app_not_found) }
+            }
+        if (!handled) return
+        transitionView = null
+        viewModel.onAppLookupHandled(result)
+    }
+
     private fun openIcon(
         applicationInfo: ApplicationInfo,
         transitionView: View? = null,
-    ) {
-        transformToActivity(transitionView, Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, applicationInfo))
-    }
+    ): Boolean = transformToActivity(transitionView, Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, applicationInfo))
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun applyFilter(query: String = "") {
@@ -231,16 +243,11 @@ class MainActivity :
         appInfo: AppInfo,
     ): Boolean {
         hideSoftInput()
-        singleLaunchSuspending(
-            work = { getApplicationInfo(appInfo.packageName) },
-            then = { applicationInfo ->
-                if (applicationInfo == null) {
-                    toast(commonutilsR.string.commonutils_error_app_not_found)
-                } else {
-                    openIcon(applicationInfo, transitionView = view)
-                }
-            },
-        )
+        singleLaunch {
+            if (viewModel.appLookup.value == AppLookup.Running) return@singleLaunch
+            transitionView = view
+            viewModel.onAppSelected(appInfo.packageName)
+        }
         return true
     }
 }

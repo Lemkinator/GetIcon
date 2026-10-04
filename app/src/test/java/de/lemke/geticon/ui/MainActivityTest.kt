@@ -45,6 +45,7 @@ import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.COMMONUTILS_KEY_IS_SEARCH_MODE
+import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.commonutils.ui.widget.NoEntryView
 import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
@@ -54,6 +55,7 @@ import de.lemke.geticon.domain.ProcessApkUseCase
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
 import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -451,6 +453,78 @@ class MainActivityTest {
                 activity.onAppPickerItemClick(null, appInfo)
                 activity.onAppPickerItemClick(null, appInfo)
             }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+                shadowActivity.nextStartedActivity shouldBe null
+            }
+        }
+    }
+
+    @Test
+    fun onAppPickerItemClick_secondAppTappedDuringLookup_opensFirstAppWithItsTransition() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            lateinit var secondView: View
+            scenario.onActivity { activity ->
+                secondView = activity.findViewById(R.id.noEntryView)
+                activity.onAppPickerItemClick(
+                    activity.findViewById(R.id.appPicker),
+                    AppInfo(packageName = activity.packageName, activityName = ""),
+                )
+                activity.onAppPickerItemClick(secondView, AppInfo(packageName = "com.nonexistent.pkg.test", activityName = ""))
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val started = shadowOf(activity).nextStartedActivity
+                val applicationInfo =
+                    IntentCompat.getParcelableExtra(
+                        started,
+                        IconActivity.KEY_APPLICATION_INFO,
+                        ApplicationInfo::class.java,
+                    )
+                applicationInfo?.packageName shouldBe activity.packageName
+                activity.findViewById<View>(R.id.appPicker).transitionName shouldBe "commonUtilsActivityTransitionName"
+            }
+            secondView.transitionName shouldBe null
+            ShadowToast.shownToastCount() shouldBe 0
+        }
+    }
+
+    @Test
+    fun onAppPickerItemClick_latchDropsLaunch_opensIconActivityOnNextResume() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.onAppPickerItemClick(null, AppInfo(packageName = activity.packageName, activityName = ""))
+                activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
+                shadowActivity.nextStartedActivity shouldBe null
+                ViewModelProvider(activity)[MainViewModel::class.java].appLookup.value.shouldBeInstanceOf<AppLookup.Found>()
+            }
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+                ViewModelProvider(activity)[MainViewModel::class.java].appLookup.value shouldBe AppLookup.Idle
+            }
+        }
+    }
+
+    @Test
+    fun onAppPickerItemClick_rotationDuringLookup_opensIconActivityFromRecreatedActivity() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.onAppPickerItemClick(
+                    activity.findViewById(R.id.appPicker),
+                    AppInfo(packageName = activity.packageName, activityName = ""),
+                )
+            }
+            scenario.recreate()
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
