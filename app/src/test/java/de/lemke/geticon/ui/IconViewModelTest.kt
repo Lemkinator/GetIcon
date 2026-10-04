@@ -40,7 +40,6 @@ import de.lemke.geticon.ui.FakeIconExporter.Call
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -92,9 +91,24 @@ class IconViewModelTest : ShouldSpec(
         }
 
         context("null applicationInfo") {
-            should("emit Finish event immediately") {
+            should("exit with AppNotFound immediately") {
                 val viewModel = buildViewModel(appInfo = null)
-                viewModel.events.test { awaitItem() shouldBe IconEvent.Finish }
+                viewModel.exit.value shouldBe IconExit.AppNotFound
+            }
+
+            should("onExitHandled returns the exit to None") {
+                val viewModel = buildViewModel(appInfo = null)
+                viewModel.exit.test {
+                    awaitItem() shouldBe IconExit.AppNotFound
+                    viewModel.onExitHandled(IconExit.AppNotFound)
+                    awaitItem() shouldBe IconExit.None
+                }
+            }
+
+            should("onExitHandled keeps an exit other than the handled one") {
+                val viewModel = buildViewModel(appInfo = null)
+                viewModel.onExitHandled(IconExit.GenerateFailed)
+                viewModel.exit.value shouldBe IconExit.AppNotFound
             }
 
             should("not read from userSettings") {
@@ -285,49 +299,45 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.isLoading shouldBe false
             }
 
-            should("emit GenerateFailed when generateIcon throws IOException in loadInitialState") {
+            should("exit with GenerateFailed when generateIcon throws IOException in loadInitialState") {
                 every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws IOException("io error")
                 val viewModel = buildViewModel(appInfo)
-                viewModel.events.test {
-                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
-                }
+                viewModel.exit.value shouldBe IconExit.GenerateFailed
             }
 
-            should("emit GenerateFailed when generateIcon throws OutOfMemoryError in loadInitialState") {
+            should("exit with GenerateFailed when generateIcon throws OutOfMemoryError in loadInitialState") {
                 every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
                 val viewModel = buildViewModel(appInfo)
-                viewModel.events.test {
-                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
-                }
+                viewModel.exit.value shouldBe IconExit.GenerateFailed
             }
 
-            should("emit GenerateFailed when generateIcon throws RuntimeException in loadInitialState") {
+            should("exit with GenerateFailed when generateIcon throws RuntimeException in loadInitialState") {
                 every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
                 val viewModel = buildViewModel(appInfo)
-                viewModel.events.test {
-                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
-                }
+                viewModel.exit.value shouldBe IconExit.GenerateFailed
             }
 
-            should("emit GenerateFailed when generateIcon throws OutOfMemoryError in regenerateIcon") {
+            should("exit with GenerateFailed when generateIcon throws OutOfMemoryError in regenerateIcon") {
                 val viewModel = buildViewModel(appInfo)
                 every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
-                viewModel.events.test {
+                viewModel.exit.test {
+                    awaitItem() shouldBe IconExit.None
                     viewModel.onMaskChanged(false)
-                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                    awaitItem() shouldBe IconExit.GenerateFailed
                 }
             }
 
-            should("emit GenerateFailed when generateIcon throws RuntimeException in regenerateIcon") {
+            should("exit with GenerateFailed when generateIcon throws RuntimeException in regenerateIcon") {
                 val viewModel = buildViewModel(appInfo)
                 every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
-                viewModel.events.test {
+                viewModel.exit.test {
+                    awaitItem() shouldBe IconExit.None
                     viewModel.onMaskChanged(false)
-                    awaitItem().shouldBeInstanceOf<IconEvent.GenerateFailed>()
+                    awaitItem() shouldBe IconExit.GenerateFailed
                 }
             }
 
-            should("emit Finish when temp APK file was deleted before loadInitialState (process death)") {
+            should("exit with AppNotFound when temp APK file was deleted before loadInitialState (process death)") {
                 val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
                 val deletedApk = File(tmpDir, "deleted_icon_${System.nanoTime()}.apk") // never created
                 val staleInfo =
@@ -337,15 +347,40 @@ class IconViewModelTest : ShouldSpec(
                     }
                 every { mockContext.cacheDir } returns tmpDir
                 val viewModel = buildViewModel(staleInfo)
-                viewModel.events.test {
-                    awaitItem() shouldBe IconEvent.Finish
-                }
+                viewModel.exit.value shouldBe IconExit.AppNotFound
             }
 
-            should("not emit GenerateFailed when generateIcon throws CancellationException in loadInitialState") {
+            should("not exit when generateIcon throws CancellationException in loadInitialState") {
                 every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws CancellationException("cancelled")
                 val viewModel = buildViewModel(appInfo)
-                viewModel.events.test { expectNoEvents() }
+                viewModel.exit.value shouldBe IconExit.None
+            }
+
+            should("a failure while an exit waits for the activity keeps the waiting exit") {
+                val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
+                val staleInfo =
+                    ApplicationInfo().also {
+                        it.packageName = "com.example.test"
+                        it.sourceDir = File(tmpDir, "deleted_icon_${System.nanoTime()}.apk").absolutePath
+                    }
+                every { mockContext.cacheDir } returns tmpDir
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+                val viewModel = buildViewModel(staleInfo)
+                viewModel.onMaskChanged(false)
+                viewModel.exit.value shouldBe IconExit.AppNotFound
+            }
+
+            should("a failure after the handled exit exits again") {
+                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onExitHandled(IconExit.GenerateFailed)
+                viewModel.onMaskChanged(false)
+                viewModel.exit.value shouldBe IconExit.GenerateFailed
+            }
+
+            should("a successful load leaves the exit at None") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.exit.value shouldBe IconExit.None
             }
 
             should("buildFileName: mask=true color=false produces _mask suffix") {

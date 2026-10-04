@@ -39,11 +39,8 @@ import de.lemke.geticon.domain.GenerateIconUseCase
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -92,10 +89,15 @@ sealed interface DocumentPick {
     data object Canceled : DocumentPick
 }
 
-sealed class IconEvent {
-    data object Finish : IconEvent()
+/** Whether the screen must close. The activity shows a [Reason], finishes and then reports it handled. */
+sealed interface IconExit {
+    sealed interface Reason : IconExit
 
-    data class GenerateFailed(val cause: Throwable) : IconEvent()
+    data object None : IconExit
+
+    data object AppNotFound : Reason
+
+    data object GenerateFailed : Reason
 }
 
 @HiltViewModel
@@ -114,13 +116,13 @@ class IconViewModel @Inject constructor(
     val export: StateFlow<IconExport>
         field = MutableStateFlow<IconExport>(IconExport.Idle)
 
-    private val _events = Channel<IconEvent>(Channel.BUFFERED)
-    val events: Flow<IconEvent> = _events.receiveAsFlow()
+    val exit: StateFlow<IconExit>
+        field = MutableStateFlow<IconExit>(IconExit.None)
 
     init {
         val appInfo = applicationInfo
         if (appInfo == null) {
-            _events.trySend(IconEvent.Finish)
+            exitWith(IconExit.AppNotFound)
         } else {
             viewModelScope.launch { loadInitialState(appInfo) }
         }
@@ -137,7 +139,7 @@ class IconViewModel @Inject constructor(
         if (sourceFile != null) {
             val isInCache = runCatching { sourceFile.canonicalFile.startsWith(context.cacheDir.canonicalFile) }.getOrElse { false }
             if (isInCache && !sourceFile.exists()) {
-                _events.send(IconEvent.Finish)
+                exitWith(IconExit.AppNotFound)
                 return
             }
         }
@@ -177,7 +179,7 @@ class IconViewModel @Inject constructor(
                 )
         }.onFailure { e ->
             if (e is CancellationException) throw e
-            _events.send(IconEvent.GenerateFailed(e))
+            exitWith(IconExit.GenerateFailed)
         }
     }
 
@@ -249,6 +251,14 @@ class IconViewModel @Inject constructor(
         export.update { if (it == result) IconExport.Idle else it }
     }
 
+    fun onExitHandled(reason: IconExit.Reason) {
+        exit.update { if (it == reason) IconExit.None else it }
+    }
+
+    private fun exitWith(reason: IconExit.Reason) {
+        exit.update { if (it == IconExit.None) reason else it }
+    }
+
     private fun startExport(work: suspend () -> IconExport.Result?) {
         if (export.value == IconExport.Running) return
         launchExport(work)
@@ -282,8 +292,8 @@ class IconViewModel @Inject constructor(
                     fileName = buildFileName(appInfo.packageName, newState.maskEnabled, newState.colorEnabled),
                     isLoading = false,
                 )
-        }.onFailure { e ->
-            _events.trySend(IconEvent.GenerateFailed(e))
+        }.onFailure {
+            exitWith(IconExit.GenerateFailed)
         }
     }
 

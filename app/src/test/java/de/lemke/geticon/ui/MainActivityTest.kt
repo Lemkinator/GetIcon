@@ -56,6 +56,7 @@ import dev.oneuiproject.oneui.layout.NavDrawerLayout
 import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -227,7 +228,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun collectEvents_showError_callsToast() {
+    fun apkImport_invalid_showsToastOnce() {
         coEvery { processApkStub(any()) } returns ApkProcessResult.InvalidApk
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
@@ -235,13 +236,15 @@ class MainActivityTest {
             }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                ShadowToast.shownToastCount() shouldBe 1
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_no_valid_file_selected)
+                ViewModelProvider(activity)[MainViewModel::class.java].apkImport.value shouldBe ApkImport.Idle
             }
         }
     }
 
     @Test
-    fun collectEvents_navigateToApkIcon_startsIconActivity() {
+    fun apkImport_imported_startsIconActivity() {
         val appInfo = ApplicationInfo().apply { packageName = "com.test" }
         coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -255,6 +258,83 @@ class MainActivityTest {
                 started.component!!.className shouldBe IconActivity::class.java.name
                 val extra = IntentCompat.getParcelableExtra(started, IconActivity.KEY_APPLICATION_INFO, ApplicationInfo::class.java)!!
                 extra.packageName shouldBe "com.test"
+                ViewModelProvider(activity)[MainViewModel::class.java].apkImport.value shouldBe ApkImport.Idle
+            }
+        }
+    }
+
+    @Test
+    fun apkImport_invalidWhilePaused_showsToastOnceAfterRecreation() {
+        coEvery { processApkStub(any()) } returns ApkProcessResult.InvalidApk
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup().pause()
+        try {
+            val paused = controller.get()
+            ViewModelProvider(paused)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 0
+            controller.recreate()
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            val recreated = controller.get()
+            recreated shouldNotBeSameInstanceAs paused
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe recreated.getString(commonutilsR.string.commonutils_error_no_valid_file_selected)
+            ViewModelProvider(recreated)[MainViewModel::class.java].apkImport.value shouldBe ApkImport.Idle
+        } finally {
+            controller.destroy()
+        }
+    }
+
+    @Test
+    fun apkImport_importedWhilePaused_startsIconActivityOnceAfterRecreation() {
+        val appInfo = ApplicationInfo().apply { packageName = "com.test" }
+        coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup().pause()
+        try {
+            val paused = controller.get()
+            ViewModelProvider(paused)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
+            shadowOf(Looper.getMainLooper()).idle()
+            shadowOf(paused).nextStartedActivity shouldBe null
+            controller.recreate()
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            val recreated = controller.get()
+            recreated shouldNotBeSameInstanceAs paused
+            val shadowActivity = shadowOf(recreated)
+            shadowActivity.nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+            shadowActivity.nextStartedActivity shouldBe null
+            ViewModelProvider(recreated)[MainViewModel::class.java].apkImport.value shouldBe ApkImport.Idle
+        } finally {
+            controller.destroy()
+        }
+    }
+
+    @Test
+    fun apkImport_latchDropsLaunch_opensIconActivityOnNextResume() {
+        val appInfo = ApplicationInfo().apply { packageName = "com.test" }
+        coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.onActivity { activity ->
+                ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
+                activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
+            }
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
+                shadowActivity.nextStartedActivity shouldBe null
+                ViewModelProvider(activity)[MainViewModel::class.java].apkImport.value shouldBe ApkImport.Imported(appInfo)
+            }
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
+                ViewModelProvider(activity)[MainViewModel::class.java].apkImport.value shouldBe ApkImport.Idle
             }
         }
     }
@@ -596,7 +676,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun loadInstalledApps_onError_doesNotCrash() {
+    fun loadInstalledApps_onError_showsErrorOnceAcrossRecreation() {
         mockkConstructor(SeslAppInfoDataHelper::class)
         every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws RuntimeException("test")
         try {
@@ -604,10 +684,37 @@ class MainActivityTest {
                 shadowOf(Looper.getMainLooper()).idle()
                 scenario.state shouldBe Lifecycle.State.RESUMED
                 scenario.onActivity { activity ->
+                    ShadowToast.shownToastCount() shouldBe 1
                     ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error)
+                    ViewModelProvider(activity)[MainViewModel::class.java].installedApps.value shouldBe
+                        InstalledApps.Failed(handled = true)
                 }
+                scenario.recreate()
+                shadowOf(Looper.getMainLooper()).idle()
+                ShadowToast.shownToastCount() shouldBe 1
             }
         } finally {
+            unmockkConstructor(SeslAppInfoDataHelper::class)
+        }
+    }
+
+    @Test
+    fun loadInstalledApps_errorBeforeResume_showsErrorOnceAfterRecreation() {
+        mockkConstructor(SeslAppInfoDataHelper::class)
+        every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws RuntimeException("test")
+        val controller = Robolectric.buildActivity(MainActivity::class.java).create().start()
+        try {
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.stop()
+            ShadowToast.shownToastCount() shouldBe 0
+            controller.recreate()
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.restart().start().resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe controller.get().getString(commonutilsR.string.commonutils_error)
+        } finally {
+            controller.destroy()
             unmockkConstructor(SeslAppInfoDataHelper::class)
         }
     }

@@ -30,7 +30,11 @@ import io.mockk.mockk
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -71,6 +75,13 @@ class ProcessApkUseCaseTest : ShouldSpec(
             every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } returns null
             val result = useCase(uri)
             result shouldBe ApkProcessResult.InvalidApk
+        }
+
+        should("return InvalidApk when the archive info has no applicationInfo") {
+            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
+            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } returns PackageInfo()
+            useCase(uri) shouldBe ApkProcessResult.InvalidApk
+            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
         }
 
         should("delete temp file when applicationInfo is null") {
@@ -118,6 +129,40 @@ class ProcessApkUseCaseTest : ShouldSpec(
             exception.shouldBeInstanceOf<CancellationException>()
         }
 
+        should("delete temp file when cancelled while processing") {
+            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
+            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } throws CancellationException("cancelled")
+            runCatching { useCase(uri) }
+            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
+        }
+
+        should("delete temp file when the caller is cancelled before a Success is delivered") {
+            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
+            lateinit var caller: Job
+            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } answers {
+                caller.cancel()
+                PackageInfo().also { it.applicationInfo = ApplicationInfo() }
+            }
+            coroutineScope {
+                caller = launch(start = CoroutineStart.LAZY) { useCase(uri) }
+                caller.join()
+            }
+            caller.isCancelled shouldBe true
+            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
+        }
+
+        should("create no temp file when the caller is cancelled before processing starts") {
+            val caller =
+                coroutineScope {
+                    launch {
+                        coroutineContext[Job]?.cancel()
+                        useCase(uri)
+                    }
+                }
+            caller.isCancelled shouldBe true
+            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
+        }
+
         should("return Error and handle null tempFile when createTempFile throws IOException") {
             val notADir = File(cacheDir, "notADir").also { it.createNewFile() }
             every { context.cacheDir } returns notADir
@@ -134,6 +179,7 @@ class ProcessApkUseCaseTest : ShouldSpec(
             val success = result.shouldBeInstanceOf<ApkProcessResult.Success>()
             success.applicationInfo.sourceDir.isNotEmpty() shouldBe true
             success.applicationInfo.sourceDir shouldBe success.applicationInfo.publicSourceDir
+            File(success.applicationInfo.sourceDir).exists() shouldBe true
         }
     },
 )

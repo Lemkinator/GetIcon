@@ -40,31 +40,36 @@ class ProcessApkUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
-    @Suppress("TooGenericExceptionCaught")
-    suspend operator fun invoke(uri: Uri): ApkProcessResult =
-        withContext(ioDispatcher) {
-            var tempFile: File? = null
+    suspend operator fun invoke(uri: Uri): ApkProcessResult {
+        var tempFile: File? = null
+        val result =
             try {
-                tempFile = File.createTempFile("extractIcon", ".apk", context.cacheDir)
-                val stream = context.contentResolver.openInputStream(uri)
-                if (stream == null) {
-                    tempFile.delete()
-                    return@withContext ApkProcessResult.Error
-                }
-                stream.use { input -> FileOutputStream(tempFile).use { out -> input.copyTo(out) } }
-                val path = tempFile.absolutePath
-                val applicationInfo = context.packageManager.getPackageArchiveInfo(path, 0)?.applicationInfo
-                if (applicationInfo == null) {
-                    tempFile.delete()
-                    return@withContext ApkProcessResult.InvalidApk
-                }
-                applicationInfo.sourceDir = path
-                applicationInfo.publicSourceDir = path
-                ApkProcessResult.Success(applicationInfo)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+                withContext(ioDispatcher) { importApk(uri) { tempFile = it } }
+            } catch (e: CancellationException) {
                 tempFile?.delete()
-                ApkProcessResult.Error
+                throw e
             }
+        if (result !is ApkProcessResult.Success) tempFile?.delete()
+        return result
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun importApk(
+        uri: Uri,
+        onTempFileCreated: (File) -> Unit,
+    ): ApkProcessResult =
+        try {
+            val file = File.createTempFile("extractIcon", ".apk", context.cacheDir).also(onTempFileCreated)
+            val stream = context.contentResolver.openInputStream(uri) ?: return ApkProcessResult.Error
+            stream.use { input -> FileOutputStream(file).use { out -> input.copyTo(out) } }
+            val path = file.absolutePath
+            val applicationInfo =
+                context.packageManager.getPackageArchiveInfo(path, 0)?.applicationInfo ?: return ApkProcessResult.InvalidApk
+            applicationInfo.sourceDir = path
+            applicationInfo.publicSourceDir = path
+            ApkProcessResult.Success(applicationInfo)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            ApkProcessResult.Error
         }
 }
