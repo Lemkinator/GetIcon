@@ -90,10 +90,12 @@ class IconActivityTest {
     @JvmField
     val generateIconStub: GenerateIconUseCase = mockk()
 
+    private val pausableIoDispatcher = PausableDispatcher(Dispatchers.Main)
+
     @BindValue
     @IoDispatcher
     @JvmField
-    val ioDispatcher: CoroutineDispatcher = Dispatchers.Main
+    val ioDispatcher: CoroutineDispatcher = pausableIoDispatcher
 
     @Inject
     lateinit var settings: SettingsRepository
@@ -595,6 +597,30 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
             file.length() shouldBeGreaterThan 0L
+        }
+    }
+
+    @Test
+    fun onExportBitmapResult_rotationDuringWrite_cancelsWriteAndAdmitsNextSave() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            val file = File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png")
+            pausableIoDispatcher.pause()
+            scenario.onActivity { activity ->
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file))))
+            }
+            scenario.recreate()
+            pausableIoDispatcher.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            file.exists() shouldBe false
+            ShadowToast.shownToastCount() shouldBe 0
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivityForResult.intent.action shouldBe Intent.ACTION_CREATE_DOCUMENT
+            }
         }
     }
 
