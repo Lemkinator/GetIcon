@@ -188,13 +188,16 @@ class IconActivityTest {
                 activity.onSeekbarProgressChanged(256)
                 val item = RoboMenuItem(R.id.menu_item_icon_share)
                 activity.onOptionsItemSelected(item) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
                 val startedIntent = shadowOf(activity).nextStartedActivity
                 startedIntent?.action shouldBe Intent.ACTION_CHOOSER
                 val innerIntent = IntentCompat.getParcelableExtra(startedIntent!!, Intent.EXTRA_INTENT, Intent::class.java)!!
                 innerIntent.type shouldBe "image/png"
-                val stream = IntentCompat.getParcelableExtra(innerIntent, Intent.EXTRA_STREAM, Uri::class.java)
-                stream shouldBe activity.iconContentUri("share/icon.png")
-                File(activity.cacheDir, "share/icon.png").length() shouldBeGreaterThan 0L
+                val stream = IntentCompat.getParcelableExtra(innerIntent, Intent.EXTRA_STREAM, Uri::class.java)!!
+                stream.toString() shouldMatch activity.iconContentUriPattern("share", "icon.png")
+                activity.cacheFile(stream).length() shouldBeGreaterThan 0L
                 innerIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION shouldBe Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
         }
@@ -223,10 +226,34 @@ class IconActivityTest {
                 val item = RoboMenuItem(R.id.menu_item_icon_share)
                 activity.onOptionsItemSelected(item) shouldBe true
                 activity.onOptionsItemSelected(item) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
                 shadowActivity.nextStartedActivity shouldBe null
+                File(activity.cacheDir, "share").walk().count { it.isFile } shouldBe 1
             }
+        }
+    }
+
+    @Test
+    fun share_whileCopyWrites_startsNothingAndShowsNoToast() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            pausableIoDispatcher.pause()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
+            }
+            pausableIoDispatcher.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity shouldBe null
+                File(activity.cacheDir, "share").exists() shouldBe false
+            }
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Copied to clipboard"
         }
     }
 
@@ -383,10 +410,10 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_copied_to_clipboard)
                 val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip!!
-                val uri = activity.iconContentUri("clipboard/icon.png")
+                val uri = clip.getItemAt(0).uri
                 clip.description.label shouldBe "icon"
                 clip.description.getMimeType(0) shouldBe "image/png"
-                clip.getItemAt(0).uri shouldBe uri
+                uri.toString() shouldMatch activity.iconContentUriPattern("clipboard", "icon.png")
                 activity.contentResolver.getType(uri) shouldBe "image/png"
             }
         }

@@ -43,6 +43,7 @@ import de.lemke.commonutils.ui.utils.collectEvents
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.copyToClipboard
 import de.lemke.commonutils.ui.utils.createBitmapClip
+import de.lemke.commonutils.ui.utils.createBitmapShareFile
 import de.lemke.commonutils.ui.utils.exportBitmap
 import de.lemke.commonutils.ui.utils.onSingleLaunchClick
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationTo
@@ -53,7 +54,6 @@ import de.lemke.commonutils.ui.utils.setCustomBackAnimation
 import de.lemke.commonutils.ui.utils.setWindowTransparent
 import de.lemke.commonutils.ui.utils.shareBitmap
 import de.lemke.commonutils.ui.utils.showOnce
-import de.lemke.commonutils.ui.utils.singleLaunchMenuItem
 import de.lemke.commonutils.ui.utils.singleLaunchSuspending
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.geticon.R
@@ -111,7 +111,7 @@ class IconActivity :
             }
 
             R.id.menu_item_icon_share -> {
-                singleLaunchMenuItem { shareBitmap(icon, "icon.png") }
+                shareIcon(icon).let { true }
             }
 
             else -> {
@@ -132,6 +132,13 @@ class IconActivity :
                     BitmapSaveResult.NeedsPicker -> exportBitmap(fileName, exportBitmapResultLauncher)
                 }
             },
+        )
+    }
+
+    private fun shareIcon(icon: Bitmap) {
+        singleLaunchSuspending(
+            work = { createBitmapShareFile(icon, "icon.png", ioDispatcher) },
+            then = { shareBitmap(it) },
         )
     }
 
