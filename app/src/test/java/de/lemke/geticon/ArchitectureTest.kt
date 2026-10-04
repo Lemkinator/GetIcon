@@ -103,6 +103,9 @@ class ArchitectureTest : ShouldSpec() {
                     val label = "Channel( and MutableSharedFlow<Int>( and .shareIn("
                     val overflow = BufferOverflow.DROP_OLDEST
                     fun produce(scope: ProducerScope<Int>) = scope.trySend(0)
+                    fun forward(source: Channel<Int>) {
+                        val mirror = MutableStateFlow<Int>(0)
+                    }
                     init {
                         val note = "receiveAsFlow( // Channel("
                     }
@@ -173,7 +176,7 @@ private val BANNED_EVENT_IMPORTS =
 private val BANNED_CHANNEL_TYPES = setOf("Channel", "SendChannel", "ReceiveChannel")
 
 private val EVENT_STREAM_CALL =
-    Regex("""\b(Channel|MutableSharedFlow)\s*(<.*?>)?\s*\(|\.(shareIn|receiveAsFlow|consumeAsFlow)\s*\(""", RegexOption.DOT_MATCHES_ALL)
+    Regex("""\b(Channel|MutableSharedFlow)\s*(<[^(){};=]*?>)?\s*\(|\.(shareIn|receiveAsFlow|consumeAsFlow)\s*\(""")
 
 private val COMMENT_OR_STRING = Regex(""""{3}.*?"{3}|"(?:\\.|[^"\\\n])*"|/\*.*?\*/|//[^\n]*""", RegexOption.DOT_MATCHES_ALL)
 
