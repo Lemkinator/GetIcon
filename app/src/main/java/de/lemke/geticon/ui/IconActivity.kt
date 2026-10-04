@@ -18,8 +18,6 @@ package de.lemke.geticon.ui
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -31,6 +29,8 @@ import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle.State.RESUMED
+import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
 import com.google.android.material.appbar.model.ButtonModel
@@ -38,25 +38,20 @@ import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.data.SettingsRepository
-import de.lemke.commonutils.di.IoDispatcher
-import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.bindColorSwatch
 import de.lemke.commonutils.ui.utils.collectEvents
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.copyToClipboard
-import de.lemke.commonutils.ui.utils.createBitmapClip
-import de.lemke.commonutils.ui.utils.createBitmapShareFile
 import de.lemke.commonutils.ui.utils.exportBitmap
 import de.lemke.commonutils.ui.utils.onSingleLaunchClick
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationTo
 import de.lemke.commonutils.ui.utils.registerForSingleLaunchResult
-import de.lemke.commonutils.ui.utils.saveBitmapToDirectory
-import de.lemke.commonutils.ui.utils.saveBitmapToUri
 import de.lemke.commonutils.ui.utils.setCustomBackAnimation
 import de.lemke.commonutils.ui.utils.setWindowTransparent
 import de.lemke.commonutils.ui.utils.shareBitmap
 import de.lemke.commonutils.ui.utils.showOnce
-import de.lemke.commonutils.ui.utils.singleLaunchSuspending
+import de.lemke.commonutils.ui.utils.singleLaunch
+import de.lemke.commonutils.ui.utils.singleLaunchMenuItem
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
@@ -68,10 +63,11 @@ import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.onProgressChanged
 import java.util.Locale
 import javax.inject.Inject
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
@@ -80,10 +76,6 @@ class IconActivity :
     ViewYTranslator by AppBarAwareYTranslator() {
     @Inject
     lateinit var settings: SettingsRepository
-
-    @Inject
-    @IoDispatcher
-    lateinit var ioDispatcher: CoroutineDispatcher
 
     private lateinit var binding: ActivityIconBinding
     private val viewModel: IconViewModel by viewModels()
@@ -101,70 +93,31 @@ class IconActivity :
         setWindowTransparent(true)
         initViews()
         collectState()
+        collectExport()
         collectEvents()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }
 
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        val enabled = viewModel.state.value.export != IconExport.Running
+        menu.findItem(R.id.menu_item_icon_save_as_image).isEnabled = enabled
+        menu.findItem(R.id.menu_item_icon_share).isEnabled = enabled
+        return super.onPrepareOptionsMenu(menu)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val state = viewModel.state.value
-        val icon = state.icon ?: return super.onOptionsItemSelected(item)
+        if (viewModel.state.value.icon == null) return super.onOptionsItemSelected(item)
         return when (item.itemId) {
-            R.id.menu_item_icon_save_as_image -> {
-                saveIcon(icon, state.fileName).let { true }
-            }
-
-            R.id.menu_item_icon_share -> {
-                shareIcon(icon).let { true }
-            }
-
-            else -> {
-                super.onOptionsItemSelected(item)
-            }
+            R.id.menu_item_icon_save_as_image -> singleLaunchMenuItem { viewModel.onSave() }
+            R.id.menu_item_icon_share -> singleLaunchMenuItem { viewModel.onShare() }
+            else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    private fun saveIcon(
-        icon: Bitmap,
-        fileName: String,
-    ) {
-        singleLaunchSuspending(
-            work = { saveBitmapToDirectory(settings.imageSaveLocation, icon, fileName, ioDispatcher) },
-            then = { result ->
-                when (result) {
-                    is BitmapSaveResult.Finished -> toast(result)
-                    BitmapSaveResult.NeedsPicker -> exportBitmap(fileName, exportBitmapResultLauncher)
-                }
-            },
-        )
-    }
-
-    private fun shareIcon(icon: Bitmap) {
-        singleLaunchSuspending(
-            work = { createBitmapShareFile(icon, "icon.png", ioDispatcher) },
-            then = { shareBitmap(it) },
-        )
     }
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun onExportBitmapResult(result: ActivityResult) {
-        val document = result.toDocumentPick()
-        val icon = viewModel.state.value.icon
-        val appContext = applicationContext
-        lifecycleScope.launch {
-            withContext(NonCancellable) {
-                val saveResult =
-                    when (document) {
-                        DocumentPick.Canceled -> BitmapSaveResult.Canceled
-                        DocumentPick.MissingUri -> BitmapSaveResult.WriteFailed
-                        is DocumentPick.Created -> appContext.saveBitmapToUri(document.uri, icon, createdDocument = true, ioDispatcher)
-                    }
-                when (saveResult) {
-                    is BitmapSaveResult.Finished -> appContext.toast(saveResult)
-                    BitmapSaveResult.Canceled -> Unit
-                }
-            }
-        }
+        viewModel.onDocumentPicked(result.toDocumentPick())
     }
 
     private fun initViews() {
@@ -191,6 +144,50 @@ class IconActivity :
 
     private fun collectState() {
         collectState(viewModel.state) { renderState(it) }
+        viewModel.state
+            .map { it.export != IconExport.Running }
+            .distinctUntilChanged()
+            .flowWithLifecycle(lifecycle)
+            .onEach { renderExportControls(enabled = it) }
+            .launchIn(lifecycleScope)
+    }
+
+    private fun collectExport() {
+        viewModel.state
+            .map { it.export }
+            .distinctUntilChanged()
+            .filterIsInstance<IconExport.Result>()
+            .flowWithLifecycle(lifecycle, RESUMED)
+            .onEach { onExportResult(it) }
+            .launchIn(lifecycleScope)
+    }
+
+    private fun onExportResult(result: IconExport.Result) {
+        val handled =
+            when (result) {
+                is IconExport.OpenPicker -> {
+                    exportBitmap(result.fileName, exportBitmapResultLauncher)
+                }
+
+                is IconExport.Share -> {
+                    shareBitmap(result.file)
+                }
+
+                is IconExport.SaveFinished -> {
+                    true.also { toast(result.result) }
+                }
+
+                is IconExport.Copy -> {
+                    true.also { copyToClipboard(result.clip) }
+                }
+
+                IconExport.CopyFailed, IconExport.ShareFailed -> {
+                    true.also {
+                        toast(commonutilsR.string.commonutils_error_share_content_not_supported_on_device)
+                    }
+                }
+            }
+        if (handled) viewModel.onExportHandled(result)
     }
 
     private fun collectEvents() {
@@ -235,6 +232,11 @@ class IconActivity :
             binding.root.setAppBarSuggestView(createSuggestAppBarModel())
             suggestViewSet = true
         }
+    }
+
+    private fun renderExportControls(enabled: Boolean) {
+        binding.icon.isLongClickable = enabled
+        invalidateOptionsMenu()
     }
 
     private fun onSizeSubmitted() {
@@ -287,11 +289,8 @@ class IconActivity :
     }
 
     private fun copyIcon(): Boolean {
-        val icon = viewModel.state.value.icon ?: return false
-        singleLaunchSuspending(
-            work = { createBitmapClip(icon, "icon", "icon.png", ioDispatcher) },
-            then = { copyToClipboard(it) },
-        )
+        if (viewModel.state.value.icon == null) return false
+        singleLaunch { viewModel.onCopy() }
         return true
     }
 
@@ -316,16 +315,6 @@ class IconActivity :
         private const val BACKGROUND_COLOR_PICKER_TAG = "backgroundColorPicker"
         private const val FOREGROUND_COLOR_PICKER_TAG = "foregroundColorPicker"
     }
-}
-
-private sealed interface DocumentPick {
-    data class Created(
-        val uri: Uri,
-    ) : DocumentPick
-
-    data object MissingUri : DocumentPick
-
-    data object Canceled : DocumentPick
 }
 
 private fun ActivityResult.toDocumentPick(): DocumentPick {

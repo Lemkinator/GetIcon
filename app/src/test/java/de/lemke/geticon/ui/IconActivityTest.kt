@@ -35,8 +35,10 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.PopupMenu
 import androidx.activity.result.ActivityResult
 import androidx.core.content.IntentCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -54,6 +56,8 @@ import de.lemke.commonutils.ShadowFileProvider
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
+import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
+import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.geticon.R
 import de.lemke.geticon.di.DispatchersModule
 import de.lemke.geticon.domain.GenerateIconUseCase
@@ -62,6 +66,7 @@ import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldMatch
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -264,6 +269,110 @@ class IconActivityTest {
     }
 
     @Test
+    fun share_rotationDuringWrite_opensShareSheetOnceInRecreatedActivity() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            pausableIoDispatcher.pause()
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
+            }
+            scenario.recreate()
+            pausableIoDispatcher.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
+                shadowActivity.nextStartedActivity shouldBe null
+            }
+        }
+    }
+
+    @Test
+    fun saveAsImage_fixedLocation_rotationDuringWrite_showsToastInRecreatedActivity() {
+        settings.imageSaveLocation = SaveLocation.DOWNLOADS
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            pausableIoDispatcher.pause()
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
+            }
+            scenario.recreate()
+            pausableIoDispatcher.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved: Downloads"
+        }
+    }
+
+    @Test
+    fun share_latchDropsLaunch_keepsResultAndOpensShareSheetOnNextResume() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            pausableIoDispatcher.pause()
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
+                activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
+            }
+            pausableIoDispatcher.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
+                shadowActivity.nextStartedActivity shouldBe null
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.export
+                    .shouldBeInstanceOf<IconExport.Share>()
+            }
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.export shouldBe IconExport.Idle
+            }
+        }
+    }
+
+    @Test
+    fun exportControls_disabledWhileWorkRuns() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            pausableIoDispatcher.pause()
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).isLongClickable shouldBe false
+                activity.preparedExportMenuItemsEnabled() shouldBe listOf(false, false)
+            }
+            pausableIoDispatcher.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).isLongClickable shouldBe true
+                activity.preparedExportMenuItemsEnabled() shouldBe listOf(true, true)
+            }
+        }
+    }
+
+    @Test
+    fun share_shareFileCannotBeWritten_showsShareError() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                File(activity.cacheDir, "share").createNewFile() shouldBe true
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity shouldBe null
+                ShadowToast.getTextOfLatestToast() shouldBe
+                    activity.getString(commonutilsR.string.commonutils_error_share_content_not_supported_on_device)
+            }
+        }
+    }
+
+    @Test
     fun saveAsImage_fixedLocation_doubleTap_writesOneFileAndShowsOneToast() {
         settings.imageSaveLocation = SaveLocation.DOWNLOADS
         launchWithAppInfo().use { scenario ->
@@ -440,6 +549,23 @@ class IconActivityTest {
             clipChanges shouldBe 1
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Copied to clipboard"
+        }
+    }
+
+    @Test
+    fun icon_longClick_clipCannotBeWritten_showsShareError() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                File(activity.cacheDir, "clipboard").createNewFile() shouldBe true
+                activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.getSystemService(ClipboardManager::class.java).hasPrimaryClip() shouldBe false
+                ShadowToast.getTextOfLatestToast() shouldBe
+                    activity.getString(commonutilsR.string.commonutils_error_share_content_not_supported_on_device)
+            }
         }
     }
 
@@ -714,6 +840,20 @@ class IconActivityTest {
     }
 
     @Test
+    fun onExportBitmapResult_unknownResultCode_showsNoToast() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onExportBitmapResult(
+                    ActivityResult(Activity.RESULT_FIRST_USER, Intent().setData(Uri.parse("content://unknown/1"))),
+                )
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 0
+        }
+    }
+
+    @Test
     fun onExportBitmapResult_resultOkWithoutUri_showsCreateError() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
@@ -912,6 +1052,13 @@ class IconActivityTest {
                 activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App-Icon"
             }
         }
+    }
+
+    private fun IconActivity.preparedExportMenuItemsEnabled(): List<Boolean> {
+        val menu = PopupMenu(this, findViewById(R.id.icon)).menu
+        menuInflater.inflate(R.menu.menu_icon, menu)
+        onPrepareOptionsMenu(menu)
+        return listOf(R.id.menu_item_icon_save_as_image, R.id.menu_item_icon_share).map { menu.findItem(it).isEnabled }
     }
 
     private fun createPickedDocument(): File =

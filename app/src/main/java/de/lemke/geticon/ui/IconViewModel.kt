@@ -16,14 +16,19 @@
 
 package de.lemke.geticon.ui
 
+import android.content.ClipData
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.lemke.commonutils.ui.utils.BitmapSaveResult
+import de.lemke.commonutils.ui.utils.BitmapShareFile
+import de.lemke.geticon.data.IconExporter
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
@@ -39,6 +44,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class IconUiState(
@@ -55,7 +61,39 @@ data class IconUiState(
     val recentForegroundColors: List<Int> = listOf(DEFAULT_FOREGROUND_COLOR),
     val recentBackgroundColors: List<Int> = listOf(DEFAULT_BACKGROUND_COLOR),
     val isLoading: Boolean = true,
+    val export: IconExport = IconExport.Idle,
 )
+
+/** A save, copy or share of the icon. The activity acts on a [Result] and then reports it handled. */
+sealed interface IconExport {
+    sealed interface Settled : IconExport
+
+    sealed interface Result : Settled
+
+    data object Idle : Settled
+
+    data object Running : IconExport
+
+    data class OpenPicker(val fileName: String) : Result
+
+    data class SaveFinished(val result: BitmapSaveResult.Finished) : Result
+
+    data class Copy(val clip: ClipData) : Result
+
+    data object CopyFailed : Result
+
+    data class Share(val file: BitmapShareFile.Written) : Result
+
+    data object ShareFailed : Result
+}
+
+sealed interface DocumentPick {
+    data class Created(val uri: Uri) : DocumentPick
+
+    data object MissingUri : DocumentPick
+
+    data object Canceled : DocumentPick
+}
 
 sealed class IconEvent {
     data object Finish : IconEvent()
@@ -69,6 +107,7 @@ class IconViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val userSettings: UserSettings,
     private val generateIcon: GenerateIconUseCase,
+    private val exporter: IconExporter,
 ) : ViewModel() {
     private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
 
@@ -171,6 +210,58 @@ class IconViewModel @Inject constructor(
         regenerateIcon(state.value.copy(backgroundColor = color, recentBackgroundColors = recentColors))
     }
 
+    fun onSave() {
+        val current = state.value
+        val icon = current.icon ?: return
+        startExport {
+            when (val result = exporter.saveToDirectory(userSettings.imageSaveLocation, icon, current.fileName)) {
+                is BitmapSaveResult.Finished -> IconExport.SaveFinished(result)
+                BitmapSaveResult.NeedsPicker -> IconExport.OpenPicker(current.fileName)
+            }
+        }
+    }
+
+    fun onDocumentPicked(pick: DocumentPick) {
+        when (pick) {
+            DocumentPick.Canceled -> Unit
+            DocumentPick.MissingUri -> state.update { it.copy(export = IconExport.SaveFinished(BitmapSaveResult.WriteFailed)) }
+            is DocumentPick.Created -> launchExport { exporter.saveToCreatedDocument(pick.uri, state.value.icon).toExport() }
+        }
+    }
+
+    fun onCopy() {
+        val icon = state.value.icon ?: return
+        startExport { exporter.createClip(icon)?.let(IconExport::Copy) ?: IconExport.CopyFailed }
+    }
+
+    fun onShare() {
+        val icon = state.value.icon ?: return
+        startExport {
+            when (val file = exporter.createShareFile(icon)) {
+                is BitmapShareFile.Written -> IconExport.Share(file)
+                BitmapShareFile.Failed -> IconExport.ShareFailed
+                BitmapShareFile.Dropped -> IconExport.Idle
+            }
+        }
+    }
+
+    fun onExportHandled(result: IconExport.Result) {
+        state.update { if (it.export == result) it.copy(export = IconExport.Idle) else it }
+    }
+
+    private fun startExport(work: suspend () -> IconExport.Settled) {
+        if (state.value.export == IconExport.Running) return
+        launchExport(work)
+    }
+
+    private fun launchExport(work: suspend () -> IconExport.Settled) {
+        state.update { it.copy(export = IconExport.Running) }
+        viewModelScope.launch {
+            val settled = work()
+            state.update { it.copy(export = settled) }
+        }
+    }
+
     // generateIcon runs synchronously on Main (~5 ms). Dispatching to Default caused slider jank:
     // cancellation was ineffective mid-withContext, producing concurrent bitmap allocations (557e6db).
     private fun regenerateIcon(newState: IconUiState) {
@@ -198,6 +289,12 @@ class IconViewModel @Inject constructor(
             _events.trySend(IconEvent.GenerateFailed(e))
         }
     }
+
+    private fun BitmapSaveResult.UriResult.toExport(): IconExport.Settled =
+        when (this) {
+            is BitmapSaveResult.Finished -> IconExport.SaveFinished(this)
+            BitmapSaveResult.Canceled -> IconExport.Idle
+        }
 
     private fun buildFileName(
         packageName: String,
