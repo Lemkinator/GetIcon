@@ -91,8 +91,6 @@ class MainActivity :
     @VisibleForTesting(otherwise = PRIVATE)
     internal var isUIReady = false
 
-    private var stopCount = 0
-
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -130,11 +128,6 @@ class MainActivity :
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == ACTION_SEARCH) binding.drawerLayout.setSearchQueryFromIntent(intent)
-    }
-
-    override fun onStop() {
-        super.onStop()
-        stopCount++
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_main, menu).let { true }
@@ -238,14 +231,13 @@ class MainActivity :
         appInfo: AppInfo,
     ): Boolean {
         hideSoftInput()
-        val stopCountAtTap = stopCount
         singleLaunchSuspending(
             work = { getApplicationInfo(appInfo.packageName) },
             then = { applicationInfo ->
                 if (applicationInfo == null) {
                     toast(commonutilsR.string.commonutils_error_app_not_found)
                 } else {
-                    openIcon(applicationInfo, transitionView = view?.takeIf { it.isAttachedToWindow && stopCount == stopCountAtTap })
+                    openIcon(applicationInfo, transitionView = view)
                 }
             },
         )
