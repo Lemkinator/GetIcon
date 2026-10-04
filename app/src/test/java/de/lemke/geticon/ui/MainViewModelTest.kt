@@ -18,6 +18,7 @@ package de.lemke.geticon.ui
 
 import android.content.pm.ApplicationInfo
 import android.net.Uri
+import androidx.lifecycle.ViewModelStore
 import androidx.picker.model.AppInfoData
 import app.cash.turbine.test
 import de.lemke.commonutils.domain.GetApplicationInfoUseCase
@@ -29,7 +30,15 @@ import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import java.io.File
 import kotlinx.coroutines.CompletableDeferred
+
+private fun MainViewModel.triggerOnCleared() {
+    ViewModelStore().also { it.put("vm", this) }.clear()
+}
+
+private fun cachedApk(): ApplicationInfo =
+    ApplicationInfo().also { it.sourceDir = File.createTempFile("extractIcon", ".apk").apply { deleteOnExit() }.absolutePath }
 
 class MainViewModelTest : ShouldSpec(
     {
@@ -125,6 +134,51 @@ class MainViewModelTest : ShouldSpec(
             viewModel.onApkPicked(uri)
             viewModel.onApkImportHandled(ApkImport.Invalid)
             viewModel.apkImport.value shouldBe ApkImport.Imported(appInfo)
+        }
+
+        should("a superseding import deletes the cached APK of the displaced Imported result") {
+            val first = cachedApk()
+            val second = cachedApk()
+            val firstUri = mockk<Uri>()
+            val secondUri = mockk<Uri>()
+            coEvery { processApk(firstUri) } returns ApkProcessResult.Success(first)
+            coEvery { processApk(secondUri) } returns ApkProcessResult.Success(second)
+            viewModel.onApkPicked(firstUri)
+            viewModel.onApkPicked(secondUri)
+            viewModel.apkImport.value shouldBe ApkImport.Imported(second)
+            File(first.sourceDir).exists() shouldBe false
+            File(second.sourceDir).exists() shouldBe true
+        }
+
+        should("an Invalid result superseding an Imported one deletes its cached APK") {
+            val imported = cachedApk()
+            val importedUri = mockk<Uri>()
+            val invalidUri = mockk<Uri>()
+            coEvery { processApk(importedUri) } returns ApkProcessResult.Success(imported)
+            coEvery { processApk(invalidUri) } returns ApkProcessResult.InvalidApk
+            viewModel.onApkPicked(importedUri)
+            viewModel.onApkPicked(invalidUri)
+            viewModel.apkImport.value shouldBe ApkImport.Invalid
+            File(imported.sourceDir).exists() shouldBe false
+        }
+
+        should("a handled Imported result keeps its cached APK for the screen it opened") {
+            val imported = cachedApk()
+            val uri = mockk<Uri>()
+            coEvery { processApk(uri) } returns ApkProcessResult.Success(imported)
+            viewModel.onApkPicked(uri)
+            viewModel.onApkImportHandled(ApkImport.Imported(imported))
+            viewModel.triggerOnCleared()
+            File(imported.sourceDir).exists() shouldBe true
+        }
+
+        should("onCleared deletes the cached APK of an Imported result that was never handled") {
+            val imported = cachedApk()
+            val uri = mockk<Uri>()
+            coEvery { processApk(uri) } returns ApkProcessResult.Success(imported)
+            viewModel.onApkPicked(uri)
+            viewModel.triggerOnCleared()
+            File(imported.sourceDir).exists() shouldBe false
         }
 
         should("onAppSelected holds Found with the looked-up ApplicationInfo") {

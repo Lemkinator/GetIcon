@@ -26,10 +26,12 @@ import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
+import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -42,7 +44,10 @@ sealed interface InstalledApps {
     data class Failed(val handled: Boolean = false) : InstalledApps
 }
 
-/** The import of a picked APK file. The activity acts on a [Result] and then reports it handled. */
+/**
+ * The import of a picked APK file. The activity acts on a [Result] and then reports it handled.
+ * The cached APK of an [Imported] result belongs to the screen it opens once handled; a superseded or never handled one is deleted.
+ */
 sealed interface ApkImport {
     sealed interface Result : ApkImport
 
@@ -85,6 +90,10 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch { loadInstalledApps() }
     }
 
+    override fun onCleared() {
+        apkImport.value.discard()
+    }
+
     private suspend fun loadInstalledApps() {
         runCatching { installedApps.value = InstalledApps.Loaded(getInstalledApps()) }.onFailure { e ->
             if (e is CancellationException) throw e
@@ -111,15 +120,20 @@ class MainViewModel @Inject constructor(
     fun onApkPicked(uri: Uri?) {
         if (uri == null) return
         viewModelScope.launch {
-            apkImport.value =
-                when (val result = processApk(uri)) {
-                    is ApkProcessResult.Success -> ApkImport.Imported(result.applicationInfo)
+            val result =
+                when (val processed = processApk(uri)) {
+                    is ApkProcessResult.Success -> ApkImport.Imported(processed.applicationInfo)
                     is ApkProcessResult.InvalidApk, is ApkProcessResult.Error -> ApkImport.Invalid
                 }
+            apkImport.getAndUpdate { result }.discard()
         }
     }
 
     fun onApkImportHandled(result: ApkImport.Result) {
         apkImport.update { if (it == result) ApkImport.Idle else it }
+    }
+
+    private fun ApkImport.discard() {
+        if (this is ApkImport.Imported) File(applicationInfo.sourceDir).delete()
     }
 }
