@@ -67,6 +67,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldMatch
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -128,14 +129,13 @@ class IconActivityTest {
         } returns testIconResult
     }
 
-    private fun launchWithAppInfo(): ActivityScenario<IconActivity> {
+    private fun appInfoIntent(): Intent {
         val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
         val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
-        val intent =
-            Intent(context, IconActivity::class.java)
-                .putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
-        return ActivityScenario.launch(intent)
+        return Intent(context, IconActivity::class.java).putExtra(IconActivity.KEY_APPLICATION_INFO, appInfo)
     }
+
+    private fun launchWithAppInfo(): ActivityScenario<IconActivity> = ActivityScenario.launch(appInfoIntent())
 
     private fun launchWithoutAppInfo(): ActivityScenario<IconActivity> {
         val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
@@ -143,18 +143,60 @@ class IconActivityTest {
     }
 
     @Test
-    fun collectEvents_finish_whenNoAppInfo() {
+    fun exit_noAppInfo_showsAppNotFoundAndFinishes() {
         launchWithoutAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
+                ShadowToast.shownToastCount() shouldBe 1
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_app_not_found)
                 activity.isFinishing shouldBe true
+                ViewModelProvider(activity)[IconViewModel::class.java].exit.value shouldBe IconExit.None
             }
         }
     }
 
     @Test
-    fun collectEvents_generateFailed_finishesActivity() {
+    fun exit_generateFailed_showsGenerationErrorAndFinishes() {
+        stubGenerateIconFailure()
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                ShadowToast.shownToastCount() shouldBe 1
+                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(R.string.error_icon_generation_failed)
+                activity.isFinishing shouldBe true
+                ViewModelProvider(activity)[IconViewModel::class.java].exit.value shouldBe IconExit.None
+            }
+        }
+    }
+
+    @Test
+    fun exit_regenerationFailsWhileStopped_showsErrorOnceAfterRecreationAndFinishes() {
+        val controller = Robolectric.buildActivity(IconActivity::class.java, appInfoIntent()).setup()
+        try {
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.pause().stop()
+            stubGenerateIconFailure()
+            val stopped = controller.get()
+            ViewModelProvider(stopped)[IconViewModel::class.java].onMaskChanged(false)
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 0
+            controller.recreate()
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.restart().start().resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            val recreated = controller.get()
+            recreated shouldNotBeSameInstanceAs stopped
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe recreated.getString(R.string.error_icon_generation_failed)
+            stopped.isFinishing shouldBe false
+            recreated.isFinishing shouldBe true
+            ViewModelProvider(recreated)[IconViewModel::class.java].exit.value shouldBe IconExit.None
+        } finally {
+            controller.destroy()
+        }
+    }
+
+    private fun stubGenerateIconFailure() {
         every {
             generateIconStub(
                 any<ApplicationInfo>(),
@@ -166,13 +208,6 @@ class IconActivityTest {
                 any<PackageManager>(),
             )
         } throws IOException("test")
-        launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(R.string.error_icon_generation_failed)
-                activity.isFinishing shouldBe true
-            }
-        }
     }
 
     @Test

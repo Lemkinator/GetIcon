@@ -37,7 +37,6 @@ import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.ui.utils.bindColorSwatch
-import de.lemke.commonutils.ui.utils.collectEvents
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.copyToClipboard
 import de.lemke.commonutils.ui.utils.exportBitmap
@@ -88,7 +87,7 @@ class IconActivity :
         collectState(viewModel.state) { renderState(it) }
         collectState(viewModel.export) { renderExportControls(it) }
         collectState(viewModel.export, minActiveState = RESUMED) { if (it is IconExport.Result) onExportResult(it) }
-        collectEvents()
+        collectState(viewModel.exit) { if (it is IconExit.Reason) onExit(it) }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }
@@ -164,20 +163,15 @@ class IconActivity :
         if (handled) viewModel.onExportHandled(result)
     }
 
-    private fun collectEvents() {
-        collectEvents(viewModel.events) { event ->
-            when (event) {
-                IconEvent.Finish -> {
-                    toast(commonutilsR.string.commonutils_error_app_not_found)
-                    finishAfterTransition()
-                }
-
-                is IconEvent.GenerateFailed -> {
-                    toast(R.string.error_icon_generation_failed)
-                    finishAfterTransition()
-                }
+    private fun onExit(reason: IconExit.Reason) {
+        val message =
+            when (reason) {
+                IconExit.AppNotFound -> commonutilsR.string.commonutils_error_app_not_found
+                IconExit.GenerateFailed -> R.string.error_icon_generation_failed
             }
-        }
+        toast(message)
+        finishAfterTransition()
+        viewModel.onExitHandled(reason)
     }
 
     private fun renderState(state: IconUiState) {
