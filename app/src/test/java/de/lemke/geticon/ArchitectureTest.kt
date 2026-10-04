@@ -112,6 +112,7 @@ class ArchitectureTest : ShouldSpec() {
             listOf(
                 "val events = kotlinx.coroutines.channels.Channel<Int>()",
                 "val events = kotlinx.coroutines.flow.MutableSharedFlow<List<Int>>()",
+                "val events = kotlinx.coroutines.channels.Channel<\n        Int,\n    >()",
                 "val events = state.shareIn(viewModelScope, SharingStarted.Eagerly)",
                 "val events = kotlinx.coroutines.channels.Channel<Int>().receiveAsFlow()",
                 "val events: SharedFlow<Int>? = null",
@@ -172,7 +173,7 @@ private val BANNED_EVENT_IMPORTS =
 private val BANNED_CHANNEL_TYPES = setOf("Channel", "SendChannel", "ReceiveChannel")
 
 private val EVENT_STREAM_CALL =
-    Regex("""\b(Channel|MutableSharedFlow)\s*(<.*>)?\s*\(|\.(shareIn|receiveAsFlow|consumeAsFlow)\s*\(""")
+    Regex("""\b(Channel|MutableSharedFlow)\s*(<.*?>)?\s*\(|\.(shareIn|receiveAsFlow|consumeAsFlow)\s*\(""", RegexOption.DOT_MATCHES_ALL)
 
 private val COMMENT_OR_STRING = Regex(""""{3}.*?"{3}|"(?:\\.|[^"\\\n])*"|/\*.*?\*/|//[^\n]*""", RegexOption.DOT_MATCHES_ALL)
 
