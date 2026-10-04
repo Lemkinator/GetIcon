@@ -76,7 +76,7 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
 
 - **`data/`** — `UserSettings`: a common-utils `SettingsRepository` subclass,
   SharedPreferences-backed (icon size, mask, colors)
-- **`domain/`** — thin use cases: `GenerateIconUseCase`, `GetApplicationInfoUseCase`, `ProcessApkUseCase`.
+- **`domain/`** — thin use cases: `GenerateIconUseCase`, `ProcessApkUseCase`.
 - **`ui/`** — two activities + two ViewModels: `MainActivity` / `MainViewModel`
   (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
 - **`App.kt`** — `@HiltAndroidApp` entry point; injects `settings: SettingsRepository`
@@ -89,6 +89,11 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
 DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
 ViewBinding enabled. Activities collect `StateFlow<UiState>` and one-shot
 `Channel<Event>` from their ViewModel via `collectState`/`collectEvents`.
+
+**Tap-driven async work runs in the Activity, never in a ViewModel.** Save, copy and share run through
+the launch latch (`singleLaunchSuspending`), which drops every other tap until the first one's `then`
+returns. The picker result write runs outside it, because `singleLaunchSuspending` drops inputs while the
+activity is not RESUMED. The IO dispatcher comes in by field injection (`@Inject @IoDispatcher lateinit var ioDispatcher`).
 
 **Multi-activity (not single-activity).** OneUI (sesl-androidx) is activity-oriented;
 single-activity + Navigation Component was tried and reverted (buggy menu, leaky
@@ -130,7 +135,13 @@ Four tools run as part of `./gradlew build`:
   Kover XML (`.github/scripts/strip-zero-instruction-lines.py`) before the Codecov upload.
 - **Konsist** — architecture rules in
   `app/src/test/java/de/lemke/geticon/ArchitectureTest.kt`. Enforces
-  `data/domain/ui` layering. Runs as part of `./gradlew test`.
+  `data/domain/ui` layering. Runs as part of `./gradlew test`. `CodingConventionsTest.kt` also
+  enforces the common-utils launch latch through `assertLaunchLatchConventions()` from the
+  common-utils testFixtures: it bans raw activity launches and result registration by name, and a
+  `show`/`showNow` call whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
+  `singleLaunchActivity`, `transformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
+  input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
+  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`.
 
 **Pre-commit hook** — blocks commits with formatting violations. Opt in
 once per clone:

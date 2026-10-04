@@ -18,13 +18,19 @@ package de.lemke.geticon.ui
 
 import android.app.Activity
 import android.content.ClipboardManager
+import android.content.ContentProvider
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
+import android.os.Bundle
+import android.os.Environment
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -43,22 +49,32 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import dagger.hilt.android.testing.UninstallModules
 import de.lemke.commonutils.ShadowFileProvider
+import de.lemke.commonutils.data.SaveLocation
+import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.geticon.R
+import de.lemke.geticon.di.DispatchersModule
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.IconResult
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldMatch
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import java.io.File
 import java.io.IOException
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -72,6 +88,7 @@ import de.lemke.commonutils.R as commonutilsR
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36], shadows = [ShadowFileProvider::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@UninstallModules(DispatchersModule::class)
 class IconActivityTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
@@ -79,6 +96,16 @@ class IconActivityTest {
     @BindValue
     @JvmField
     val generateIconStub: GenerateIconUseCase = mockk()
+
+    private val pausableIoDispatcher = PausableDispatcher(Dispatchers.Main)
+
+    @BindValue
+    @IoDispatcher
+    @JvmField
+    val ioDispatcher: CoroutineDispatcher = pausableIoDispatcher
+
+    @Inject
+    lateinit var settings: SettingsRepository
 
     @Before
     fun setup() {
@@ -167,15 +194,116 @@ class IconActivityTest {
                 activity.onSeekbarProgressChanged(256)
                 val item = RoboMenuItem(R.id.menu_item_icon_share)
                 activity.onOptionsItemSelected(item) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
                 val startedIntent = shadowOf(activity).nextStartedActivity
                 startedIntent?.action shouldBe Intent.ACTION_CHOOSER
                 val innerIntent = IntentCompat.getParcelableExtra(startedIntent!!, Intent.EXTRA_INTENT, Intent::class.java)!!
                 innerIntent.type shouldBe "image/png"
-                val stream = IntentCompat.getParcelableExtra(innerIntent, Intent.EXTRA_STREAM, Uri::class.java)
-                stream shouldBe activity.iconContentUri("icon.png")
-                File(activity.cacheDir, "icon.png").length() shouldBeGreaterThan 0L
+                val stream = IntentCompat.getParcelableExtra(innerIntent, Intent.EXTRA_STREAM, Uri::class.java)!!
+                stream.toString() shouldMatch activity.iconContentUriPattern("share", "icon.png")
+                activity.cacheFile(stream).length() shouldBeGreaterThan 0L
                 innerIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION shouldBe Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
+        }
+    }
+
+    @Test
+    fun saveAsImage_doubleTap_launchesDocumentPickerOnce() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
+                activity.onOptionsItemSelected(item) shouldBe true
+                activity.onOptionsItemSelected(item) shouldBe true
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivityForResult?.intent?.action shouldBe Intent.ACTION_CREATE_DOCUMENT
+                shadowActivity.nextStartedActivityForResult shouldBe null
+            }
+        }
+    }
+
+    @Test
+    fun share_doubleTap_opensShareSheetOnce() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val item = RoboMenuItem(R.id.menu_item_icon_share)
+                activity.onOptionsItemSelected(item) shouldBe true
+                activity.onOptionsItemSelected(item) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
+                shadowActivity.nextStartedActivity shouldBe null
+                File(activity.cacheDir, "share").walk().count { it.isFile } shouldBe 1
+            }
+        }
+    }
+
+    @Test
+    fun share_whileCopyWrites_startsNothingAndShowsNoToast() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            pausableIoDispatcher.pause()
+            scenario.onActivity { activity ->
+                activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
+            }
+            pausableIoDispatcher.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity shouldBe null
+                File(activity.cacheDir, "share").exists() shouldBe false
+            }
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Copied to clipboard"
+        }
+    }
+
+    @Test
+    fun saveAsImage_fixedLocation_doubleTap_writesOneFileAndShowsOneToast() {
+        settings.imageSaveLocation = SaveLocation.DOWNLOADS
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
+                activity.onOptionsItemSelected(item) shouldBe true
+                activity.onOptionsItemSelected(item) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).listFiles()?.size shouldBe 1
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved: Downloads"
+        }
+    }
+
+    @Test
+    @Config(sdk = [29])
+    fun saveAsImage_api29WithStoredDownloads_savesThroughDocumentPicker() {
+        settings.imageSaveLocation = SaveLocation.DOWNLOADS
+        val file = File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png")
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val shadowActivity = shadowOf(activity)
+                val picker = shadowActivity.nextStartedActivityForResult.intent
+                picker.action shouldBe Intent.ACTION_CREATE_DOCUMENT
+                picker.getStringExtra(Intent.EXTRA_TITLE)!! shouldMatch """de_lemke_geticon_debug_mask_\d{4}(_\d{2}){5}\.png"""
+                shadowActivity.receiveResult(picker, Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            downloads.list().orEmpty().toList() shouldBe emptyList()
+            file.length() shouldBeGreaterThan 0L
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
         }
     }
 
@@ -288,12 +416,46 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_copied_to_clipboard)
                 val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip!!
-                val uri = activity.iconContentUri("icon.png")
+                val uri = clip.getItemAt(0).uri
                 clip.description.label shouldBe "icon"
                 clip.description.getMimeType(0) shouldBe "image/png"
-                clip.getItemAt(0).uri shouldBe uri
+                uri.toString() shouldMatch activity.iconContentUriPattern("clipboard", "icon.png")
                 activity.contentResolver.getType(uri) shouldBe "image/png"
             }
+        }
+    }
+
+    @Test
+    fun icon_doubleLongClick_copiesOneClipWithOneToast() {
+        launchWithAppInfo().use { scenario ->
+            var clipChanges = 0
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.getSystemService(ClipboardManager::class.java).addPrimaryClipChangedListener { clipChanges++ }
+                val icon = activity.findViewById<ImageView>(R.id.icon)
+                icon.performLongClick() shouldBe true
+                icon.performLongClick() shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            clipChanges shouldBe 1
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Copied to clipboard"
+        }
+    }
+
+    @Test
+    fun icon_longClickWhileShareSheetPending_copiesNothing() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
+                activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.getSystemService(ClipboardManager::class.java).hasPrimaryClip() shouldBe false
+            }
+            ShadowToast.shownToastCount() shouldBe 0
         }
     }
 
@@ -459,79 +621,108 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_nullIcon_returnsEarly() {
-        // No appInfo → loadInitialState never runs, so state.icon stays null.
-        launchWithoutAppInfo().use { scenario ->
+    fun colorButton_doubleTap_showsOneColorPicker() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                val before = ShadowToast.shownToastCount()
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
-                ShadowToast.shownToastCount() shouldBe before
+                val button = activity.findViewById<Button>(R.id.colorButtonBackground)
+                button.performClick()
+                button.performClick()
+                ShadowDialog.getShownDialogs().size shouldBe 1
+                ShadowDialog.getLatestDialog().isShowing shouldBe true
             }
         }
     }
 
     @Test
-    fun onExportBitmapResult_resultOk_callsSave() {
+    fun onExportBitmapResult_afterGenerationFailed_deletesDocumentAndShowsCreateError() {
+        every {
+            generateIconStub(
+                any<ApplicationInfo>(),
+                any<Int>(),
+                any<Boolean>(),
+                any<Boolean>(),
+                any<Int>(),
+                any<Int>(),
+                any<PackageManager>(),
+            )
+        } throws IOException("generation failed")
+        val provider = documentProvider()
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
-                val file = File(activity.cacheDir, "icon_export_test.png")
-                val intent = Intent().setData(Uri.fromFile(file))
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, intent))
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_image_saved)
-                file.exists() shouldBe true
-                file.length() shouldBeGreaterThan 0L
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(provider.uri)))
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            provider.document.exists() shouldBe false
+            ShadowToast.shownToastCount() shouldBe 2
+            ShadowToast.getTextOfLatestToast() shouldBe "Error creating file"
+        }
+    }
+
+    @Test
+    fun onExportBitmapResult_resultOk_savesIcon() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            val file = File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png")
+            scenario.onActivity { activity ->
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file))))
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
+            file.length() shouldBeGreaterThan 0L
+        }
+    }
+
+    @Test
+    fun onExportBitmapResult_rotationDuringWrite_finishesWriteAndAdmitsNextSave() {
+        val document = createPickedDocument()
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            pausableIoDispatcher.pause()
+            scenario.onActivity { activity ->
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(document))))
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            document.length() shouldBe 0L
+            scenario.recreate()
+            pausableIoDispatcher.resume()
+            shadowOf(Looper.getMainLooper()).idle()
+            document.readBytes().take(PNG_SIGNATURE.size) shouldBe PNG_SIGNATURE
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivityForResult.intent.action shouldBe Intent.ACTION_CREATE_DOCUMENT
             }
         }
     }
 
     @Test
-    fun onExportBitmapResult_resultCanceled_doesNothing() {
+    fun onExportBitmapResult_resultCanceled_showsNoToast() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
-                val before = ShadowToast.shownToastCount()
                 activity.onExportBitmapResult(ActivityResult(Activity.RESULT_CANCELED, null))
-                ShadowToast.shownToastCount() shouldBe before
             }
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 0
         }
     }
 
     @Test
-    fun onExportBitmapResult_nullResult_showsErrorToast() {
+    fun onExportBitmapResult_resultOkWithoutUri_showsCreateError() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
-                activity.onExportBitmapResult(null)
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_saving_image)
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
             }
-        }
-    }
-
-    @Test
-    fun onExportBitmapResult_resultOkNullData_callsSaveWithNullUri() {
-        launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, null))
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_creating_file)
-            }
-        }
-    }
-
-    @Test
-    fun onExportBitmapResult_otherCode_showsErrorToast() {
-        launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
-                activity.onExportBitmapResult(ActivityResult(99, null))
-                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_saving_image)
-            }
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Error creating file"
         }
     }
 
@@ -723,8 +914,73 @@ class IconActivityTest {
         }
     }
 
+    private fun createPickedDocument(): File =
+        File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png").apply { createNewFile() }
+
+    private fun documentProvider(): FakeDocumentProvider =
+        Robolectric
+            .buildContentProvider(FakeDocumentProvider::class.java)
+            .create(DOCUMENTS_AUTHORITY)
+            .get()
+            .apply { document = createPickedDocument() }
+
     companion object {
+        private val PNG_SIGNATURE = listOf<Byte>(-119, 80, 78, 71, 13, 10, 26, 10)
         private val testBitmap: Bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
         private val testIconResult = IconResult(bitmap = testBitmap, isAdaptiveIcon = true, hasMaskedAppIcon = true)
     }
+}
+
+private const val DOCUMENTS_AUTHORITY = "de.lemke.geticon.test.documents"
+
+// The hidden DocumentsContract.METHOD_DELETE_DOCUMENT that deleteDocument sends to the provider.
+private const val METHOD_DELETE_DOCUMENT = "android:deleteDocument"
+
+private class FakeDocumentProvider : ContentProvider() {
+    lateinit var document: File
+    val uri: Uri = Uri.parse("content://$DOCUMENTS_AUTHORITY/document/1")
+
+    override fun onCreate() = true
+
+    override fun call(
+        method: String,
+        arg: String?,
+        extras: Bundle?,
+    ): Bundle? {
+        if (method == METHOD_DELETE_DOCUMENT) document.delete()
+        return null
+    }
+
+    override fun openFile(
+        uri: Uri,
+        mode: String,
+    ): ParcelFileDescriptor = ParcelFileDescriptor.open(document, ParcelFileDescriptor.parseMode(mode))
+
+    override fun query(
+        uri: Uri,
+        projection: Array<out String>?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+        sortOrder: String?,
+    ): Cursor? = null
+
+    override fun getType(uri: Uri): String? = null
+
+    override fun insert(
+        uri: Uri,
+        values: ContentValues?,
+    ): Uri? = null
+
+    override fun delete(
+        uri: Uri,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+    ) = 0
+
+    override fun update(
+        uri: Uri,
+        values: ContentValues?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+    ) = 0
 }

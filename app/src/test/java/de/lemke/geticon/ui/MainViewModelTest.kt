@@ -20,7 +20,6 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import androidx.picker.model.AppInfoData
 import app.cash.turbine.test
-import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
@@ -28,32 +27,29 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 
 class MainViewModelTest : ShouldSpec(
     {
         val processApk = mockk<ProcessApkUseCase>()
         val getInstalledApps = mockk<GetInstalledAppsUseCase>()
-        val getApplicationInfo = mockk<GetApplicationInfoUseCase>()
         lateinit var viewModel: MainViewModel
 
         beforeEach {
             coEvery { getInstalledApps() } returns emptyList()
-            every { getApplicationInfo(any()) } returns null
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = MainViewModel(processApk, getInstalledApps)
         }
 
         should("installedApps emits loaded list") {
             val app = mockk<AppInfoData>()
             coEvery { getInstalledApps() } returns listOf(app)
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = MainViewModel(processApk, getInstalledApps)
             viewModel.installedApps.value shouldBe listOf(app)
         }
 
         should("emit ShowLoadError when getInstalledApps throws") {
             coEvery { getInstalledApps() } throws RuntimeException("load failed")
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = MainViewModel(processApk, getInstalledApps)
             viewModel.events.test {
                 awaitItem() shouldBe MainEvent.ShowLoadError
             }
@@ -106,25 +102,6 @@ class MainViewModelTest : ShouldSpec(
                 viewModel.onApkPicked(uri)
                 val event = awaitItem() as MainEvent.NavigateToApkIcon
                 event.applicationInfo shouldBe appInfo
-            }
-        }
-
-        should("emit NavigateToIcon when onAppSelected finds the package") {
-            val appInfo = mockk<ApplicationInfo>()
-            every { getApplicationInfo(any()) } returns appInfo
-            viewModel.events.test {
-                viewModel.onAppSelected("com.example.test")
-                val event = awaitItem()
-                event.shouldBeInstanceOf<MainEvent.NavigateToIcon>()
-                event.applicationInfo shouldBe appInfo
-            }
-        }
-
-        should("emit ShowAppNotFoundError when onAppSelected package not found") {
-            every { getApplicationInfo(any()) } returns null
-            viewModel.events.test {
-                viewModel.onAppSelected("com.nonexistent.pkg")
-                awaitItem() shouldBe MainEvent.ShowAppNotFoundError
             }
         }
     },
