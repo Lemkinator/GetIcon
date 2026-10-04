@@ -18,10 +18,14 @@ package de.lemke.geticon
 
 import com.lemonappdev.konsist.api.KoModifier
 import com.lemonappdev.konsist.api.Konsist
+import com.lemonappdev.konsist.api.declaration.KoFileDeclaration
 import com.lemonappdev.konsist.api.ext.list.withPackage
 import com.lemonappdev.konsist.api.verify.assertFalse
 import com.lemonappdev.konsist.api.verify.assertTrue
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.engine.spec.tempdir
+import io.kotest.matchers.shouldBe
 
 class ArchitectureTest : ShouldSpec() {
     private val codeScope = Konsist.scopeFromProduction()
@@ -72,14 +76,48 @@ class ArchitectureTest : ShouldSpec() {
         }
         should("ViewModel files expose state only, without Channel or SharedFlow events") {
             codeScope.files
-                .filter { file -> file.classes().any { it.hasParent { parent -> parent.name == "ViewModel" } } }
-                .assertFalse(testName = this.testCase.name.toString()) {
-                    it.hasImport { import ->
-                        import.name.startsWith("kotlinx.coroutines.channels.") ||
-                            import.name.endsWith("SharedFlow") ||
-                            import.name == "kotlinx.coroutines.flow.receiveAsFlow"
-                    }
+                .filter { it.declaresViewModel() }
+                .assertFalse(testName = this.testCase.name.toString()) { it.usesEventStreams() }
+        }
+        should("event stream rule catches fully qualified, typed and inferred Channel and SharedFlow use") {
+            fun usesEventStreams(source: String): Boolean {
+                val dir = tempdir()
+                dir.resolve("ProbeViewModel.kt").writeText(source)
+                return Konsist
+                    .scopeFromExternalDirectory(dir.absolutePath)
+                    .files
+                    .single()
+                    .usesEventStreams()
+            }
+            usesEventStreams(
+                """
+                import kotlinx.coroutines.channels.awaitClose
+                import kotlinx.coroutines.flow.MutableStateFlow
+                import kotlinx.coroutines.flow.callbackFlow
+                class ProbeViewModel : ViewModel() {
+                    /** Mirrors no Channel( or MutableSharedFlow( */
+                    val state = MutableStateFlow(0)
+                    val ticks = callbackFlow<Int> { awaitClose { } }
                 }
+                """.trimIndent(),
+            ) shouldBe false
+            listOf(
+                "val events = kotlinx.coroutines.channels.Channel<Int>()",
+                "val events = kotlinx.coroutines.flow.MutableSharedFlow<List<Int>>()",
+                "val events = state.shareIn(viewModelScope, SharingStarted.Eagerly)",
+                "val events = kotlinx.coroutines.channels.Channel<Int>().receiveAsFlow()",
+                "val events: SharedFlow<Int>? = null",
+                "val events: kotlinx.coroutines.channels.SendChannel<Int> = TODO()",
+                "val events: ReceiveChannel<Int> = TODO()",
+                "val events: Channel<Int> = TODO()",
+                "val events: StateFlow<Int>\n        field = kotlinx.coroutines.flow.MutableSharedFlow<Int>()",
+                "val events by lazy { kotlinx.coroutines.channels.Channel<Int>() }",
+            ).forEach { property ->
+                withClue(property) { usesEventStreams("class ProbeViewModel : ViewModel() {\n    $property\n}\n") shouldBe true }
+            }
+            BANNED_EVENT_IMPORTS.forEach { banned ->
+                withClue(banned) { usesEventStreams("import $banned\nclass ProbeViewModel : ViewModel()\n") shouldBe true }
+            }
         }
         should("ui collects no event flows") {
             codeScope.files
@@ -98,3 +136,51 @@ class ArchitectureTest : ShouldSpec() {
         }
     }
 }
+
+private val VIEW_MODEL_BASE_CLASSES = setOf("ViewModel", "AndroidViewModel")
+
+private val BANNED_EVENT_IMPORTS =
+    setOf(
+        "kotlinx.coroutines.channels.*",
+        "kotlinx.coroutines.channels.Channel",
+        "kotlinx.coroutines.channels.ReceiveChannel",
+        "kotlinx.coroutines.channels.SendChannel",
+        "kotlinx.coroutines.flow.MutableSharedFlow",
+        "kotlinx.coroutines.flow.SharedFlow",
+        "kotlinx.coroutines.flow.asSharedFlow",
+        "kotlinx.coroutines.flow.consumeAsFlow",
+        "kotlinx.coroutines.flow.receiveAsFlow",
+        "kotlinx.coroutines.flow.shareIn",
+    )
+
+private val BANNED_CHANNEL_TYPES = setOf("Channel", "SendChannel", "ReceiveChannel")
+
+private val EVENT_STREAM_CALL =
+    Regex("""\b(Channel|MutableSharedFlow)\s*(<.*>)?\s*\(|\.(shareIn|receiveAsFlow|consumeAsFlow)\s*\(""")
+
+private val COMMENT = Regex("""/\*.*?\*/|//[^\n]*""", RegexOption.DOT_MATCHES_ALL)
+
+private fun KoFileDeclaration.declaresViewModel(): Boolean =
+    classes().any { koClass -> koClass.hasParent { it.name in VIEW_MODEL_BASE_CLASSES } }
+
+private fun KoFileDeclaration.usesEventStreams(): Boolean =
+    hasImport { import ->
+        val path =
+            import.text
+                .removePrefix("import")
+                .substringBefore(" as ")
+                .trim()
+        path in BANNED_EVENT_IMPORTS || path.endsWith("SharedFlow")
+    } ||
+        properties().any { property ->
+            val declaredType =
+                property.type
+                    ?.text
+                    ?.substringBefore('<')
+                    ?.removeSuffix("?")
+                    ?.trim()
+                    ?.substringAfterLast('.')
+            declaredType in BANNED_CHANNEL_TYPES ||
+                declaredType?.endsWith("SharedFlow") == true ||
+                EVENT_STREAM_CALL.containsMatchIn(property.text.replace(COMMENT, ""))
+        }
