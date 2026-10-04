@@ -26,7 +26,6 @@ import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -47,57 +46,85 @@ class MainViewModelTest : ShouldSpec(
             viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
         }
 
-        should("installedApps emits loaded list") {
+        should("installedApps is Loading until the load returns, then Loaded with the apps") {
             val app = mockk<AppInfoData>()
-            coEvery { getInstalledApps() } returns listOf(app)
+            val gate = CompletableDeferred<List<AppInfoData>>()
+            coEvery { getInstalledApps() } coAnswers { gate.await() }
             viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
-            viewModel.installedApps.value shouldBe listOf(app)
+            viewModel.installedApps.test {
+                awaitItem() shouldBe InstalledApps.Loading
+                gate.complete(listOf(app))
+                awaitItem() shouldBe InstalledApps.Loaded(listOf(app))
+            }
         }
 
-        should("emit ShowLoadError when getInstalledApps throws") {
+        should("installedApps is Failed and not yet handled when getInstalledApps throws") {
             coEvery { getInstalledApps() } throws RuntimeException("load failed")
             viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
-            viewModel.events.test {
-                awaitItem() shouldBe MainEvent.ShowLoadError
+            viewModel.installedApps.value shouldBe InstalledApps.Failed(handled = false)
+        }
+
+        should("onInstalledAppsFailureHandled marks the failure handled") {
+            coEvery { getInstalledApps() } throws RuntimeException("load failed")
+            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel.installedApps.test {
+                awaitItem() shouldBe InstalledApps.Failed(handled = false)
+                viewModel.onInstalledAppsFailureHandled()
+                awaitItem() shouldBe InstalledApps.Failed(handled = true)
             }
         }
 
-        should("emit no event when uri is null") {
-            viewModel.events.test {
-                viewModel.onApkPicked(null)
-                expectNoEvents()
-            }
+        should("onInstalledAppsFailureHandled keeps a loaded list") {
+            viewModel.onInstalledAppsFailureHandled()
+            viewModel.installedApps.value shouldBe InstalledApps.Loaded(emptyList())
         }
 
-        should("emit ShowError when processApk returns InvalidApk") {
+        should("apkImport stays Idle when uri is null") {
+            viewModel.onApkPicked(null)
+            viewModel.apkImport.value shouldBe ApkImport.Idle
+            coVerify(exactly = 0) { processApk(any()) }
+        }
+
+        should("apkImport holds Invalid when processApk returns InvalidApk") {
             val uri = mockk<Uri>()
             coEvery { processApk(uri) } returns ApkProcessResult.InvalidApk
-
-            viewModel.events.test {
-                viewModel.onApkPicked(uri)
-                awaitItem() shouldBe MainEvent.ShowError
-            }
+            viewModel.onApkPicked(uri)
+            viewModel.apkImport.value shouldBe ApkImport.Invalid
         }
 
-        should("emit ShowError when processApk returns Error") {
+        should("apkImport holds Invalid when processApk returns Error") {
             val uri = mockk<Uri>()
             coEvery { processApk(uri) } returns ApkProcessResult.Error
-
-            viewModel.events.test {
-                viewModel.onApkPicked(uri)
-                awaitItem() shouldBe MainEvent.ShowError
-            }
+            viewModel.onApkPicked(uri)
+            viewModel.apkImport.value shouldBe ApkImport.Invalid
         }
 
-        should("emit NavigateToApkIcon when processApk succeeds") {
+        should("apkImport holds Imported with the returned ApplicationInfo when processApk succeeds") {
             val uri = mockk<Uri>()
             val appInfo = mockk<ApplicationInfo>()
             coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
-
-            viewModel.events.test {
+            viewModel.apkImport.test {
+                awaitItem() shouldBe ApkImport.Idle
                 viewModel.onApkPicked(uri)
-                awaitItem().shouldBeInstanceOf<MainEvent.NavigateToApkIcon>()
+                awaitItem() shouldBe ApkImport.Imported(appInfo)
             }
+        }
+
+        should("onApkImportHandled returns to Idle") {
+            val uri = mockk<Uri>()
+            coEvery { processApk(uri) } returns ApkProcessResult.InvalidApk
+            viewModel.onApkPicked(uri)
+            viewModel.onApkImportHandled(ApkImport.Invalid)
+            viewModel.apkImport.value shouldBe ApkImport.Idle
+        }
+
+        should("onApkImportHandled keeps a result other than the handled one") {
+            val uri = mockk<Uri>()
+            val appInfo = mockk<ApplicationInfo>()
+            coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
+            viewModel.onApkPicked(uri)
+            viewModel.onApkImportHandled(ApkImport.Invalid)
+            viewModel.apkImport.value shouldBe ApkImport.Imported(appInfo)
         }
 
         should("onAppSelected holds Found with the looked-up ApplicationInfo") {
@@ -141,18 +168,6 @@ class MainViewModelTest : ShouldSpec(
             viewModel.onAppSelected("com.example.app")
             viewModel.onAppLookupHandled(AppLookup.NotFound)
             viewModel.appLookup.value shouldBe AppLookup.Found(appInfo)
-        }
-
-        should("NavigateToApkIcon carries the returned ApplicationInfo") {
-            val uri = mockk<Uri>()
-            val appInfo = mockk<ApplicationInfo>()
-            coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
-
-            viewModel.events.test {
-                viewModel.onApkPicked(uri)
-                val event = awaitItem() as MainEvent.NavigateToApkIcon
-                event.applicationInfo shouldBe appInfo
-            }
         }
     },
 )

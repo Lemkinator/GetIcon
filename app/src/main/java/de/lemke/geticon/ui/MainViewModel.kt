@@ -28,21 +28,29 @@ import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-sealed class MainEvent {
-    data class NavigateToApkIcon(val applicationInfo: ApplicationInfo) : MainEvent()
+/** The installed apps the picker lists. The activity reports a [Failed] load once and then marks it handled. */
+sealed interface InstalledApps {
+    data object Loading : InstalledApps
 
-    data object ShowError : MainEvent()
+    data class Loaded(val apps: List<AppInfoData>) : InstalledApps
 
-    data object ShowLoadError : MainEvent()
+    data class Failed(val handled: Boolean = false) : InstalledApps
+}
+
+/** The import of a picked APK file. The activity acts on a [Result] and then reports it handled. */
+sealed interface ApkImport {
+    sealed interface Result : ApkImport
+
+    data object Idle : ApkImport
+
+    data class Imported(val applicationInfo: ApplicationInfo) : Result
+
+    data object Invalid : Result
 }
 
 /** The lookup of a picked app. The activity acts on a [Result] and then reports it handled. */
@@ -64,11 +72,11 @@ class MainViewModel @Inject constructor(
     private val getInstalledApps: GetInstalledAppsUseCase,
     private val getApplicationInfo: GetApplicationInfoUseCase,
 ) : ViewModel() {
-    private val _events = Channel<MainEvent>(BUFFERED)
-    val events: Flow<MainEvent> = _events.receiveAsFlow()
+    val installedApps: StateFlow<InstalledApps>
+        field = MutableStateFlow<InstalledApps>(InstalledApps.Loading)
 
-    val installedApps: StateFlow<List<AppInfoData>>
-        field = MutableStateFlow<List<AppInfoData>>(emptyList())
+    val apkImport: StateFlow<ApkImport>
+        field = MutableStateFlow<ApkImport>(ApkImport.Idle)
 
     val appLookup: StateFlow<AppLookup>
         field = MutableStateFlow<AppLookup>(AppLookup.Idle)
@@ -78,10 +86,14 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun loadInstalledApps() {
-        runCatching { installedApps.value = getInstalledApps() }.onFailure { e ->
+        runCatching { installedApps.value = InstalledApps.Loaded(getInstalledApps()) }.onFailure { e ->
             if (e is CancellationException) throw e
-            _events.send(MainEvent.ShowLoadError)
+            installedApps.value = InstalledApps.Failed()
         }
+    }
+
+    fun onInstalledAppsFailureHandled() {
+        installedApps.update { if (it is InstalledApps.Failed) InstalledApps.Failed(handled = true) else it }
     }
 
     fun onAppSelected(packageName: String) {
@@ -99,12 +111,15 @@ class MainViewModel @Inject constructor(
     fun onApkPicked(uri: Uri?) {
         if (uri == null) return
         viewModelScope.launch {
-            val event =
+            apkImport.value =
                 when (val result = processApk(uri)) {
-                    is ApkProcessResult.Success -> MainEvent.NavigateToApkIcon(result.applicationInfo)
-                    is ApkProcessResult.InvalidApk, is ApkProcessResult.Error -> MainEvent.ShowError
+                    is ApkProcessResult.Success -> ApkImport.Imported(result.applicationInfo)
+                    is ApkProcessResult.InvalidApk, is ApkProcessResult.Error -> ApkImport.Invalid
                 }
-            _events.send(event)
         }
+    }
+
+    fun onApkImportHandled(result: ApkImport.Result) {
+        apkImport.update { if (it == result) ApkImport.Idle else it }
     }
 }

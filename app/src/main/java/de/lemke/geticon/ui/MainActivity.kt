@@ -41,7 +41,6 @@ import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
-import de.lemke.commonutils.ui.utils.collectEvents
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.configureCommonUtilsSplashScreen
 import de.lemke.commonutils.ui.utils.onSingleLaunchItemSelected
@@ -110,8 +109,9 @@ class MainActivity :
         )
         initDrawer()
         initAppPicker()
-        collectEvents()
-        collectState(viewModel.installedApps) { binding.appPicker.submitList(it) }
+        collectState(viewModel.installedApps, minActiveState = RESUMED) { if (it is InstalledApps.Failed) onInstalledAppsFailed(it) }
+        collectState(viewModel.apkImport, minActiveState = RESUMED) { if (it is ApkImport.Result) onApkImportResult(it) }
+        collectState(viewModel.installedApps) { renderInstalledApps(it) }
         collectState(viewModel.appLookup, minActiveState = RESUMED) { if (it is AppLookup.Result) onAppLookupResult(it) }
         savedInstanceState?.restoreSearchAndActionMode(onSearchMode = { startSearch() })
         isUIReady = true
@@ -141,22 +141,28 @@ class MainActivity :
             else -> super.onOptionsItemSelected(item)
         }
 
-    private fun collectEvents() {
-        collectEvents(viewModel.events, minActiveState = RESUMED) { event ->
-            when (event) {
-                is MainEvent.NavigateToApkIcon -> {
-                    openIcon(event.applicationInfo)
-                }
-
-                MainEvent.ShowError -> {
-                    toast(commonutilsR.string.commonutils_error_no_valid_file_selected)
-                }
-
-                MainEvent.ShowLoadError -> {
-                    toast(commonutilsR.string.commonutils_error)
-                }
+    private fun renderInstalledApps(installedApps: InstalledApps) {
+        val apps =
+            when (installedApps) {
+                is InstalledApps.Loaded -> installedApps.apps
+                InstalledApps.Loading, is InstalledApps.Failed -> emptyList()
             }
-        }
+        binding.appPicker.submitList(apps)
+    }
+
+    private fun onInstalledAppsFailed(failed: InstalledApps.Failed) {
+        if (failed.handled) return
+        toast(commonutilsR.string.commonutils_error)
+        viewModel.onInstalledAppsFailureHandled()
+    }
+
+    private fun onApkImportResult(result: ApkImport.Result) {
+        val handled =
+            when (result) {
+                is ApkImport.Imported -> openIcon(result.applicationInfo)
+                ApkImport.Invalid -> true.also { toast(commonutilsR.string.commonutils_error_no_valid_file_selected) }
+            }
+        if (handled) viewModel.onApkImportHandled(result)
     }
 
     private fun onAppLookupResult(result: AppLookup.Result) {
