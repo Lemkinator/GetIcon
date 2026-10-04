@@ -51,6 +51,7 @@ import de.lemke.commonutils.ui.utils.onSingleLaunchClick
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationTo
 import de.lemke.commonutils.ui.utils.registerForSingleLaunchResult
 import de.lemke.commonutils.ui.utils.saveBitmapToDirectory
+import de.lemke.commonutils.ui.utils.saveBitmapToUri
 import de.lemke.commonutils.ui.utils.setCustomBackAnimation
 import de.lemke.commonutils.ui.utils.setWindowTransparent
 import de.lemke.commonutils.ui.utils.shareBitmap
@@ -68,9 +69,9 @@ import dev.oneuiproject.oneui.ktx.onProgressChanged
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
@@ -83,9 +84,6 @@ class IconActivity :
     @Inject
     @IoDispatcher
     lateinit var ioDispatcher: CoroutineDispatcher
-
-    @Inject
-    lateinit var pickedDocumentWriter: PickedDocumentWriter
 
     private lateinit var binding: ActivityIconBinding
     private val viewModel: IconViewModel by viewModels()
@@ -151,21 +149,23 @@ class IconActivity :
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun onExportBitmapResult(result: ActivityResult) {
         val document = result.toDocumentPick()
+        val icon = viewModel.state.value.icon
+        val appContext = applicationContext
         lifecycleScope.launch {
-            val saveResult =
-                when (document) {
-                    DocumentPick.Canceled -> BitmapSaveResult.Canceled
-                    DocumentPick.MissingUri -> BitmapSaveResult.WriteFailed
-                    is DocumentPick.Created -> pickedDocumentWriter.write(document.uri, awaitIcon())
+            withContext(NonCancellable) {
+                val saveResult =
+                    when (document) {
+                        DocumentPick.Canceled -> BitmapSaveResult.Canceled
+                        DocumentPick.MissingUri -> BitmapSaveResult.WriteFailed
+                        is DocumentPick.Created -> appContext.saveBitmapToUri(document.uri, icon, createdDocument = true, ioDispatcher)
+                    }
+                when (saveResult) {
+                    is BitmapSaveResult.Finished -> appContext.toast(saveResult)
+                    BitmapSaveResult.Canceled -> Unit
                 }
-            when (saveResult) {
-                is BitmapSaveResult.Finished -> toast(saveResult)
-                BitmapSaveResult.Canceled -> Unit
             }
         }
     }
-
-    private suspend fun awaitIcon(): Bitmap = viewModel.state.mapNotNull { it.icon }.first()
 
     private fun initViews() {
         setCustomBackAnimation(binding.root, inAppReview = settings)

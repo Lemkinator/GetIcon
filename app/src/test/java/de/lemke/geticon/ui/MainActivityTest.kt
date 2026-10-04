@@ -48,7 +48,6 @@ import de.lemke.commonutils.ui.utils.COMMONUTILS_KEY_IS_SEARCH_MODE
 import de.lemke.commonutils.ui.widget.NoEntryView
 import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
-import de.lemke.geticon.di.ApplicationScope
 import de.lemke.geticon.di.DispatchersModule
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
@@ -63,9 +62,7 @@ import io.mockk.unmockkConstructor
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import leakcanary.AppWatcher
 import org.junit.Before
 import org.junit.Rule
@@ -99,11 +96,6 @@ class MainActivityTest {
     @IoDispatcher
     @JvmField
     val ioDispatcher: CoroutineDispatcher = Dispatchers.Main
-
-    @BindValue
-    @ApplicationScope
-    @JvmField
-    val applicationScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     @Inject
     lateinit var settings: SettingsRepository

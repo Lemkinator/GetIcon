@@ -18,14 +18,19 @@ package de.lemke.geticon.ui
 
 import android.app.Activity
 import android.content.ClipboardManager
+import android.content.ContentProvider
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
+import android.os.Bundle
 import android.os.Environment
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -50,7 +55,6 @@ import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.geticon.R
-import de.lemke.geticon.di.ApplicationScope
 import de.lemke.geticon.di.DispatchersModule
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.IconResult
@@ -64,15 +68,13 @@ import io.mockk.verify
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -101,11 +103,6 @@ class IconActivityTest {
     @IoDispatcher
     @JvmField
     val ioDispatcher: CoroutineDispatcher = pausableIoDispatcher
-
-    @BindValue
-    @ApplicationScope
-    @JvmField
-    val applicationScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     @Inject
     lateinit var settings: SettingsRepository
@@ -638,8 +635,7 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_beforeIconIsReady_savesIconOnceReady() {
-        // A canceled initial generation leaves state.icon null, as after process death before IconViewModel regenerates it.
+    fun onExportBitmapResult_afterGenerationFailed_deletesDocumentAndShowsCreateError() {
         every {
             generateIconStub(
                 any<ApplicationInfo>(),
@@ -650,21 +646,17 @@ class IconActivityTest {
                 any<Int>(),
                 any<PackageManager>(),
             )
-        } throws CancellationException("initial generation canceled") andThen testIconResult
-        val document = createPickedDocument()
+        } throws IOException("generation failed")
+        val provider = documentProvider()
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(document))))
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(provider.uri)))
             }
             shadowOf(Looper.getMainLooper()).idle()
-            document.length() shouldBe 0L
-            ShadowToast.shownToastCount() shouldBe 0
-            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(256) }
-            shadowOf(Looper.getMainLooper()).idle()
-            document.readBytes().take(PNG_SIGNATURE.size) shouldBe PNG_SIGNATURE
-            ShadowToast.shownToastCount() shouldBe 1
-            ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
+            provider.document.exists() shouldBe false
+            ShadowToast.shownToastCount() shouldBe 2
+            ShadowToast.getTextOfLatestToast() shouldBe "Error creating file"
         }
     }
 
@@ -697,6 +689,8 @@ class IconActivityTest {
             pausableIoDispatcher.resume()
             shadowOf(Looper.getMainLooper()).idle()
             document.readBytes().take(PNG_SIGNATURE.size) shouldBe PNG_SIGNATURE
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
             }
@@ -923,9 +917,70 @@ class IconActivityTest {
     private fun createPickedDocument(): File =
         File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png").apply { createNewFile() }
 
+    private fun documentProvider(): FakeDocumentProvider =
+        Robolectric
+            .buildContentProvider(FakeDocumentProvider::class.java)
+            .create(DOCUMENTS_AUTHORITY)
+            .get()
+            .apply { document = createPickedDocument() }
+
     companion object {
         private val PNG_SIGNATURE = listOf<Byte>(-119, 80, 78, 71, 13, 10, 26, 10)
         private val testBitmap: Bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
         private val testIconResult = IconResult(bitmap = testBitmap, isAdaptiveIcon = true, hasMaskedAppIcon = true)
     }
+}
+
+private const val DOCUMENTS_AUTHORITY = "de.lemke.geticon.test.documents"
+
+// The hidden DocumentsContract.METHOD_DELETE_DOCUMENT that deleteDocument sends to the provider.
+private const val METHOD_DELETE_DOCUMENT = "android:deleteDocument"
+
+private class FakeDocumentProvider : ContentProvider() {
+    lateinit var document: File
+    val uri: Uri = Uri.parse("content://$DOCUMENTS_AUTHORITY/document/1")
+
+    override fun onCreate() = true
+
+    override fun call(
+        method: String,
+        arg: String?,
+        extras: Bundle?,
+    ): Bundle? {
+        if (method == METHOD_DELETE_DOCUMENT) document.delete()
+        return null
+    }
+
+    override fun openFile(
+        uri: Uri,
+        mode: String,
+    ): ParcelFileDescriptor = ParcelFileDescriptor.open(document, ParcelFileDescriptor.parseMode(mode))
+
+    override fun query(
+        uri: Uri,
+        projection: Array<out String>?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+        sortOrder: String?,
+    ): Cursor? = null
+
+    override fun getType(uri: Uri): String? = null
+
+    override fun insert(
+        uri: Uri,
+        values: ContentValues?,
+    ): Uri? = null
+
+    override fun delete(
+        uri: Uri,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+    ) = 0
+
+    override fun update(
+        uri: Uri,
+        values: ContentValues?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+    ) = 0
 }
