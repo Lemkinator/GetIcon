@@ -88,8 +88,10 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
   to that instance)
 
 DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
-ViewBinding enabled. Activities collect `StateFlow<UiState>` and one-shot
-`Channel<Event>` from their ViewModel via `collectState`/`collectEvents`.
+ViewBinding enabled. ViewModels expose state only: activities collect each `StateFlow` via
+`collectState`. A one-off result (toast, finish, launch) is a sealed state such as `IconExport`,
+`IconExit`, `AppLookup` or `ApkImport`. The activity acts on it and reports it through `on…Handled()`.
+`ArchitectureTest` bans `Channel`/`SharedFlow` in ViewModel files and `collectEvents` in `ui`.
 
 **Multi-activity (not single-activity).** OneUI (sesl-androidx) is activity-oriented;
 single-activity + Navigation Component was tried and reverted (buggy menu, leaky
