@@ -83,7 +83,7 @@ class MainActivity :
     private val viewModel: MainViewModel by viewModels()
 
     private val pickApkActivityResultLauncher = registerForSingleLaunchResult(GetContent()) { viewModel.onApkPicked(it) }
-    private var appTransition: AppTransition? = null
+    private var transitionView: View? = null
 
     @VisibleForTesting(otherwise = PRIVATE)
     internal var isUIReady = false
@@ -125,7 +125,7 @@ class MainActivity :
 
     override fun onStop() {
         super.onStop()
-        appTransition = null
+        transitionView = null
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -162,11 +162,11 @@ class MainActivity :
     private fun onAppLookupResult(result: AppLookup.Result) {
         val handled =
             when (result) {
-                is AppLookup.Found -> openIcon(result.applicationInfo, appTransition?.viewFor(result.applicationInfo.packageName))
+                is AppLookup.Found -> openIcon(result.applicationInfo, transitionView)
                 AppLookup.NotFound -> true.also { toast(commonutilsR.string.commonutils_error_app_not_found) }
             }
         if (!handled) return
-        appTransition = null
+        transitionView = null
         viewModel.onAppLookupHandled(result)
     }
 
@@ -244,16 +244,10 @@ class MainActivity :
     ): Boolean {
         hideSoftInput()
         singleLaunch {
-            appTransition = view?.let { AppTransition(appInfo.packageName, it) }
+            if (viewModel.appLookup.value == AppLookup.Running) return@singleLaunch
+            transitionView = view
             viewModel.onAppSelected(appInfo.packageName)
         }
         return true
     }
-}
-
-private class AppTransition(
-    private val packageName: String,
-    private val view: View,
-) {
-    fun viewFor(packageName: String): View? = view.takeIf { packageName == this.packageName }
 }

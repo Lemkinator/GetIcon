@@ -463,7 +463,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_secondAppTappedDuringLookup_opensFirstAppWithoutTransition() {
+    fun onAppPickerItemClick_secondAppTappedDuringLookup_opensFirstAppWithItsTransition() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             lateinit var secondView: View
             scenario.onActivity { activity ->
@@ -484,7 +484,7 @@ class MainActivityTest {
                         ApplicationInfo::class.java,
                     )
                 applicationInfo?.packageName shouldBe activity.packageName
-                activity.findViewById<View>(R.id.appPicker).transitionName shouldBe null
+                activity.findViewById<View>(R.id.appPicker).transitionName shouldBe "commonUtilsActivityTransitionName"
             }
             secondView.transitionName shouldBe null
             ShadowToast.shownToastCount() shouldBe 0
