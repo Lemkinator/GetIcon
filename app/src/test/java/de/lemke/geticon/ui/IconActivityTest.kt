@@ -56,6 +56,7 @@ import de.lemke.geticon.domain.IconResult
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldMatch
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -243,6 +244,33 @@ class IconActivityTest {
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).listFiles()?.size shouldBe 1
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Image saved: Downloads"
+        }
+    }
+
+    @Test
+    @Config(sdk = [29])
+    fun saveAsImage_api29WithStoredDownloads_savesThroughDocumentPicker() {
+        settings.imageSaveLocation = SaveLocation.DOWNLOADS
+        val file = File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png")
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val shadowActivity = shadowOf(activity)
+                val picker = shadowActivity.nextStartedActivityForResult.intent
+                picker.action shouldBe Intent.ACTION_CREATE_DOCUMENT
+                picker.getStringExtra(Intent.EXTRA_TITLE)!! shouldMatch """de_lemke_geticon_debug_mask_\d{4}(_\d{2}){5}\.png"""
+                shadowActivity.receiveResult(picker, Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            downloads.list().orEmpty().toList() shouldBe emptyList()
+            file.length() shouldBeGreaterThan 0L
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
         }
     }
 
