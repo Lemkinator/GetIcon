@@ -69,6 +69,8 @@ import dev.oneuiproject.oneui.ktx.onProgressChanged
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import de.lemke.commonutils.R as commonutilsR
 
@@ -147,13 +149,12 @@ class IconActivity :
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun onExportBitmapResult(result: ActivityResult) {
         val document = result.toDocumentPick()
-        val icon = viewModel.state.value.icon
         lifecycleScope.launch {
             val saveResult =
                 when (document) {
                     DocumentPick.Canceled -> BitmapSaveResult.Canceled
                     DocumentPick.MissingUri -> BitmapSaveResult.WriteFailed
-                    is DocumentPick.Created -> saveBitmapToUri(document.uri, icon, createdDocument = true, ioDispatcher)
+                    is DocumentPick.Created -> saveBitmapToUri(document.uri, awaitIcon(), createdDocument = true, ioDispatcher)
                 }
             when (saveResult) {
                 is BitmapSaveResult.Finished -> toast(saveResult)
@@ -161,6 +162,8 @@ class IconActivity :
             }
         }
     }
+
+    private suspend fun awaitIcon(): Bitmap = viewModel.state.mapNotNull { it.icon }.first()
 
     private fun initViews() {
         setCustomBackAnimation(binding.root, inAppReview = settings)

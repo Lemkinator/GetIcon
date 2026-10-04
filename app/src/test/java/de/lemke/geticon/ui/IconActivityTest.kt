@@ -63,6 +63,7 @@ import io.mockk.verify
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.junit.Before
@@ -629,15 +630,33 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_nullIcon_showsWriteError() {
-        // No appInfo → loadInitialState never runs, so state.icon stays null.
-        launchWithoutAppInfo().use { scenario ->
+    fun onExportBitmapResult_beforeIconIsReady_savesIconOnceReady() {
+        // A canceled initial generation leaves state.icon null, as after process death before IconViewModel regenerates it.
+        every {
+            generateIconStub(
+                any<ApplicationInfo>(),
+                any<Int>(),
+                any<Boolean>(),
+                any<Boolean>(),
+                any<Int>(),
+                any<Int>(),
+                any<PackageManager>(),
+            )
+        } throws CancellationException("initial generation canceled") andThen testIconResult
+        val document = createPickedDocument()
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                val file = File(activity.cacheDir, "icon_export_test.png")
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file))))
+                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(document))))
             }
             shadowOf(Looper.getMainLooper()).idle()
-            ShadowToast.getTextOfLatestToast() shouldBe "Error creating file"
+            document.length() shouldBe 0L
+            ShadowToast.shownToastCount() shouldBe 0
+            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(256) }
+            shadowOf(Looper.getMainLooper()).idle()
+            document.readBytes().take(PNG_SIGNATURE.size) shouldBe PNG_SIGNATURE
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
         }
     }
 
@@ -892,7 +911,11 @@ class IconActivityTest {
         }
     }
 
+    private fun createPickedDocument(): File =
+        File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png").apply { createNewFile() }
+
     companion object {
+        private val PNG_SIGNATURE = listOf<Byte>(-119, 80, 78, 71, 13, 10, 26, 10)
         private val testBitmap: Bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
         private val testIconResult = IconResult(bitmap = testBitmap, isAdaptiveIcon = true, hasMaskedAppIcon = true)
     }
