@@ -320,7 +320,7 @@ class IconActivityTest {
                 shadowActivity.nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
                 shadowActivity.nextStartedActivity shouldBe null
                 ViewModelProvider(activity)[IconViewModel::class.java]
-                    .state.value.export
+                    .export.value
                     .shouldBeInstanceOf<IconExport.Share>()
             }
             scenario.moveToState(Lifecycle.State.STARTED)
@@ -328,7 +328,7 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.export shouldBe IconExport.Idle
+                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe IconExport.Idle
             }
         }
     }
@@ -350,7 +350,7 @@ class IconActivityTest {
             ShadowToast.shownToastCount() shouldBe 1
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivityForResult shouldBe null
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.export shouldBe IconExport.Idle
+                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe IconExport.Idle
             }
         }
     }

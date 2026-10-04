@@ -61,16 +61,13 @@ data class IconUiState(
     val recentForegroundColors: List<Int> = listOf(DEFAULT_FOREGROUND_COLOR),
     val recentBackgroundColors: List<Int> = listOf(DEFAULT_BACKGROUND_COLOR),
     val isLoading: Boolean = true,
-    val export: IconExport = IconExport.Idle,
 )
 
 /** A save, copy or share of the icon. The activity acts on a [Result] and then reports it handled. */
 sealed interface IconExport {
-    sealed interface Settled : IconExport
+    sealed interface Result : IconExport
 
-    sealed interface Result : Settled
-
-    data object Idle : Settled
+    data object Idle : IconExport
 
     data object Running : IconExport
 
@@ -113,6 +110,9 @@ class IconViewModel @Inject constructor(
 
     val state: StateFlow<IconUiState>
         field = MutableStateFlow(IconUiState())
+
+    val export: StateFlow<IconExport>
+        field = MutableStateFlow<IconExport>(IconExport.Idle)
 
     private val _events = Channel<IconEvent>(Channel.BUFFERED)
     val events: Flow<IconEvent> = _events.receiveAsFlow()
@@ -224,7 +224,7 @@ class IconViewModel @Inject constructor(
     fun onDocumentPicked(pick: DocumentPick) {
         when (pick) {
             DocumentPick.Canceled -> Unit
-            DocumentPick.MissingUri -> state.update { it.copy(export = IconExport.SaveFinished(BitmapSaveResult.WriteFailed)) }
+            DocumentPick.MissingUri -> export.value = IconExport.SaveFinished(BitmapSaveResult.WriteFailed)
             is DocumentPick.Created -> launchExport { exporter.saveToCreatedDocument(pick.uri, state.value.icon).toExport() }
         }
     }
@@ -240,26 +240,23 @@ class IconViewModel @Inject constructor(
             when (val file = exporter.createShareFile(icon)) {
                 is BitmapShareFile.Written -> IconExport.Share(file)
                 BitmapShareFile.Failed -> IconExport.ShareFailed
-                BitmapShareFile.Dropped -> IconExport.Idle
+                BitmapShareFile.Dropped -> null
             }
         }
     }
 
     fun onExportHandled(result: IconExport.Result) {
-        state.update { if (it.export == result) it.copy(export = IconExport.Idle) else it }
+        export.update { if (it == result) IconExport.Idle else it }
     }
 
-    private fun startExport(work: suspend () -> IconExport.Settled) {
-        if (state.value.export == IconExport.Running) return
+    private fun startExport(work: suspend () -> IconExport.Result?) {
+        if (export.value == IconExport.Running) return
         launchExport(work)
     }
 
-    private fun launchExport(work: suspend () -> IconExport.Settled) {
-        state.update { it.copy(export = IconExport.Running) }
-        viewModelScope.launch {
-            val settled = work()
-            state.update { it.copy(export = settled) }
-        }
+    private fun launchExport(work: suspend () -> IconExport.Result?) {
+        export.value = IconExport.Running
+        viewModelScope.launch { export.value = work() ?: IconExport.Idle }
     }
 
     // generateIcon runs synchronously on Main (~5 ms). Dispatching to Default caused slider jank:
@@ -290,10 +287,10 @@ class IconViewModel @Inject constructor(
         }
     }
 
-    private fun BitmapSaveResult.UriResult.toExport(): IconExport.Settled =
+    private fun BitmapSaveResult.UriResult.toExport(): IconExport.Result? =
         when (this) {
             is BitmapSaveResult.Finished -> IconExport.SaveFinished(this)
-            BitmapSaveResult.Canceled -> IconExport.Idle
+            BitmapSaveResult.Canceled -> null
         }
 
     private fun buildFileName(

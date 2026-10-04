@@ -30,8 +30,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle.State.RESUMED
-import androidx.lifecycle.flowWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.picker3.app.SeslColorPickerDialog
 import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
@@ -63,11 +61,6 @@ import dev.oneuiproject.oneui.ktx.hideSoftInput
 import dev.oneuiproject.oneui.ktx.onProgressChanged
 import java.util.Locale
 import javax.inject.Inject
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import de.lemke.commonutils.R as commonutilsR
 
 @AndroidEntryPoint
@@ -92,15 +85,16 @@ class IconActivity :
         setContentView(binding.root)
         setWindowTransparent(true)
         initViews()
-        collectState()
-        collectExport()
+        collectState(viewModel.state) { renderState(it) }
+        collectState(viewModel.export) { renderExportControls(it) }
+        collectState(viewModel.export, minActiveState = RESUMED) { if (it is IconExport.Result) onExportResult(it) }
         collectEvents()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val enabled = viewModel.state.value.export != IconExport.Running
+        val enabled = viewModel.export.value != IconExport.Running
         menu.findItem(R.id.menu_item_icon_save_as_image).isEnabled = enabled
         menu.findItem(R.id.menu_item_icon_share).isEnabled = enabled
         return super.onPrepareOptionsMenu(menu)
@@ -140,26 +134,6 @@ class IconActivity :
         binding.sizeSeekbar.onProgressChanged { onSeekbarProgressChanged(it) }
         binding.colorButtonBackground.onSingleLaunchClick { showColorPicker(isBackground = true) }
         binding.colorButtonForeground.onSingleLaunchClick { showColorPicker(isBackground = false) }
-    }
-
-    private fun collectState() {
-        collectState(viewModel.state) { renderState(it) }
-        viewModel.state
-            .map { it.export != IconExport.Running }
-            .distinctUntilChanged()
-            .flowWithLifecycle(lifecycle)
-            .onEach { renderExportControls(enabled = it) }
-            .launchIn(lifecycleScope)
-    }
-
-    private fun collectExport() {
-        viewModel.state
-            .map { it.export }
-            .distinctUntilChanged()
-            .filterIsInstance<IconExport.Result>()
-            .flowWithLifecycle(lifecycle, RESUMED)
-            .onEach { onExportResult(it) }
-            .launchIn(lifecycleScope)
     }
 
     private fun onExportResult(result: IconExport.Result) {
@@ -234,8 +208,8 @@ class IconActivity :
         }
     }
 
-    private fun renderExportControls(enabled: Boolean) {
-        binding.icon.isLongClickable = enabled
+    private fun renderExportControls(export: IconExport) {
+        binding.icon.isLongClickable = export != IconExport.Running
         invalidateOptionsMenu()
     }
 
