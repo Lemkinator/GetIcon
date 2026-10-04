@@ -334,6 +334,28 @@ class IconActivityTest {
     }
 
     @Test
+    fun saveAsImage_noDocumentPicker_showsSavingErrorOnceAcrossResume() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            shadowOf(ApplicationProvider.getApplicationContext<HiltTestApplication>()).checkActivities(true)
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Error: Saving content is not supported on your device."
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 1
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivityForResult shouldBe null
+                ViewModelProvider(activity)[IconViewModel::class.java].state.value.export shouldBe IconExport.Idle
+            }
+        }
+    }
+
+    @Test
     fun exportControls_disabledWhileWorkRuns() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()

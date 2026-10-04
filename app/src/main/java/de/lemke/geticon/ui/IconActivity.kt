@@ -166,7 +166,7 @@ class IconActivity :
         val handled =
             when (result) {
                 is IconExport.OpenPicker -> {
-                    exportBitmap(result.fileName, exportBitmapResultLauncher)
+                    true.also { exportBitmap(result.fileName, exportBitmapResultLauncher) }
                 }
 
                 is IconExport.Share -> {
