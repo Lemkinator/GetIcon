@@ -71,7 +71,7 @@ class ArchitectureTest : ShouldSpec() {
                 .classes()
                 .filter { it.name.endsWith("ViewModel") }
                 .assertTrue(testName = this.testCase.name.toString()) {
-                    it.hasParent { parent -> parent.name == "ViewModel" }
+                    it.hasParent { parent -> parent.name in VIEW_MODEL_BASE_CLASSES }
                 }
         }
         should("ViewModel files expose state only, without Channel or SharedFlow events") {
@@ -91,6 +91,8 @@ class ArchitectureTest : ShouldSpec() {
             }
             usesEventStreams(
                 """
+                import kotlinx.coroutines.channels.BufferOverflow
+                import kotlinx.coroutines.channels.ProducerScope
                 import kotlinx.coroutines.channels.awaitClose
                 import kotlinx.coroutines.flow.MutableStateFlow
                 import kotlinx.coroutines.flow.callbackFlow
@@ -98,6 +100,12 @@ class ArchitectureTest : ShouldSpec() {
                     /** Mirrors no Channel( or MutableSharedFlow( */
                     val state = MutableStateFlow(0)
                     val ticks = callbackFlow<Int> { awaitClose { } }
+                    val label = "Channel( and MutableSharedFlow<Int>( and .shareIn("
+                    val overflow = BufferOverflow.DROP_OLDEST
+                    fun produce(scope: ProducerScope<Int>) = scope.trySend(0)
+                    init {
+                        val note = "receiveAsFlow( // Channel("
+                    }
                 }
                 """.trimIndent(),
             ) shouldBe false
@@ -112,8 +120,16 @@ class ArchitectureTest : ShouldSpec() {
                 "val events: Channel<Int> = TODO()",
                 "val events: StateFlow<Int>\n        field = kotlinx.coroutines.flow.MutableSharedFlow<Int>()",
                 "val events by lazy { kotlinx.coroutines.channels.Channel<Int>() }",
-            ).forEach { property ->
-                withClue(property) { usesEventStreams("class ProbeViewModel : ViewModel() {\n    $property\n}\n") shouldBe true }
+                "val label = \"\" + Channel<Int>()",
+                "fun events() = Channel<Int>()",
+                "fun events() = state.shareIn(viewModelScope, SharingStarted.Eagerly)",
+                "fun events(): SharedFlow<Int> = TODO()",
+                "fun events(): kotlinx.coroutines.channels.ReceiveChannel<Int>? = null",
+                "fun send() {\n        val events: SendChannel<Int> = TODO()\n    }",
+                "init {\n        events = kotlinx.coroutines.flow.MutableSharedFlow<Int>()\n    }",
+                "init {\n        val events: Channel<Int> = TODO()\n    }",
+            ).forEach { member ->
+                withClue(member) { usesEventStreams("class ProbeViewModel : ViewModel() {\n    $member\n}\n") shouldBe true }
             }
             BANNED_EVENT_IMPORTS.forEach { banned ->
                 withClue(banned) { usesEventStreams("import $banned\nclass ProbeViewModel : ViewModel()\n") shouldBe true }
@@ -158,7 +174,7 @@ private val BANNED_CHANNEL_TYPES = setOf("Channel", "SendChannel", "ReceiveChann
 private val EVENT_STREAM_CALL =
     Regex("""\b(Channel|MutableSharedFlow)\s*(<.*>)?\s*\(|\.(shareIn|receiveAsFlow|consumeAsFlow)\s*\(""")
 
-private val COMMENT = Regex("""/\*.*?\*/|//[^\n]*""", RegexOption.DOT_MATCHES_ALL)
+private val COMMENT_OR_STRING = Regex(""""{3}.*?"{3}|"(?:\\.|[^"\\\n])*"|/\*.*?\*/|//[^\n]*""", RegexOption.DOT_MATCHES_ALL)
 
 private fun KoFileDeclaration.declaresViewModel(): Boolean =
     classes().any { koClass -> koClass.hasParent { it.name in VIEW_MODEL_BASE_CLASSES } }
@@ -172,15 +188,21 @@ private fun KoFileDeclaration.usesEventStreams(): Boolean =
                 .trim()
         path in BANNED_EVENT_IMPORTS || path.endsWith("SharedFlow")
     } ||
-        properties().any { property ->
-            val declaredType =
-                property.type
-                    ?.text
-                    ?.substringBefore('<')
-                    ?.removeSuffix("?")
-                    ?.trim()
-                    ?.substringAfterLast('.')
-            declaredType in BANNED_CHANNEL_TYPES ||
-                declaredType?.endsWith("SharedFlow") == true ||
-                EVENT_STREAM_CALL.containsMatchIn(property.text.replace(COMMENT, ""))
-        }
+        declaredTypes().any { type ->
+            val name =
+                type
+                    .substringBefore('<')
+                    .removeSuffix("?")
+                    .trim()
+                    .substringAfterLast('.')
+            name in BANNED_CHANNEL_TYPES || name.endsWith("SharedFlow")
+        } ||
+        EVENT_STREAM_CALL.containsMatchIn(text.replace(COMMENT_OR_STRING, ""))
+
+private fun KoFileDeclaration.declaredTypes(): List<String> {
+    val functions = functions()
+    val variables = functions.flatMap { it.variables } + classes().flatMap { it.initBlocks }.flatMap { it.variables }
+    return properties().mapNotNull { it.type?.text } +
+        functions.mapNotNull { it.returnType?.text } +
+        variables.mapNotNull { it.type?.text }
+}
