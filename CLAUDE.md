@@ -90,6 +90,10 @@ DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`)
 ViewBinding enabled. Activities collect `StateFlow<UiState>` and one-shot
 `Channel<Event>` from their ViewModel via `collectState`/`collectEvents`.
 
+**Tap-driven async work runs in the Activity, never in a ViewModel.** Save, copy and share run through
+the launch latch (`singleLaunchSuspending`), which drops every other tap until the first one's `then`
+returns. The IO dispatcher comes in by field injection (`@Inject @IoDispatcher lateinit var ioDispatcher`).
+
 **Multi-activity (not single-activity).** OneUI (sesl-androidx) is activity-oriented;
 single-activity + Navigation Component was tried and reverted (buggy menu, leaky
 fragment transitions needing reflection, OneUI screens authored as activities).
