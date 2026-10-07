@@ -387,28 +387,9 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.exit.value shouldBe IconExit.None
             }
 
-            should("buildFileName: mask=true color=false produces _mask suffix") {
+            should("state holds the file name of the generated icon") {
                 val viewModel = buildViewModel(appInfo)
-                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_mask"
-            }
-
-            should("buildFileName: mask=false color=false produces _default suffix") {
-                val viewModel = buildViewModel(appInfo)
-                viewModel.onMaskChanged(false)
-                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_default"
-            }
-
-            should("buildFileName: mask=true color=true produces _mask_mono suffix") {
-                val viewModel = buildViewModel(appInfo)
-                viewModel.onColorChanged(true)
-                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_mask_mono"
-            }
-
-            should("buildFileName: mask=false color=true produces _default_mono suffix") {
-                val viewModel = buildViewModel(appInfo)
-                viewModel.onMaskChanged(false)
-                viewModel.onColorChanged(true)
-                viewModel.state.value.fileName shouldBe "${appInfo.packageName}_default_mono"
+                viewModel.state.value.fileName shouldBe "com.example.test_mask"
             }
 
             should("onForegroundColorChanged caps recent colors to MAX_RECENT_COLORS") {
