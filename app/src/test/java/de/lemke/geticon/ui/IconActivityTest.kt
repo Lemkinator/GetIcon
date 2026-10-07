@@ -21,8 +21,6 @@ import android.content.ClipboardManager
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -59,18 +57,17 @@ import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.geticon.R
+import de.lemke.geticon.data.FakeIconRenderer
+import de.lemke.geticon.data.IconRenderer
 import de.lemke.geticon.di.DispatchersModule
-import de.lemke.geticon.domain.GenerateIconUseCase
-import de.lemke.geticon.domain.IconResult
+import de.lemke.geticon.di.IconRendererModule
+import de.lemke.geticon.domain.model.IconKind
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldMatch
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
@@ -94,14 +91,16 @@ import de.lemke.commonutils.R as commonutilsR
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36], shadows = [ShadowFileProvider::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@UninstallModules(DispatchersModule::class)
+@UninstallModules(DispatchersModule::class, IconRendererModule::class)
 class IconActivityTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
+    private val renderer = FakeIconRenderer(testBitmap)
+
     @BindValue
     @JvmField
-    val generateIconStub: GenerateIconUseCase = mockk()
+    val iconRenderer: IconRenderer = renderer
 
     private val pausableIoDispatcher = PausableDispatcher(Dispatchers.Main)
 
@@ -116,17 +115,6 @@ class IconActivityTest {
     @Before
     fun setup() {
         hiltRule.inject()
-        every {
-            generateIconStub(
-                any<ApplicationInfo>(),
-                any<Int>(),
-                any<Boolean>(),
-                any<Boolean>(),
-                any<Int>(),
-                any<Int>(),
-                any<PackageManager>(),
-            )
-        } returns testIconResult
     }
 
     private fun appInfoIntent(): Intent {
@@ -157,7 +145,7 @@ class IconActivityTest {
 
     @Test
     fun exit_generateFailed_showsGenerationErrorAndFinishes() {
-        stubGenerateIconFailure()
+        failIconRendering()
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
@@ -175,7 +163,7 @@ class IconActivityTest {
         try {
             shadowOf(Looper.getMainLooper()).idle()
             controller.pause().stop()
-            stubGenerateIconFailure()
+            failIconRendering()
             val stopped = controller.get()
             ViewModelProvider(stopped)[IconViewModel::class.java].onMaskChanged(false)
             shadowOf(Looper.getMainLooper()).idle()
@@ -202,7 +190,7 @@ class IconActivityTest {
         try {
             shadowOf(Looper.getMainLooper()).idle()
             controller.pause()
-            stubGenerateIconFailure()
+            failIconRendering()
             val activity = controller.get()
             ViewModelProvider(activity)[IconViewModel::class.java].onMaskChanged(false)
             shadowOf(Looper.getMainLooper()).idle()
@@ -220,18 +208,8 @@ class IconActivityTest {
         }
     }
 
-    private fun stubGenerateIconFailure() {
-        every {
-            generateIconStub(
-                any<ApplicationInfo>(),
-                any<Int>(),
-                any<Boolean>(),
-                any<Boolean>(),
-                any<Int>(),
-                any<Int>(),
-                any<PackageManager>(),
-            )
-        } throws IOException("test")
+    private fun failIconRendering() {
+        renderer.failure = IOException("test")
     }
 
     @Test
@@ -530,7 +508,8 @@ class IconActivityTest {
             }
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.maskEnabled shouldBe false
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.maskEnabled shouldBe false
             }
         }
     }
@@ -542,37 +521,29 @@ class IconActivityTest {
             onView(withId(R.id.color_checkbox)).perform(click())
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.colorEnabled shouldBe true
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.colorEnabled shouldBe true
             }
         }
     }
 
     @Test
     fun colorCheckbox_programmaticUncheck_doesNotCallViewModel() {
-        // generateIconStub returns isAdaptiveIcon=false so regenerateIcon produces a state
+        // The renderer reports a MASKABLE icon so regenerateIcon produces a state
         // where colorCheckbox.isChecked would be set from true→false inside renderState.
-        every {
-            generateIconStub(
-                any<ApplicationInfo>(),
-                any<Int>(),
-                any<Boolean>(),
-                any<Boolean>(),
-                any<Int>(),
-                any<Int>(),
-                any<PackageManager>(),
-            )
-        } returns testIconResult.copy(isAdaptiveIcon = false)
+        renderer.kind = IconKind.MASKABLE
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 // performClick() fires OnCheckedChangeListener (isRendering=false) → onColorChanged(true).
-                // regenerateIcon runs with colorEnabled=true, isAdaptiveIcon=false from stub.
+                // regenerateIcon runs with colorEnabled=true and the MASKABLE kind from the renderer.
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
-            // renderState: colorCheckbox.isChecked = colorEnabled && isAdaptiveIcon = true && false = false
+            // renderState: colorCheckbox.isChecked = colorEnabled && kind.canTint = true && false = false
             // → changes from true→false while isRendering=true → listener fires with isRendering=true (skips body).
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.colorEnabled shouldBe true
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.colorEnabled shouldBe true
                 activity.findViewById<CheckBox>(R.id.color_checkbox).isChecked shouldBe false
                 listOf(R.id.colorButtonBackground, R.id.colorButtonForeground).forEach { id ->
                     val button = activity.findViewById<Button>(id)
@@ -673,7 +644,8 @@ class IconActivityTest {
             onView(withId(R.id.size_edittext)).perform(replaceText("256"), pressImeActionButton())
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 256
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.size shouldBe 256
             }
         }
     }
@@ -699,7 +671,8 @@ class IconActivityTest {
             onView(withId(R.id.size_edittext)).perform(replaceText("٢٥٦"), pressImeActionButton())
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 256
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.size shouldBe 256
             }
         }
     }
@@ -716,7 +689,8 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٥١٢"
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 512
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.size shouldBe 512
             }
         }
     }
@@ -730,7 +704,8 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٢٥٦"
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 256
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.size shouldBe 256
             }
         }
     }
@@ -747,7 +722,8 @@ class IconActivityTest {
                 val field = activity.findViewById<EditText>(R.id.size_edittext)
                 field.text.toString() shouldBe "1024"
                 field.selectionStart shouldBe 4
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 1024
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.size shouldBe 1024
             }
         }
     }
@@ -762,7 +738,8 @@ class IconActivityTest {
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "16"
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 16
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.size shouldBe 16
             }
         }
     }
@@ -779,7 +756,8 @@ class IconActivityTest {
                 val field = activity.findViewById<EditText>(R.id.size_edittext)
                 field.text.toString() shouldBe "512"
                 field.selectionStart shouldBe 3
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 512
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.size shouldBe 512
             }
         }
     }
@@ -791,7 +769,8 @@ class IconActivityTest {
             onView(withId(R.id.size_edittext)).perform(replaceText("abc"), pressImeActionButton())
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 512
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.size shouldBe 512
             }
         }
     }
@@ -805,9 +784,10 @@ class IconActivityTest {
                 activity.onSeekbarProgressChanged(100) // same size → early return (no-op)
             }
             scenario.onActivity { activity ->
-                ViewModelProvider(activity)[IconViewModel::class.java].state.value.size shouldBe 100
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .state.value.style.size shouldBe 100
             }
-            verify(exactly = 1) { generateIconStub(any(), 100, any(), any(), any(), any(), any()) }
+            renderer.renders.count { it.style.size == 100 } shouldBe 1
         }
     }
 
@@ -843,17 +823,7 @@ class IconActivityTest {
 
     @Test
     fun onExportBitmapResult_afterGenerationFailed_deletesDocumentAndShowsCreateError() {
-        every {
-            generateIconStub(
-                any<ApplicationInfo>(),
-                any<Int>(),
-                any<Boolean>(),
-                any<Boolean>(),
-                any<Int>(),
-                any<Int>(),
-                any<PackageManager>(),
-            )
-        } throws IOException("generation failed")
+        renderer.failure = IOException("generation failed")
         val provider = documentProvider()
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
@@ -954,7 +924,7 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 activity.onColorPicked(Color.RED, true)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
-                state.backgroundColor shouldBe Color.RED
+                state.style.backgroundColor shouldBe Color.RED
                 state.recentBackgroundColors.first() shouldBe Color.RED
             }
         }
@@ -967,7 +937,7 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 activity.onColorPicked(Color.BLUE, false)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
-                state.foregroundColor shouldBe Color.BLUE
+                state.style.foregroundColor shouldBe Color.BLUE
                 state.recentForegroundColors.first() shouldBe Color.BLUE
             }
         }
@@ -1155,7 +1125,6 @@ class IconActivityTest {
     companion object {
         private val PNG_SIGNATURE = listOf<Byte>(-119, 80, 78, 71, 13, 10, 26, 10)
         private val testBitmap: Bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
-        private val testIconResult = IconResult(bitmap = testBitmap, isAdaptiveIcon = true, hasMaskedAppIcon = true)
     }
 }
 

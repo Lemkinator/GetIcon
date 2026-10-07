@@ -14,35 +14,33 @@
  * limitations under the License.
  */
 
-package de.lemke.geticon.domain
+package de.lemke.geticon.data
 
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
-import de.lemke.geticon.data.IconRenderer
 import de.lemke.geticon.domain.model.IconKind
 import de.lemke.geticon.domain.model.IconStyle
-import javax.inject.Inject
+import de.lemke.geticon.domain.model.RenderedIcon
 
-data class GeneratedIcon(
-    val bitmap: Bitmap,
-    val kind: IconKind,
-    val fileName: String,
-)
+/** Renders every icon as [bitmap] of [kind], or throws [failure] once set, and records each render. */
+internal class FakeIconRenderer(
+    private val bitmap: Bitmap,
+) : IconRenderer {
+    var kind: IconKind = IconKind.ADAPTIVE
+    var failure: Throwable? = null
+    val renders = mutableListOf<Render>()
 
-class GenerateIconUseCase @Inject constructor(
-    private val renderer: IconRenderer,
-) {
-    /** Renders the icon of [applicationInfo] in [style] and names the file it exports to. */
-    operator fun invoke(
+    override fun render(
         applicationInfo: ApplicationInfo,
         style: IconStyle,
-    ): GeneratedIcon {
-        val rendered = renderer.render(applicationInfo, style)
-        return GeneratedIcon(rendered.bitmap, rendered.kind, fileName(applicationInfo.packageName, style))
+    ): RenderedIcon {
+        renders += Render(applicationInfo, style)
+        failure?.let { throw it }
+        return RenderedIcon(bitmap, kind)
     }
 
-    private fun fileName(
-        packageName: String,
-        style: IconStyle,
-    ): String = "${packageName}_${if (style.maskEnabled) "mask" else "default"}${if (style.colorEnabled) "_mono" else ""}"
+    data class Render(
+        val applicationInfo: ApplicationInfo,
+        val style: IconStyle,
+    )
 }

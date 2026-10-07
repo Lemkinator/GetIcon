@@ -29,18 +29,19 @@ import de.lemke.commonutils.data.FakeSharedPreferences
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
+import de.lemke.geticon.data.FakeIconRenderer
+import de.lemke.geticon.data.FakeIconRenderer.Render
 import de.lemke.geticon.data.UserSettings
-import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
-import de.lemke.geticon.domain.IconResult
+import de.lemke.geticon.domain.model.IconKind
+import de.lemke.geticon.domain.model.IconStyle
 import de.lemke.geticon.ui.FakeIconExporter.Call
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -49,7 +50,6 @@ import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.first
 
 private fun IconViewModel.triggerOnCleared() {
     ViewModelStore().also { it.put("vm", this) }.clear()
@@ -61,20 +61,26 @@ class IconViewModelTest : ShouldSpec(
         val mockPackageManager = mockk<PackageManager>(relaxed = true)
         lateinit var userSettings: UserSettings
         lateinit var exporter: FakeIconExporter
-        val generateIcon = mockk<GenerateIconUseCase>()
+        lateinit var renderer: FakeIconRenderer
 
-        val defaultIconSize = DEFAULT_ICON_SIZE
         val defaultForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
         val defaultBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
-        val mockIconResult = IconResult(bitmap = mockk<Bitmap>(relaxed = true), isAdaptiveIcon = true, hasMaskedAppIcon = false)
+        val icon = mockk<Bitmap>()
+        val defaultStyle =
+            IconStyle(
+                size = 512,
+                maskEnabled = true,
+                colorEnabled = false,
+                foregroundColor = -1,
+                backgroundColor = 0xFF0381FE.toInt(),
+            )
 
         beforeEach {
-            clearMocks(generateIcon)
             every { mockContext.packageManager } returns mockPackageManager
             every { mockContext.cacheDir } returns File(System.getProperty("java.io.tmpdir") ?: "/tmp")
             userSettings = UserSettings(FakeSharedPreferences())
             exporter = FakeIconExporter()
-            every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } returns mockIconResult
+            renderer = FakeIconRenderer(icon)
         }
 
         fun buildViewModel(
@@ -87,7 +93,7 @@ class IconViewModelTest : ShouldSpec(
                 } else {
                     SavedStateHandle()
                 }
-            return IconViewModel(mockContext, handle, settings, generateIcon, exporter)
+            return IconViewModel(mockContext, handle, settings, GenerateIconUseCase(renderer), exporter)
         }
 
         context("null applicationInfo") {
@@ -120,10 +126,10 @@ class IconViewModelTest : ShouldSpec(
                 verify(exactly = 0) { spyPreferences.getString(any(), any()) }
             }
 
-            should("onMaskChanged does not call generateIcon when applicationInfo is null") {
+            should("onMaskChanged renders nothing when applicationInfo is null") {
                 val viewModel = buildViewModel(appInfo = null)
                 viewModel.onMaskChanged(false)
-                verify(exactly = 0) { generateIcon(any(), any(), any(), any(), any(), any(), any()) }
+                renderer.renders shouldBe emptyList()
             }
 
             should("onCleared does nothing when applicationInfo is null") {
@@ -143,24 +149,17 @@ class IconViewModelTest : ShouldSpec(
         context("valid applicationInfo") {
             val appInfo = mockk<ApplicationInfo>(relaxed = true).also { it.packageName = "com.example.test" }
 
-            should("load initial state from userSettings") {
+            should("load the initial style from userSettings and render the app in it") {
                 val viewModel = buildViewModel(appInfo)
-                withClue("size should match userSettings.iconSize") {
-                    viewModel.state.value.size shouldBe defaultIconSize
-                }
-                withClue("maskEnabled should match userSettings.maskEnabled") {
-                    viewModel.state.value.maskEnabled shouldBe userSettings.maskEnabled
-                }
-                withClue("colorEnabled should match userSettings.colorEnabled") {
-                    viewModel.state.value.colorEnabled shouldBe userSettings.colorEnabled
-                }
+                viewModel.state.value.style shouldBe defaultStyle
+                renderer.renders shouldBe listOf(Render(appInfo, defaultStyle))
             }
 
-            should("set isAdaptiveIcon from generateIcon result after init") {
+            should("hold the kind and bitmap of the rendered icon after init") {
+                renderer.kind = IconKind.MASKABLE
                 val viewModel = buildViewModel(appInfo)
-                // StateFlow.filter{}.first() returns immediately if predicate matches current value;
-                // suspends until a matching emission arrives otherwise. Robust for sync or async init.
-                viewModel.state.first { it.isAdaptiveIcon }
+                viewModel.state.value.kind shouldBe IconKind.MASKABLE
+                viewModel.state.value.icon shouldBe icon
             }
 
             should("set recentForegroundColors from settings") {
@@ -173,50 +172,59 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.recentBackgroundColors shouldBe defaultBackgroundColors
             }
 
-            should("onMaskChanged updates maskEnabled in state") {
+            should("onMaskChanged renders the icon unmasked") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onMaskChanged(false)
-                viewModel.state.value.maskEnabled shouldBe false
+                viewModel.state.value.style shouldBe defaultStyle.copy(maskEnabled = false)
+                renderer.renders.last() shouldBe Render(appInfo, defaultStyle.copy(maskEnabled = false))
             }
 
-            should("onColorChanged updates colorEnabled in state") {
+            should("onColorChanged renders the icon tinted") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onColorChanged(true)
-                viewModel.state.value.colorEnabled shouldBe true
+                viewModel.state.value.style shouldBe defaultStyle.copy(colorEnabled = true)
+                renderer.renders.last() shouldBe Render(appInfo, defaultStyle.copy(colorEnabled = true))
             }
 
-            should("onSizeChanged updates size in state") {
+            should("onSizeChanged renders the icon at the new size") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onSizeChanged(300)
-                viewModel.state.value.size shouldBe 300
+                viewModel.state.value.style.size shouldBe 300
+                renderer.renders.last() shouldBe Render(appInfo, defaultStyle.copy(size = 300))
+            }
+
+            should("onSizeChanged renders nothing for the current size") {
+                val viewModel = buildViewModel(appInfo)
+                viewModel.onSizeChanged(512)
+                renderer.renders shouldBe listOf(Render(appInfo, defaultStyle))
             }
 
             should("onSizeChanged clamps value below MIN_ICON_SIZE to MIN_ICON_SIZE") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onSizeChanged(MIN_ICON_SIZE - 1)
-                viewModel.state.value.size shouldBe MIN_ICON_SIZE
+                viewModel.state.value.style.size shouldBe MIN_ICON_SIZE
             }
 
             should("onSizeChanged clamps value above MAX_ICON_SIZE to MAX_ICON_SIZE") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onSizeChanged(MAX_ICON_SIZE + 1)
-                viewModel.state.value.size shouldBe MAX_ICON_SIZE
+                viewModel.state.value.style.size shouldBe MAX_ICON_SIZE
             }
 
             should("onSizeChanged accepts MIN_ICON_SIZE and MAX_ICON_SIZE as boundary values") {
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onSizeChanged(MIN_ICON_SIZE)
-                viewModel.state.value.size shouldBe MIN_ICON_SIZE
+                viewModel.state.value.style.size shouldBe MIN_ICON_SIZE
                 viewModel.onSizeChanged(MAX_ICON_SIZE)
-                viewModel.state.value.size shouldBe MAX_ICON_SIZE
+                viewModel.state.value.style.size shouldBe MAX_ICON_SIZE
             }
 
             should("onForegroundColorChanged prepends color to recent list") {
                 val viewModel = buildViewModel(appInfo)
                 val newColor = 0xFFFF0000.toInt()
                 viewModel.onForegroundColorChanged(newColor)
-                viewModel.state.value.recentForegroundColors
-                    .first() shouldBe newColor
+                viewModel.state.value.recentForegroundColors shouldBe listOf(newColor, -1)
+                renderer.renders.last() shouldBe Render(appInfo, defaultStyle.copy(foregroundColor = newColor))
             }
 
             should("onForegroundColorChanged deduplicates recent colors") {
@@ -233,8 +241,8 @@ class IconViewModelTest : ShouldSpec(
                 val viewModel = buildViewModel(appInfo)
                 val newColor = 0xFF00FF00.toInt()
                 viewModel.onBackgroundColorChanged(newColor)
-                viewModel.state.value.recentBackgroundColors
-                    .first() shouldBe newColor
+                viewModel.state.value.recentBackgroundColors shouldBe listOf(newColor, 0xFF0381FE.toInt())
+                renderer.renders.last() shouldBe Render(appInfo, defaultStyle.copy(backgroundColor = newColor))
             }
 
             should("onMaskChanged writes maskEnabled to userSettings") {
@@ -294,32 +302,32 @@ class IconViewModelTest : ShouldSpec(
 
             should("isLoading is false when regenerateIcon throws OutOfMemoryError") {
                 val viewModel = buildViewModel(appInfo)
-                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
+                renderer.failure = OutOfMemoryError("oom")
                 viewModel.onMaskChanged(false)
                 viewModel.state.value.isLoading shouldBe false
             }
 
-            should("exit with GenerateFailed when generateIcon throws IOException in loadInitialState") {
-                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws IOException("io error")
+            should("exit with GenerateFailed when rendering throws IOException in loadInitialState") {
+                renderer.failure = IOException("io error")
                 val viewModel = buildViewModel(appInfo)
                 viewModel.exit.value shouldBe IconExit.GenerateFailed
             }
 
-            should("exit with GenerateFailed when generateIcon throws OutOfMemoryError in loadInitialState") {
-                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
+            should("exit with GenerateFailed when rendering throws OutOfMemoryError in loadInitialState") {
+                renderer.failure = OutOfMemoryError("oom")
                 val viewModel = buildViewModel(appInfo)
                 viewModel.exit.value shouldBe IconExit.GenerateFailed
             }
 
-            should("exit with GenerateFailed when generateIcon throws RuntimeException in loadInitialState") {
-                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+            should("exit with GenerateFailed when rendering throws RuntimeException in loadInitialState") {
+                renderer.failure = RuntimeException("crash")
                 val viewModel = buildViewModel(appInfo)
                 viewModel.exit.value shouldBe IconExit.GenerateFailed
             }
 
-            should("exit with GenerateFailed when generateIcon throws OutOfMemoryError in regenerateIcon") {
+            should("exit with GenerateFailed when rendering throws OutOfMemoryError in regenerateIcon") {
                 val viewModel = buildViewModel(appInfo)
-                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws OutOfMemoryError("oom")
+                renderer.failure = OutOfMemoryError("oom")
                 viewModel.exit.test {
                     awaitItem() shouldBe IconExit.None
                     viewModel.onMaskChanged(false)
@@ -327,9 +335,9 @@ class IconViewModelTest : ShouldSpec(
                 }
             }
 
-            should("exit with GenerateFailed when generateIcon throws RuntimeException in regenerateIcon") {
+            should("exit with GenerateFailed when rendering throws RuntimeException in regenerateIcon") {
                 val viewModel = buildViewModel(appInfo)
-                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+                renderer.failure = RuntimeException("crash")
                 viewModel.exit.test {
                     awaitItem() shouldBe IconExit.None
                     viewModel.onMaskChanged(false)
@@ -350,8 +358,8 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.exit.value shouldBe IconExit.AppNotFound
             }
 
-            should("not exit when generateIcon throws CancellationException in loadInitialState") {
-                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws CancellationException("cancelled")
+            should("not exit when rendering throws CancellationException in loadInitialState") {
+                renderer.failure = CancellationException("cancelled")
                 val viewModel = buildViewModel(appInfo)
                 viewModel.exit.value shouldBe IconExit.None
             }
@@ -364,14 +372,14 @@ class IconViewModelTest : ShouldSpec(
                         it.sourceDir = File(tmpDir, "deleted_icon_${System.nanoTime()}.apk").absolutePath
                     }
                 every { mockContext.cacheDir } returns tmpDir
-                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+                renderer.failure = RuntimeException("crash")
                 val viewModel = buildViewModel(staleInfo)
                 viewModel.onMaskChanged(false)
                 viewModel.exit.value shouldBe IconExit.AppNotFound
             }
 
             should("a failure after the handled exit exits again") {
-                every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("crash")
+                renderer.failure = RuntimeException("crash")
                 val viewModel = buildViewModel(appInfo)
                 viewModel.onExitHandled(IconExit.GenerateFailed)
                 viewModel.onMaskChanged(false)
@@ -440,7 +448,6 @@ class IconViewModelTest : ShouldSpec(
             }
 
             context("export") {
-                val icon = mockIconResult.bitmap
                 val fileName = "com.example.test_mask"
 
                 should("onSave writes the icon to the stored location and holds the toast result") {
@@ -546,7 +553,7 @@ class IconViewModelTest : ShouldSpec(
                 }
 
                 should("onDocumentPicked hands a failed generation's missing icon to the write, which reports WriteFailed") {
-                    every { generateIcon(any(), any(), any(), any(), any(), any(), any()) } throws IOException("generation failed")
+                    renderer.failure = IOException("generation failed")
                     exporter.documentResult = BitmapSaveResult.WriteFailed
                     val uri = mockk<Uri>()
                     val viewModel = buildViewModel(appInfo)
@@ -585,7 +592,7 @@ class IconViewModelTest : ShouldSpec(
                 }
             }
 
-            should("loadInitialState falls through to generateIcon when canonicalFile throws IOException") {
+            should("loadInitialState still renders when canonicalFile throws IOException") {
                 val mockCacheDir = mockk<File>()
                 every { mockCacheDir.canonicalFile } throws IOException("canonical failed")
                 every { mockContext.cacheDir } returns mockCacheDir
