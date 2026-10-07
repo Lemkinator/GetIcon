@@ -16,13 +16,11 @@
 
 package de.lemke.geticon.domain
 
-import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.net.Uri
-import dagger.hilt.android.qualifiers.ApplicationContext
 import de.lemke.commonutils.di.IoDispatcher
+import de.lemke.geticon.data.ApkImporter
 import java.io.File
-import java.io.FileOutputStream
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -37,7 +35,7 @@ sealed class ApkProcessResult {
 }
 
 class ProcessApkUseCase @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+    private val importer: ApkImporter,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
     suspend operator fun invoke(uri: Uri): ApkProcessResult {
@@ -59,12 +57,11 @@ class ProcessApkUseCase @Inject constructor(
         onTempFileCreated: (File) -> Unit,
     ): ApkProcessResult =
         try {
-            val file = File.createTempFile("extractIcon", ".apk", context.cacheDir).also(onTempFileCreated)
-            val stream = context.contentResolver.openInputStream(uri) ?: return ApkProcessResult.Error
-            stream.use { input -> FileOutputStream(file).use { out -> input.copyTo(out) } }
+            val file = importer.createCacheFile().also(onTempFileCreated)
+            val stream = importer.open(uri) ?: return ApkProcessResult.Error
+            stream.use { input -> file.outputStream().use { out -> input.copyTo(out) } }
+            val applicationInfo = importer.readApplicationInfo(file) ?: return ApkProcessResult.InvalidApk
             val path = file.absolutePath
-            val applicationInfo =
-                context.packageManager.getPackageArchiveInfo(path, 0)?.applicationInfo ?: return ApkProcessResult.InvalidApk
             applicationInfo.sourceDir = path
             applicationInfo.publicSourceDir = path
             ApkProcessResult.Success(applicationInfo)

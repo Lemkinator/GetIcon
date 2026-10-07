@@ -23,43 +23,58 @@ import androidx.picker.model.AppInfoData
 import app.cash.turbine.test
 import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.domain.GetInstalledAppsUseCase
-import de.lemke.geticon.domain.ApkProcessResult
+import de.lemke.geticon.data.FakeApkImporter
 import de.lemke.geticon.domain.ProcessApkUseCase
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 
 private fun MainViewModel.triggerOnCleared() {
     ViewModelStore().also { it.put("vm", this) }.clear()
 }
 
-private fun cachedApk(): ApplicationInfo =
-    ApplicationInfo().also { it.sourceDir = File.createTempFile("extractIcon", ".apk").apply { deleteOnExit() }.absolutePath }
-
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest : ShouldSpec(
     {
-        lateinit var processApk: ProcessApkUseCase
+        lateinit var importer: FakeApkImporter
         lateinit var getInstalledApps: GetInstalledAppsUseCase
         lateinit var getApplicationInfo: GetApplicationInfoUseCase
         lateinit var viewModel: MainViewModel
 
+        fun buildViewModel(io: CoroutineDispatcher = Dispatchers.Main) =
+            MainViewModel(ProcessApkUseCase(importer, io), getInstalledApps, getApplicationInfo)
+
         beforeEach {
-            processApk = mockk()
+            importer = FakeApkImporter()
             getInstalledApps = mockk()
             getApplicationInfo = mockk()
             coEvery { getInstalledApps() } returns emptyList()
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = buildViewModel()
+        }
+
+        afterEach { importer.cacheDir.deleteRecursively() }
+
+        fun pick(packageName: String): ApkImport.Imported {
+            val uri = mockk<Uri>()
+            importer.addApk(uri, packageName)
+            viewModel.onApkPicked(uri)
+            return viewModel.apkImport.value.shouldBeInstanceOf<ApkImport.Imported>()
         }
 
         should("installedApps is Loading until the load returns, then Loaded with the apps") {
             val app = mockk<AppInfoData>()
             val gate = CompletableDeferred<List<AppInfoData>>()
             coEvery { getInstalledApps() } coAnswers { gate.await() }
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = buildViewModel()
             viewModel.installedApps.test {
                 awaitItem() shouldBe InstalledApps.Loading
                 gate.complete(listOf(app))
@@ -69,13 +84,13 @@ class MainViewModelTest : ShouldSpec(
 
         should("installedApps is Failed and not yet handled when getInstalledApps throws") {
             coEvery { getInstalledApps() } throws RuntimeException("load failed")
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = buildViewModel()
             viewModel.installedApps.value shouldBe InstalledApps.Failed(handled = false)
         }
 
         should("onInstalledAppsFailureHandled marks the failure handled") {
             coEvery { getInstalledApps() } throws RuntimeException("load failed")
-            viewModel = MainViewModel(processApk, getInstalledApps, getApplicationInfo)
+            viewModel = buildViewModel()
             viewModel.installedApps.test {
                 awaitItem() shouldBe InstalledApps.Failed(handled = false)
                 viewModel.onInstalledAppsFailureHandled()
@@ -91,108 +106,91 @@ class MainViewModelTest : ShouldSpec(
         should("apkImport stays Idle when uri is null") {
             viewModel.onApkPicked(null)
             viewModel.apkImport.value shouldBe ApkImport.Idle
-            coVerify(exactly = 0) { processApk(any()) }
+            importer.opened shouldBe emptyList()
         }
 
-        should("apkImport holds Invalid when processApk returns InvalidApk") {
+        should("apkImport holds Invalid when the picked document is no APK") {
             val uri = mockk<Uri>()
-            coEvery { processApk(uri) } returns ApkProcessResult.InvalidApk
+            importer.addDocument(uri, "not an apk")
             viewModel.onApkPicked(uri)
             viewModel.apkImport.value shouldBe ApkImport.Invalid
         }
 
-        should("apkImport holds Invalid when processApk returns Error") {
-            val uri = mockk<Uri>()
-            coEvery { processApk(uri) } returns ApkProcessResult.Error
-            viewModel.onApkPicked(uri)
+        should("apkImport holds Invalid when the picked document has no content") {
+            viewModel.onApkPicked(mockk<Uri>())
             viewModel.apkImport.value shouldBe ApkImport.Invalid
         }
 
-        should("apkImport holds Imported with the returned ApplicationInfo when processApk succeeds") {
+        should("apkImport holds Imported with the application of the cached APK") {
             val uri = mockk<Uri>()
-            val appInfo = mockk<ApplicationInfo>()
-            coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
+            importer.addApk(uri, "com.example.app")
             viewModel.apkImport.test {
                 awaitItem() shouldBe ApkImport.Idle
                 viewModel.onApkPicked(uri)
-                awaitItem() shouldBe ApkImport.Imported(appInfo)
+                val imported = awaitItem().shouldBeInstanceOf<ApkImport.Imported>()
+                imported.applicationInfo.packageName shouldBe "com.example.app"
+                imported.applicationInfo.sourceDir shouldBe importer.cachedFiles().single().absolutePath
             }
         }
 
         should("onApkImportHandled returns to Idle") {
             val uri = mockk<Uri>()
-            coEvery { processApk(uri) } returns ApkProcessResult.InvalidApk
+            importer.addDocument(uri, "not an apk")
             viewModel.onApkPicked(uri)
             viewModel.onApkImportHandled(ApkImport.Invalid)
             viewModel.apkImport.value shouldBe ApkImport.Idle
         }
 
         should("onApkImportHandled keeps a result other than the handled one") {
-            val uri = mockk<Uri>()
-            val appInfo = mockk<ApplicationInfo>()
-            coEvery { processApk(uri) } returns ApkProcessResult.Success(appInfo)
-            viewModel.onApkPicked(uri)
+            val imported = pick("com.example.app")
             viewModel.onApkImportHandled(ApkImport.Invalid)
-            viewModel.apkImport.value shouldBe ApkImport.Imported(appInfo)
+            viewModel.apkImport.value shouldBe imported
         }
 
         should("a superseding import deletes the cached APK of the displaced Imported result") {
-            val first = cachedApk()
-            val second = cachedApk()
-            val firstUri = mockk<Uri>()
-            val secondUri = mockk<Uri>()
-            coEvery { processApk(firstUri) } returns ApkProcessResult.Success(first)
-            coEvery { processApk(secondUri) } returns ApkProcessResult.Success(second)
-            viewModel.onApkPicked(firstUri)
-            viewModel.onApkPicked(secondUri)
-            viewModel.apkImport.value shouldBe ApkImport.Imported(second)
-            File(first.sourceDir).exists() shouldBe false
-            File(second.sourceDir).exists() shouldBe true
+            val first = pick("com.example.first")
+            val second = pick("com.example.second")
+            viewModel.apkImport.value shouldBe second
+            File(first.applicationInfo.sourceDir).exists() shouldBe false
+            importer.cachedFiles() shouldBe listOf(File(second.applicationInfo.sourceDir))
         }
 
-        should("a newer pick cancels an older import that would otherwise finish after it") {
-            val newer = cachedApk()
+        should("a newer pick cancels an older import before it opens its document") {
+            val io = StandardTestDispatcher()
+            viewModel = buildViewModel(io)
             val olderUri = mockk<Uri>()
             val newerUri = mockk<Uri>()
-            val olderGate = CompletableDeferred<ApkProcessResult>()
-            coEvery { processApk(olderUri) } coAnswers { olderGate.await() }
-            coEvery { processApk(newerUri) } returns ApkProcessResult.Success(newer)
+            importer.addApk(olderUri, "com.example.older")
+            importer.addApk(newerUri, "com.example.newer")
             viewModel.onApkPicked(olderUri)
             viewModel.onApkPicked(newerUri)
-            olderGate.complete(ApkProcessResult.Success(cachedApk()))
-            viewModel.apkImport.value shouldBe ApkImport.Imported(newer)
-            File(newer.sourceDir).exists() shouldBe true
+            io.scheduler.advanceUntilIdle()
+            importer.opened shouldBe listOf(newerUri)
+            val imported = viewModel.apkImport.value.shouldBeInstanceOf<ApkImport.Imported>()
+            imported.applicationInfo.packageName shouldBe "com.example.newer"
+            importer.cachedFiles() shouldBe listOf(File(imported.applicationInfo.sourceDir))
         }
 
         should("an Invalid result superseding an Imported one deletes its cached APK") {
-            val imported = cachedApk()
-            val importedUri = mockk<Uri>()
+            pick("com.example.app")
             val invalidUri = mockk<Uri>()
-            coEvery { processApk(importedUri) } returns ApkProcessResult.Success(imported)
-            coEvery { processApk(invalidUri) } returns ApkProcessResult.InvalidApk
-            viewModel.onApkPicked(importedUri)
+            importer.addDocument(invalidUri, "not an apk")
             viewModel.onApkPicked(invalidUri)
             viewModel.apkImport.value shouldBe ApkImport.Invalid
-            File(imported.sourceDir).exists() shouldBe false
+            importer.cachedFiles() shouldBe emptyList()
         }
 
         should("a handled Imported result keeps its cached APK for the screen it opened") {
-            val imported = cachedApk()
-            val uri = mockk<Uri>()
-            coEvery { processApk(uri) } returns ApkProcessResult.Success(imported)
-            viewModel.onApkPicked(uri)
-            viewModel.onApkImportHandled(ApkImport.Imported(imported))
+            val imported = pick("com.example.app")
+            viewModel.onApkImportHandled(imported)
             viewModel.triggerOnCleared()
-            File(imported.sourceDir).exists() shouldBe true
+            importer.cachedFiles() shouldBe listOf(File(imported.applicationInfo.sourceDir))
         }
 
         should("onCleared deletes the cached APK of an Imported result that was never handled") {
-            val imported = cachedApk()
-            val uri = mockk<Uri>()
-            coEvery { processApk(uri) } returns ApkProcessResult.Success(imported)
-            viewModel.onApkPicked(uri)
+            pick("com.example.app")
             viewModel.triggerOnCleared()
-            File(imported.sourceDir).exists() shouldBe false
+            importer.cachedFiles() shouldBe emptyList()
         }
 
         should("onAppSelected holds Found with the looked-up ApplicationInfo") {

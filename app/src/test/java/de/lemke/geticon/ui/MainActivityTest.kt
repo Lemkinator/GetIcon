@@ -49,17 +49,16 @@ import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.commonutils.ui.widget.NoEntryView
 import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
+import de.lemke.geticon.data.ApkImporter
+import de.lemke.geticon.data.FakeApkImporter
+import de.lemke.geticon.di.ApkImporterModule
 import de.lemke.geticon.di.DispatchersModule
-import de.lemke.geticon.domain.ApkProcessResult
-import de.lemke.geticon.domain.ProcessApkUseCase
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
 import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
-import io.mockk.coEvery
 import io.mockk.every
-import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.unmockkConstructor
 import javax.inject.Inject
@@ -67,6 +66,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import leakcanary.AppWatcher
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -86,14 +86,16 @@ import dev.oneuiproject.oneui.design.R as oneuiDesignR
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@UninstallModules(DispatchersModule::class)
+@UninstallModules(DispatchersModule::class, ApkImporterModule::class)
 class MainActivityTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
+    private val importer = FakeApkImporter()
+
     @BindValue
     @JvmField
-    val processApkStub: ProcessApkUseCase = mockk(relaxed = true)
+    val apkImporter: ApkImporter = importer
 
     @BindValue
     @IoDispatcher
@@ -110,6 +112,11 @@ class MainActivityTest {
         if (!AppWatcher.isInstalled) {
             AppWatcher.manualInstall(ApplicationProvider.getApplicationContext<HiltTestApplication>())
         }
+    }
+
+    @After
+    fun deleteCachedApks() {
+        importer.cacheDir.deleteRecursively()
     }
 
     @Test
@@ -229,7 +236,7 @@ class MainActivityTest {
 
     @Test
     fun apkImport_invalid_showsToastOnce() {
-        coEvery { processApkStub(any()) } returns ApkProcessResult.InvalidApk
+        importer.addDocument(Uri.parse("content://test"), "not an apk")
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
@@ -245,8 +252,7 @@ class MainActivityTest {
 
     @Test
     fun apkImport_imported_startsIconActivity() {
-        val appInfo = ApplicationInfo().apply { packageName = "com.test" }
-        coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
+        importer.addApk(Uri.parse("content://test"), "com.test")
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[MainViewModel::class.java]
@@ -265,7 +271,7 @@ class MainActivityTest {
 
     @Test
     fun apkImport_invalidWhilePaused_showsToastOnceAfterRecreation() {
-        coEvery { processApkStub(any()) } returns ApkProcessResult.InvalidApk
+        importer.addDocument(Uri.parse("content://test"), "not an apk")
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup().pause()
         try {
             val paused = controller.get()
@@ -288,8 +294,7 @@ class MainActivityTest {
 
     @Test
     fun apkImport_importedWhilePaused_startsIconActivityOnceAfterRecreation() {
-        val appInfo = ApplicationInfo().apply { packageName = "com.test" }
-        coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
+        importer.addApk(Uri.parse("content://test"), "com.test")
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup().pause()
         try {
             val paused = controller.get()
@@ -313,8 +318,7 @@ class MainActivityTest {
 
     @Test
     fun apkImport_latchDropsLaunch_opensIconActivityOnNextResume() {
-        val appInfo = ApplicationInfo().apply { packageName = "com.test" }
-        coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
+        importer.addApk(Uri.parse("content://test"), "com.test")
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.onActivity { activity ->
@@ -327,7 +331,10 @@ class MainActivityTest {
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
                 shadowActivity.nextStartedActivity shouldBe null
-                ViewModelProvider(activity)[MainViewModel::class.java].apkImport.value shouldBe ApkImport.Imported(appInfo)
+                ViewModelProvider(activity)[MainViewModel::class.java]
+                    .apkImport.value
+                    .shouldBeInstanceOf<ApkImport.Imported>()
+                    .applicationInfo.packageName shouldBe "com.test"
             }
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
@@ -366,8 +373,7 @@ class MainActivityTest {
 
     @Test
     fun pickedApk_resultWhilePaused_startsIconActivityOnResume() {
-        val appInfo = ApplicationInfo().apply { packageName = "com.test" }
-        coEvery { processApkStub(any()) } returns ApkProcessResult.Success(appInfo)
+        importer.addApk(Uri.parse("content://test.apk"), "com.test")
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             lateinit var pickerIntent: Intent
             scenario.onActivity { activity ->
