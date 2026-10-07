@@ -16,92 +16,33 @@
 
 package de.lemke.geticon.domain
 
-import android.annotation.SuppressLint
-import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.AdaptiveIconDrawable
-import android.graphics.drawable.Drawable
-import android.os.Build.VERSION.SDK_INT
-import android.os.Build.VERSION_CODES.TIRAMISU
-import android.util.Log
-import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.drawable.toBitmap
-import androidx.reflect.app.SeslApplicationPackageManagerReflector.semGetApplicationIconForIconTray
-import dagger.hilt.android.qualifiers.ApplicationContext
+import de.lemke.geticon.data.IconRenderer
+import de.lemke.geticon.domain.model.IconKind
+import de.lemke.geticon.domain.model.IconStyle
 import javax.inject.Inject
 
-data class IconResult(
+data class GeneratedIcon(
     val bitmap: Bitmap,
-    val isAdaptiveIcon: Boolean,
-    val hasMaskedAppIcon: Boolean,
+    val kind: IconKind,
+    val fileName: String,
 )
 
 class GenerateIconUseCase @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+    private val renderer: IconRenderer,
 ) {
-    /**
-     * Loads an app icon and renders it into a bitmap, optionally applying masking and color tinting.
-     *
-     * @return An [IconResult] containing the rendered bitmap and metadata about the icon type.
-     */
-    @SuppressLint("RestrictedApi")
+    /** Renders the icon of [applicationInfo] in [style], with the name of the file it exports to. */
     operator fun invoke(
         applicationInfo: ApplicationInfo,
-        size: Int,
-        maskEnabled: Boolean,
-        colorEnabled: Boolean,
-        foregroundColor: Int,
-        backgroundColor: Int,
-        packageManager: PackageManager,
-    ): IconResult {
-        @Suppress("TooGenericExceptionCaught")
-        val appIcon: Drawable =
-            try {
-                applicationInfo.loadIcon(packageManager)
-            } catch (e: Exception) {
-                Log.w("GenerateIconUseCase", "loadIcon failed for ${applicationInfo.packageName}", e)
-                AppCompatResources.getDrawable(context, dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_image)
-                    ?: return IconResult(
-                        bitmap = createBitmap(size, size),
-                        isAdaptiveIcon = false,
-                        hasMaskedAppIcon = false,
-                    )
-            }
-        val maskedAppIcon = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
-        val isAdaptiveIcon = appIcon is AdaptiveIconDrawable
-        val hasMaskedAppIcon = isAdaptiveIcon || maskedAppIcon != null
-
-        val drawable = appIcon.mutate()
-        val bitmap: Bitmap
-        if (drawable is AdaptiveIconDrawable && drawable.foreground != null && drawable.background != null) {
-            bitmap = createBitmap(size, size)
-            drawable.setBounds(0, 0, size, size)
-            val background = drawable.background.mutate()
-            var foreground = drawable.foreground.mutate()
-            if (colorEnabled) {
-                if (SDK_INT >= TIRAMISU) {
-                    val monochrome = drawable.monochrome
-                    if (monochrome != null) foreground = monochrome.mutate()
-                }
-                background.setTint(backgroundColor)
-                foreground.setTint(foregroundColor)
-            }
-            val canvas = Canvas(bitmap)
-            if (maskEnabled) canvas.clipPath(drawable.iconMask)
-            background.draw(canvas)
-            foreground.draw(canvas)
-        } else {
-            bitmap =
-                if (maskEnabled && maskedAppIcon != null) {
-                    maskedAppIcon.toBitmap(size, size)
-                } else {
-                    drawable.toBitmap(size, size)
-                }
-        }
-        return IconResult(bitmap, isAdaptiveIcon, hasMaskedAppIcon)
+        style: IconStyle,
+    ): GeneratedIcon {
+        val rendered = renderer.render(applicationInfo, style)
+        return GeneratedIcon(rendered.bitmap, rendered.kind, fileName(applicationInfo.packageName, style))
     }
+
+    private fun fileName(
+        packageName: String,
+        style: IconStyle,
+    ): String = "${packageName}_${if (style.maskEnabled) "mask" else "default"}${if (style.colorEnabled) "_mono" else ""}"
 }
