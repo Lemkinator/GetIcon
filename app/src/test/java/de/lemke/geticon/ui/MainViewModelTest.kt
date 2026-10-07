@@ -171,6 +171,25 @@ class MainViewModelTest : ShouldSpec(
             importer.cachedFiles() shouldBe listOf(File(imported.applicationInfo.sourceDir))
         }
 
+        should("a newer pick cancels an older import after it opened its document") {
+            val io = StandardTestDispatcher()
+            viewModel = buildViewModel(io)
+            val olderUri = mockk<Uri>()
+            val newerUri = mockk<Uri>()
+            importer.addApk(olderUri, "com.example.older")
+            importer.addApk(newerUri, "com.example.newer")
+            importer.beforeReading = {
+                importer.beforeReading = {}
+                viewModel.onApkPicked(newerUri)
+            }
+            viewModel.onApkPicked(olderUri)
+            io.scheduler.advanceUntilIdle()
+            importer.opened shouldBe listOf(olderUri, newerUri)
+            val imported = viewModel.apkImport.value.shouldBeInstanceOf<ApkImport.Imported>()
+            imported.applicationInfo.packageName shouldBe "com.example.newer"
+            importer.cachedFiles() shouldBe listOf(File(imported.applicationInfo.sourceDir))
+        }
+
         should("an Invalid result superseding an Imported one deletes its cached APK") {
             pick("com.example.app")
             val invalidUri = mockk<Uri>()
