@@ -16,104 +16,145 @@
 
 package de.lemke.geticon.data
 
-import android.content.ContentResolver
+import android.content.ContentProvider
+import android.content.ContentValues
 import android.content.Context
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
+import android.database.Cursor
 import android.net.Uri
-import io.kotest.core.spec.style.ShouldSpec
+import android.os.ParcelFileDescriptor
+import androidx.test.core.app.ApplicationProvider
+import de.lemke.geticon.App
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldEndWith
 import io.kotest.matchers.string.shouldStartWith
-import io.mockk.every
-import io.mockk.mockk
 import java.io.File
-import kotlin.io.path.createTempDirectory
+import org.junit.After
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
-class DefaultApkImporterTest : ShouldSpec(
-    {
-        val context = mockk<Context>()
-        val contentResolver = mockk<ContentResolver>()
-        val packageManager = mockk<PackageManager>()
-        val importer = DefaultApkImporter(context)
-        lateinit var cacheDir: File
+@RunWith(RobolectricTestRunner::class)
+@Config(application = App::class, sdk = [36])
+class DefaultApkImporterTest {
+    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val importer = DefaultApkImporter(context)
+    private val documents = Robolectric.setupContentProvider(DocumentProvider::class.java, AUTHORITY)
+    private val documentDir = File(context.filesDir, "documents").apply { mkdirs() }
 
-        beforeEach {
-            cacheDir = createTempDirectory("defaultApkImporter").toFile()
-            every { context.cacheDir } returns cacheDir
-            every { context.contentResolver } returns contentResolver
-            every { context.packageManager } returns packageManager
-        }
+    @After
+    fun tearDown() {
+        documentDir.deleteRecursively()
+        context.cacheDir
+            .listFiles()
+            .orEmpty()
+            .forEach { it.deleteRecursively() }
+    }
 
-        afterEach { cacheDir.deleteRecursively() }
+    @Test
+    fun `creates an empty APK file in the app cache`() {
+        val file = importer.createCacheFile()
+        file.parentFile shouldBe context.cacheDir
+        file.name shouldStartWith "extractIcon"
+        file.name shouldEndWith ".apk"
+        file.length() shouldBe 0L
+    }
 
-        should("create an empty APK file in the app cache") {
-            val file = importer.createCacheFile()
-            file.parentFile shouldBe cacheDir
-            file.name shouldStartWith "extractIcon"
-            file.name shouldEndWith ".apk"
-            file.length() shouldBe 0L
-        }
+    @Test
+    fun `opens the picked document through its provider`() {
+        val uri = documents.add(File(documentDir, "picked.apk").apply { writeText("apk bytes") })
+        importer.open(uri)?.reader()?.use { it.readText() } shouldBe "apk bytes"
+    }
 
-        should("open the picked document through the content resolver") {
-            val uri = mockk<Uri>()
-            every { contentResolver.openInputStream(uri) } returns "apk bytes".byteInputStream()
-            importer.open(uri)?.reader()?.readText() shouldBe "apk bytes"
-        }
+    @Test
+    fun `returns null when the provider has no content`() {
+        importer.open(Uri.parse("content://$AUTHORITY/missing")) shouldBe null
+    }
 
-        should("return null when the provider has no content") {
-            val uri = mockk<Uri>()
-            every { contentResolver.openInputStream(uri) } returns null
-            importer.open(uri) shouldBe null
-        }
+    @Test
+    fun `reads the application of a parsed archive`() {
+        val apk = File(context.applicationInfo.publicSourceDir).copyTo(File(context.cacheDir, "app.apk"))
+        importer.readApplicationInfo(apk)?.packageName shouldBe context.packageName
+    }
 
-        should("read the application of a parsed archive") {
-            val apk = File(cacheDir, "app.apk")
-            val applicationInfo = ApplicationInfo()
-            every { packageManager.getPackageArchiveInfo(apk.absolutePath, 0) } returns
-                PackageInfo().also { it.applicationInfo = applicationInfo }
-            importer.readApplicationInfo(apk) shouldBe applicationInfo
-        }
+    @Test
+    fun `returns null for a file that is no archive`() {
+        val apk = File(context.cacheDir, "app.apk").apply { writeText("no archive") }
+        importer.readApplicationInfo(apk) shouldBe null
+    }
 
-        should("return null for an archive without application") {
-            val apk = File(cacheDir, "app.apk")
-            every { packageManager.getPackageArchiveInfo(apk.absolutePath, 0) } returns PackageInfo()
-            importer.readApplicationInfo(apk) shouldBe null
-        }
+    @Test
+    fun `treats a created cache file as cached`() {
+        importer.isCached(importer.createCacheFile()) shouldBe true
+    }
 
-        should("return null for a file that is no archive") {
-            val apk = File(cacheDir, "app.apk")
-            every { packageManager.getPackageArchiveInfo(apk.absolutePath, 0) } returns null
-            importer.readApplicationInfo(apk) shouldBe null
-        }
+    @Test
+    fun `treats a file outside the cache as not cached`() {
+        importer.isCached(File(documentDir, "installed.apk")) shouldBe false
+    }
 
-        should("treat a created cache file as cached") {
-            importer.isCached(importer.createCacheFile()) shouldBe true
-        }
+    @Test
+    fun `treats a path that cannot be resolved as not cached`() {
+        importer.isCached(File(context.cacheDir, "invalid\u0000.apk")) shouldBe false
+    }
 
-        should("treat a file outside the cache as not cached") {
-            importer.isCached(File(cacheDir.parentFile, "installed.apk")) shouldBe false
-        }
+    @Test
+    fun `discards a cached APK`() {
+        val apk = importer.createCacheFile()
+        importer.discard(apk)
+        apk.exists() shouldBe false
+    }
 
-        should("treat a path that cannot be resolved as not cached") {
-            importer.isCached(File(cacheDir, "invalid\u0000.apk")) shouldBe false
-        }
+    @Test
+    fun `keeps a file outside the cache on discard`() {
+        val outside = File(documentDir, "installed.apk").apply { createNewFile() }
+        importer.discard(outside)
+        outside.exists() shouldBe true
+    }
 
-        should("discard a cached APK") {
-            val apk = importer.createCacheFile()
-            importer.discard(apk)
-            apk.exists() shouldBe false
-        }
+    class DocumentProvider : ContentProvider() {
+        private val files = mutableMapOf<Uri, File>()
 
-        should("keep a file outside the cache on discard") {
-            val outside = File.createTempFile("installed", ".apk")
-            try {
-                importer.discard(outside)
-                outside.exists() shouldBe true
-            } finally {
-                outside.delete()
-            }
-        }
-    },
-)
+        fun add(file: File): Uri = Uri.parse("content://$AUTHORITY/${file.name}").also { files[it] = file }
+
+        override fun openFile(
+            uri: Uri,
+            mode: String,
+        ): ParcelFileDescriptor? = files[uri]?.let { ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY) }
+
+        override fun onCreate(): Boolean = true
+
+        override fun getType(uri: Uri): String? = null
+
+        override fun query(
+            uri: Uri,
+            projection: Array<out String>?,
+            selection: String?,
+            selectionArgs: Array<out String>?,
+            sortOrder: String?,
+        ): Cursor? = null
+
+        override fun insert(
+            uri: Uri,
+            values: ContentValues?,
+        ): Uri? = null
+
+        override fun update(
+            uri: Uri,
+            values: ContentValues?,
+            selection: String?,
+            selectionArgs: Array<out String>?,
+        ): Int = 0
+
+        override fun delete(
+            uri: Uri,
+            selection: String?,
+            selectionArgs: Array<out String>?,
+        ): Int = 0
+    }
+
+    private companion object {
+        const val AUTHORITY = "de.lemke.geticon.test.documents"
+    }
+}
