@@ -58,6 +58,12 @@ class DefaultIconRendererTest {
         result.bitmap.width shouldBe 256
         result.bitmap.height shouldBe 256
         result.kind shouldBe IconKind.ADAPTIVE
+        result.label shouldBe "Get Icon (Debug)"
+    }
+
+    @Test
+    fun `labels an app without label resource by its package name`() {
+        renderer.render(app { ColorDrawable(Color.RED) }, plain()).label shouldBe "com.example.icon"
     }
 
     @Test
@@ -160,6 +166,7 @@ class DefaultIconRendererTest {
             result.kind shouldBe IconKind.LEGACY
             result.bitmap.width shouldBe 128
             result.bitmap.centerPixel() shouldBe Color.TRANSPARENT
+            result.label shouldBe "com.example.icon"
         } finally {
             unmockkStatic(AppCompatResources::class)
         }

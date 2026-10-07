@@ -87,5 +87,33 @@ class DefaultApkImporterTest : ShouldSpec(
             every { packageManager.getPackageArchiveInfo(apk.absolutePath, 0) } returns null
             importer.readApplicationInfo(apk) shouldBe null
         }
+
+        should("treat a created cache file as cached") {
+            importer.isCached(importer.createCacheFile()) shouldBe true
+        }
+
+        should("treat a file outside the cache as not cached") {
+            importer.isCached(File(cacheDir.parentFile, "installed.apk")) shouldBe false
+        }
+
+        should("treat a path that cannot be resolved as not cached") {
+            importer.isCached(File(cacheDir, "invalid\u0000.apk")) shouldBe false
+        }
+
+        should("discard a cached APK") {
+            val apk = importer.createCacheFile()
+            importer.discard(apk)
+            apk.exists() shouldBe false
+        }
+
+        should("keep a file outside the cache on discard") {
+            val outside = File.createTempFile("installed", ".apk")
+            try {
+                importer.discard(outside)
+                outside.exists() shouldBe true
+            } finally {
+                outside.delete()
+            }
+        }
     },
 )

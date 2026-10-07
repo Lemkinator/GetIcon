@@ -70,6 +70,12 @@ internal class FakeApkImporter(
         return ApplicationInfo().apply { packageName = content.removePrefix(APK_HEADER) }
     }
 
+    override fun isCached(file: File): Boolean = file.absoluteFile.parentFile == cacheDir.absoluteFile
+
+    override fun discard(file: File) {
+        if (isCached(file)) file.delete()
+    }
+
     private companion object {
         const val APK_HEADER = "apk:"
     }

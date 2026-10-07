@@ -38,7 +38,7 @@ import de.lemke.geticon.domain.model.RenderedIcon
 import javax.inject.Inject
 
 interface IconRenderer {
-    /** Loads the icon of [applicationInfo] and draws it into a bitmap in [style]. */
+    /** Loads the icon and label of [applicationInfo] and draws the icon into a bitmap in [style]. */
     fun render(
         applicationInfo: ApplicationInfo,
         style: IconStyle,
@@ -55,7 +55,8 @@ class DefaultIconRenderer @Inject constructor(
     ): RenderedIcon {
         val size = style.size
         val packageManager = context.packageManager
-        val appIcon = loadIcon(applicationInfo, packageManager) ?: return RenderedIcon(createBitmap(size, size), IconKind.LEGACY)
+        val label = applicationInfo.loadLabel(packageManager).toString()
+        val appIcon = loadIcon(applicationInfo, packageManager) ?: return RenderedIcon(createBitmap(size, size), IconKind.LEGACY, label)
         val maskedAppIcon = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
         val kind =
             when {
@@ -70,7 +71,7 @@ class DefaultIconRenderer @Inject constructor(
                 style.maskEnabled && maskedAppIcon != null -> maskedAppIcon.toBitmap(size, size)
                 else -> drawable.toBitmap(size, size)
             }
-        return RenderedIcon(bitmap, kind)
+        return RenderedIcon(bitmap, kind, label)
     }
 
     @Suppress("TooGenericExceptionCaught")

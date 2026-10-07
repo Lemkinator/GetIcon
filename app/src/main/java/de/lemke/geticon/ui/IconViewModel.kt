@@ -17,7 +17,6 @@
 package de.lemke.geticon.ui
 
 import android.content.ClipData
-import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.net.Uri
@@ -25,9 +24,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
+import de.lemke.geticon.data.ApkImporter
 import de.lemke.geticon.data.IconExporter
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
@@ -107,11 +106,11 @@ sealed interface IconExit {
 
 @HiltViewModel
 class IconViewModel @Inject constructor(
-    @param:ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
     private val userSettings: UserSettings,
     private val generateIcon: GenerateIconUseCase,
     private val exporter: IconExporter,
+    private val apkImporter: ApkImporter,
 ) : ViewModel() {
     private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
 
@@ -134,19 +133,14 @@ class IconViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        val sourceFile = applicationInfo?.sourceDir?.let { File(it) } ?: return
-        val isInCache = runCatching { sourceFile.canonicalFile.startsWith(context.cacheDir.canonicalFile) }.getOrElse { false }
-        if (isInCache) sourceFile.delete()
+        applicationInfo?.sourceDir?.let { apkImporter.discard(File(it)) }
     }
 
     private suspend fun loadInitialState(appInfo: ApplicationInfo) {
         val sourceFile = appInfo.sourceDir?.let { File(it) }
-        if (sourceFile != null) {
-            val isInCache = runCatching { sourceFile.canonicalFile.startsWith(context.cacheDir.canonicalFile) }.getOrElse { false }
-            if (isInCache && !sourceFile.exists()) {
-                exitWith(IconExit.AppNotFound)
-                return
-            }
+        if (sourceFile != null && apkImporter.isCached(sourceFile) && !sourceFile.exists()) {
+            exitWith(IconExit.AppNotFound)
+            return
         }
         runCatching {
             val recentForegroundColors = userSettings.recentForegroundColors
@@ -163,7 +157,7 @@ class IconViewModel @Inject constructor(
             state.value =
                 IconUiState(
                     icon = icon.bitmap,
-                    appName = appInfo.loadLabel(context.packageManager).toString(),
+                    appName = icon.label,
                     style = style,
                     kind = icon.kind,
                     fileName = icon.fileName,

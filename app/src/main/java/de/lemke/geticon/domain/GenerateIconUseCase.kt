@@ -26,19 +26,20 @@ import javax.inject.Inject
 data class GeneratedIcon(
     val bitmap: Bitmap,
     val kind: IconKind,
+    val label: String,
     val fileName: String,
 )
 
 class GenerateIconUseCase @Inject constructor(
     private val renderer: IconRenderer,
 ) {
-    /** Renders the icon of [applicationInfo] in [style] and names the file it exports to. */
+    /** Renders the icon of [applicationInfo] in [style], with the app label and the name of the file it exports to. */
     operator fun invoke(
         applicationInfo: ApplicationInfo,
         style: IconStyle,
     ): GeneratedIcon {
         val rendered = renderer.render(applicationInfo, style)
-        return GeneratedIcon(rendered.bitmap, rendered.kind, fileName(applicationInfo.packageName, style))
+        return GeneratedIcon(rendered.bitmap, rendered.kind, rendered.label, fileName(applicationInfo.packageName, style))
     }
 
     private fun fileName(

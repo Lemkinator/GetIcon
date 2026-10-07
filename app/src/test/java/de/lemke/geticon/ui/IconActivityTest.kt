@@ -1046,7 +1046,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Get Icon (Debug) icon"
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Example App icon"
             }
         }
     }
@@ -1057,7 +1057,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Get Icon (Debug)"
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Example App"
             }
         }
     }
@@ -1068,7 +1068,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Get Icon (Debug) icon"
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Example App icon"
             }
         }
     }
@@ -1079,7 +1079,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Get Icon (Debug)"
+                activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Example App"
             }
         }
     }

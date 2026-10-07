@@ -17,9 +17,7 @@
 package de.lemke.geticon.ui
 
 import android.content.ClipData
-import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
@@ -29,6 +27,7 @@ import de.lemke.commonutils.data.FakeSharedPreferences
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
+import de.lemke.geticon.data.FakeApkImporter
 import de.lemke.geticon.data.FakeIconRenderer
 import de.lemke.geticon.data.FakeIconRenderer.Render
 import de.lemke.geticon.data.UserSettings
@@ -42,7 +41,6 @@ import de.lemke.geticon.ui.FakeIconExporter.Call
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
@@ -57,11 +55,10 @@ private fun IconViewModel.triggerOnCleared() {
 
 class IconViewModelTest : ShouldSpec(
     {
-        val mockContext = mockk<Context>(relaxed = true)
-        val mockPackageManager = mockk<PackageManager>(relaxed = true)
         lateinit var userSettings: UserSettings
         lateinit var exporter: FakeIconExporter
         lateinit var renderer: FakeIconRenderer
+        lateinit var apkImporter: FakeApkImporter
 
         val defaultForegroundColors = listOf(UserSettings.DEFAULT_FOREGROUND_COLOR)
         val defaultBackgroundColors = listOf(UserSettings.DEFAULT_BACKGROUND_COLOR)
@@ -76,12 +73,19 @@ class IconViewModelTest : ShouldSpec(
             )
 
         beforeEach {
-            every { mockContext.packageManager } returns mockPackageManager
-            every { mockContext.cacheDir } returns File(System.getProperty("java.io.tmpdir") ?: "/tmp")
             userSettings = UserSettings(FakeSharedPreferences())
             exporter = FakeIconExporter()
             renderer = FakeIconRenderer(icon)
+            apkImporter = FakeApkImporter()
         }
+
+        afterEach { apkImporter.cacheDir.deleteRecursively() }
+
+        fun appInfoAt(sourceFile: File) =
+            ApplicationInfo().also {
+                it.packageName = "com.example.test"
+                it.sourceDir = sourceFile.absolutePath
+            }
 
         fun buildViewModel(
             appInfo: ApplicationInfo? = null,
@@ -93,7 +97,7 @@ class IconViewModelTest : ShouldSpec(
                 } else {
                     SavedStateHandle()
                 }
-            return IconViewModel(mockContext, handle, settings, GenerateIconUseCase(renderer), exporter)
+            return IconViewModel(handle, settings, GenerateIconUseCase(renderer), exporter, apkImporter)
         }
 
         context("null applicationInfo") {
@@ -147,7 +151,7 @@ class IconViewModelTest : ShouldSpec(
         }
 
         context("valid applicationInfo") {
-            val appInfo = mockk<ApplicationInfo>(relaxed = true).also { it.packageName = "com.example.test" }
+            val appInfo = ApplicationInfo().also { it.packageName = "com.example.test" }
 
             should("load the initial style from userSettings and render the app in it") {
                 val viewModel = buildViewModel(appInfo)
@@ -160,6 +164,12 @@ class IconViewModelTest : ShouldSpec(
                 val viewModel = buildViewModel(appInfo)
                 viewModel.state.value.kind shouldBe IconKind.MASKABLE
                 viewModel.state.value.icon shouldBe icon
+            }
+
+            should("hold the label of the rendered icon as the app name") {
+                renderer.label = "Example"
+                val viewModel = buildViewModel(appInfo)
+                viewModel.state.value.appName shouldBe "Example"
             }
 
             should("set recentForegroundColors from settings") {
@@ -268,25 +278,20 @@ class IconViewModelTest : ShouldSpec(
                 buildViewModel(appInfo = infoWithNullSourceDir).triggerOnCleared()
             }
 
-            should("onCleared skips file deletion when sourceDir is not in cacheDir") {
-                buildViewModel(
-                    ApplicationInfo().also {
-                        it.packageName = "com.example.test"
-                        it.sourceDir = "/data/app/com.example.test.apk"
-                    },
-                ).triggerOnCleared()
+            should("onCleared keeps an installed APK outside the cache") {
+                val installedApk = File.createTempFile("installed", ".apk")
+                try {
+                    buildViewModel(appInfoAt(installedApk)).triggerOnCleared()
+                    installedApk.exists() shouldBe true
+                } finally {
+                    installedApk.delete()
+                }
             }
 
-            should("onCleared deletes temp file when sourceDir is in cacheDir") {
-                val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
-                val tmpFile = File(tmpDir, "test_icon.apk").also { it.createNewFile() }
-                buildViewModel(
-                    ApplicationInfo().also {
-                        it.packageName = "com.example.test"
-                        it.sourceDir = tmpFile.absolutePath
-                    },
-                ).triggerOnCleared()
-                tmpFile.exists() shouldBe false
+            should("onCleared deletes the cached APK") {
+                val cachedApk = apkImporter.createCacheFile()
+                buildViewModel(appInfoAt(cachedApk)).triggerOnCleared()
+                cachedApk.exists() shouldBe false
             }
 
             should("isLoading is false after initial load completes") {
@@ -346,16 +351,14 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("exit with AppNotFound when temp APK file was deleted before loadInitialState (process death)") {
-                val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
-                val deletedApk = File(tmpDir, "deleted_icon_${System.nanoTime()}.apk") // never created
-                val staleInfo =
-                    ApplicationInfo().also {
-                        it.packageName = "com.example.test"
-                        it.sourceDir = deletedApk.absolutePath
-                    }
-                every { mockContext.cacheDir } returns tmpDir
-                val viewModel = buildViewModel(staleInfo)
+                val viewModel = buildViewModel(appInfoAt(File(apkImporter.cacheDir, "deleted.apk")))
                 viewModel.exit.value shouldBe IconExit.AppNotFound
+            }
+
+            should("render an app whose missing APK lies outside the cache") {
+                val viewModel = buildViewModel(appInfoAt(File(apkImporter.cacheDir.parentFile, "missing_${System.nanoTime()}.apk")))
+                viewModel.state.value.isLoading shouldBe false
+                viewModel.exit.value shouldBe IconExit.None
             }
 
             should("not exit when rendering throws CancellationException in loadInitialState") {
@@ -365,15 +368,8 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("a failure while an exit waits for the activity keeps the waiting exit") {
-                val tmpDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
-                val staleInfo =
-                    ApplicationInfo().also {
-                        it.packageName = "com.example.test"
-                        it.sourceDir = File(tmpDir, "deleted_icon_${System.nanoTime()}.apk").absolutePath
-                    }
-                every { mockContext.cacheDir } returns tmpDir
                 renderer.failure = RuntimeException("crash")
-                val viewModel = buildViewModel(staleInfo)
+                val viewModel = buildViewModel(appInfoAt(File(apkImporter.cacheDir, "deleted.apk")))
                 viewModel.onMaskChanged(false)
                 viewModel.exit.value shouldBe IconExit.AppNotFound
             }
@@ -425,26 +421,6 @@ class IconViewModelTest : ShouldSpec(
                 val viewModel = buildViewModel(appInfo)
                 repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
                 viewModel.state.value.recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
-            }
-
-            should("onCleared skips deletion when canonicalFile throws IOException") {
-                val mockCacheDir = mockk<File>()
-                every { mockCacheDir.canonicalFile } throws IOException("canonical failed")
-                every { mockContext.cacheDir } returns mockCacheDir
-                val tmpFile =
-                    File(System.getProperty("java.io.tmpdir") ?: "/tmp", "test_${System.nanoTime()}.apk")
-                        .also { it.createNewFile() }
-                try {
-                    buildViewModel(
-                        ApplicationInfo().also {
-                            it.packageName = "com.example.test"
-                            it.sourceDir = tmpFile.absolutePath
-                        },
-                    ).triggerOnCleared()
-                    tmpFile.exists() shouldBe true
-                } finally {
-                    tmpFile.delete()
-                }
             }
 
             context("export") {
@@ -590,21 +566,6 @@ class IconViewModelTest : ShouldSpec(
                     viewModel.onSizeChanged(300)
                     viewModel.export.value shouldBe IconExport.Running
                 }
-            }
-
-            should("loadInitialState still renders when canonicalFile throws IOException") {
-                val mockCacheDir = mockk<File>()
-                every { mockCacheDir.canonicalFile } throws IOException("canonical failed")
-                every { mockContext.cacheDir } returns mockCacheDir
-                val viewModel =
-                    buildViewModel(
-                        mockk<ApplicationInfo>(relaxed = true).also {
-                            it.packageName = "com.example.test"
-                            it.sourceDir =
-                                File(System.getProperty("java.io.tmpdir") ?: "/tmp", "test_${System.nanoTime()}.apk").absolutePath
-                        },
-                    )
-                viewModel.state.value.isLoading shouldBe false
             }
         }
     },

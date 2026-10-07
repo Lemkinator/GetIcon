@@ -33,6 +33,12 @@ interface ApkImporter {
 
     /** Parses the APK at [apk], or returns null when it holds no application. */
     fun readApplicationInfo(apk: File): ApplicationInfo?
+
+    /** Whether [file] lies in the app cache, where [createCacheFile] puts imported APKs. */
+    fun isCached(file: File): Boolean
+
+    /** Deletes [file] when it is a cached APK; leaves any other file untouched. */
+    fun discard(file: File)
 }
 
 class DefaultApkImporter @Inject constructor(
@@ -44,4 +50,11 @@ class DefaultApkImporter @Inject constructor(
 
     override fun readApplicationInfo(apk: File): ApplicationInfo? =
         context.packageManager.getPackageArchiveInfo(apk.absolutePath, 0)?.applicationInfo
+
+    override fun isCached(file: File): Boolean =
+        runCatching { file.canonicalFile.startsWith(context.cacheDir.canonicalFile) }.getOrElse { false }
+
+    override fun discard(file: File) {
+        if (isCached(file)) file.delete()
+    }
 }
