@@ -44,10 +44,10 @@ class ProcessApkUseCase @Inject constructor(
             try {
                 withContext(ioDispatcher) { importApk(uri) { tempFile = it } }
             } catch (e: CancellationException) {
-                tempFile?.delete()
+                tempFile?.let(importer::discard)
                 throw e
             }
-        if (result !is ApkProcessResult.Success) tempFile?.delete()
+        if (result !is ApkProcessResult.Success) tempFile?.let(importer::discard)
         return result
     }
 

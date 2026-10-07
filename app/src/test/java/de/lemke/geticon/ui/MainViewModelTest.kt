@@ -51,7 +51,7 @@ class MainViewModelTest : ShouldSpec(
         lateinit var viewModel: MainViewModel
 
         fun buildViewModel(io: CoroutineDispatcher = Dispatchers.Main) =
-            MainViewModel(ProcessApkUseCase(importer, io), getInstalledApps, getApplicationInfo)
+            MainViewModel(ProcessApkUseCase(importer, io), getInstalledApps, getApplicationInfo, importer)
 
         beforeEach {
             importer = FakeApkImporter()
