@@ -28,6 +28,8 @@ import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
 import de.lemke.geticon.data.FakeApkImporter
+import de.lemke.geticon.data.FakeIconExporter
+import de.lemke.geticon.data.FakeIconExporter.Call
 import de.lemke.geticon.data.FakeIconRenderer
 import de.lemke.geticon.data.FakeIconRenderer.Render
 import de.lemke.geticon.data.UserSettings
@@ -37,7 +39,6 @@ import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.model.IconKind
 import de.lemke.geticon.domain.model.IconStyle
-import de.lemke.geticon.ui.FakeIconExporter.Call
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
