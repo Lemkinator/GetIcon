@@ -31,7 +31,7 @@ interface ApkImporter {
     /** Opens the picked document at [uri], or returns null when its provider has no content. */
     fun open(uri: Uri): InputStream?
 
-    /** Parses the APK at [apk], or returns null when it holds no application. */
+    /** Parses the APK at [apk], or returns null when the file is no parsable APK. */
     fun readApplicationInfo(apk: File): ApplicationInfo?
 
     /** Whether [file] lies in the app cache, where [createCacheFile] puts imported APKs. */
