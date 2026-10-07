@@ -76,8 +76,8 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
 
 - **`data/`** — `UserSettings`: a common-utils `SettingsRepository` subclass,
   SharedPreferences-backed (icon size, mask, colors); `IconExporter`: writes the icon to a public
-  directory, a picked document, the clipboard cache or the share cache; `IconRenderer`: draws an
-  app icon in an `IconStyle` and reports its `IconKind` and label; `ApkImporter`: creates the cache
+  directory, a picked document, the clipboard cache or the share cache; `IconRenderer`: loads an app
+  label, and draws an app icon in an `IconStyle` and reports its `IconKind`; `ApkImporter`: creates the cache
   file, opens the picked document, parses the copied APK and checks for or deletes a cached APK
 - **`domain/`** — thin use cases: `GenerateIconUseCase`, `ProcessApkUseCase`. `domain/model/` holds
   the value types the data layer shares (`IconStyle`, `IconKind`, `RenderedIcon`).

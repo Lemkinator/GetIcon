@@ -28,6 +28,7 @@ import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
 import de.lemke.geticon.data.ApkImporter
 import de.lemke.geticon.data.IconExporter
+import de.lemke.geticon.data.IconRenderer
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
@@ -109,6 +110,7 @@ class IconViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val userSettings: UserSettings,
     private val generateIcon: GenerateIconUseCase,
+    private val renderer: IconRenderer,
     private val exporter: IconExporter,
     private val apkImporter: ApkImporter,
 ) : ViewModel() {
@@ -153,11 +155,12 @@ class IconViewModel @Inject constructor(
                     foregroundColor = recentForegroundColors.first(),
                     backgroundColor = recentBackgroundColors.first(),
                 )
+            val appName = renderer.label(appInfo)
             val icon = generateIcon(appInfo, style)
             state.value =
                 IconUiState(
                     icon = icon.bitmap,
-                    appName = icon.label,
+                    appName = appName,
                     style = style,
                     kind = icon.kind,
                     fileName = icon.fileName,

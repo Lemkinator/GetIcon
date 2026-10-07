@@ -98,7 +98,7 @@ class IconViewModelTest : ShouldSpec(
                 } else {
                     SavedStateHandle()
                 }
-            return IconViewModel(handle, settings, GenerateIconUseCase(renderer), exporter, apkImporter)
+            return IconViewModel(handle, settings, GenerateIconUseCase(renderer), renderer, exporter, apkImporter)
         }
 
         context("null applicationInfo") {
@@ -167,9 +167,18 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.icon shouldBe icon
             }
 
-            should("hold the label of the rendered icon as the app name") {
+            should("hold the label of the app as the app name") {
                 renderer.label = "Example"
                 val viewModel = buildViewModel(appInfo)
+                viewModel.state.value.appName shouldBe "Example"
+            }
+
+            should("load the label once and keep it across a re-render") {
+                renderer.label = "Example"
+                val viewModel = buildViewModel(appInfo)
+                renderer.label = "Renamed"
+                viewModel.onMaskChanged(false)
+                renderer.labeled shouldBe listOf(appInfo)
                 viewModel.state.value.appName shouldBe "Example"
             }
 

@@ -38,7 +38,10 @@ import de.lemke.geticon.domain.model.RenderedIcon
 import javax.inject.Inject
 
 interface IconRenderer {
-    /** Loads the icon and label of [applicationInfo] and draws the icon into a bitmap in [style]. */
+    /** Loads the label of [applicationInfo], falling back to its package name. */
+    fun label(applicationInfo: ApplicationInfo): String
+
+    /** Loads the icon of [applicationInfo] and draws it into a bitmap in [style]. */
     fun render(
         applicationInfo: ApplicationInfo,
         style: IconStyle,
@@ -48,6 +51,8 @@ interface IconRenderer {
 class DefaultIconRenderer @Inject constructor(
     @param:ApplicationContext private val context: Context,
 ) : IconRenderer {
+    override fun label(applicationInfo: ApplicationInfo): String = applicationInfo.loadLabel(context.packageManager).toString()
+
     @SuppressLint("RestrictedApi")
     override fun render(
         applicationInfo: ApplicationInfo,
@@ -55,8 +60,7 @@ class DefaultIconRenderer @Inject constructor(
     ): RenderedIcon {
         val size = style.size
         val packageManager = context.packageManager
-        val label = applicationInfo.loadLabel(packageManager).toString()
-        val appIcon = loadIcon(applicationInfo, packageManager) ?: return RenderedIcon(createBitmap(size, size), IconKind.LEGACY, label)
+        val appIcon = loadIcon(applicationInfo, packageManager) ?: return RenderedIcon(createBitmap(size, size), IconKind.LEGACY)
         val maskedAppIcon = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
         val kind =
             when {
@@ -71,7 +75,7 @@ class DefaultIconRenderer @Inject constructor(
                 style.maskEnabled && maskedAppIcon != null -> maskedAppIcon.toBitmap(size, size)
                 else -> drawable.toBitmap(size, size)
             }
-        return RenderedIcon(bitmap, kind, label)
+        return RenderedIcon(bitmap, kind)
     }
 
     @Suppress("TooGenericExceptionCaught")

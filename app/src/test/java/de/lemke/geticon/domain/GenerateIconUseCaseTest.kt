@@ -34,13 +34,9 @@ class GenerateIconUseCaseTest : ShouldSpec(
         val app = ApplicationInfo().apply { packageName = "com.example.app" }
         val style = IconStyle(size = 256, maskEnabled = true, colorEnabled = false, foregroundColor = -1, backgroundColor = -16547330)
 
-        should("return the rendered icon with its kind, label and export file name") {
-            val renderer =
-                FakeIconRenderer(bitmap).apply {
-                    kind = IconKind.MASKABLE
-                    label = "Example"
-                }
-            GenerateIconUseCase(renderer)(app, style) shouldBe GeneratedIcon(bitmap, IconKind.MASKABLE, "Example", "com.example.app_mask")
+        should("return the rendered icon with its kind and export file name") {
+            val renderer = FakeIconRenderer(bitmap).apply { kind = IconKind.MASKABLE }
+            GenerateIconUseCase(renderer)(app, style) shouldBe GeneratedIcon(bitmap, IconKind.MASKABLE, "com.example.app_mask")
             renderer.renders shouldBe listOf(Render(app, style))
         }
 

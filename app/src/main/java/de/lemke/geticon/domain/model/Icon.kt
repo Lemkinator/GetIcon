@@ -39,5 +39,4 @@ enum class IconKind(
 data class RenderedIcon(
     val bitmap: Bitmap,
     val kind: IconKind,
-    val label: String,
 )

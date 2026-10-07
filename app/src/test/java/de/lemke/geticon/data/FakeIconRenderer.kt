@@ -22,14 +22,20 @@ import de.lemke.geticon.domain.model.IconKind
 import de.lemke.geticon.domain.model.IconStyle
 import de.lemke.geticon.domain.model.RenderedIcon
 
-/** Renders every icon as [bitmap] of [kind] labeled [label], or throws [failure] once set, and records each render. */
+/** Labels every app [label] and renders every icon as [bitmap] of [kind], or throws [failure] once set; records each call. */
 internal class FakeIconRenderer(
     private val bitmap: Bitmap,
 ) : IconRenderer {
     var kind: IconKind = IconKind.ADAPTIVE
     var label: String = "Example App"
     var failure: Throwable? = null
+    val labeled = mutableListOf<ApplicationInfo>()
     val renders = mutableListOf<Render>()
+
+    override fun label(applicationInfo: ApplicationInfo): String {
+        labeled += applicationInfo
+        return label
+    }
 
     override fun render(
         applicationInfo: ApplicationInfo,
@@ -37,7 +43,7 @@ internal class FakeIconRenderer(
     ): RenderedIcon {
         renders += Render(applicationInfo, style)
         failure?.let { throw it }
-        return RenderedIcon(bitmap, kind, label)
+        return RenderedIcon(bitmap, kind)
     }
 
     data class Render(
