@@ -21,6 +21,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModelStore
 import androidx.picker.model.AppInfoData
 import app.cash.turbine.test
+import de.lemke.commonutils.data.FakePackageLookup
 import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.domain.GetInstalledAppsUseCase
 import de.lemke.geticon.data.FakeApkImporter
@@ -28,8 +29,6 @@ import de.lemke.geticon.domain.ProcessApkUseCase
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.mockk
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
@@ -46,18 +45,22 @@ private fun MainViewModel.triggerOnCleared() {
 class MainViewModelTest : ShouldSpec(
     {
         lateinit var importer: FakeApkImporter
-        lateinit var getInstalledApps: GetInstalledAppsUseCase
-        lateinit var getApplicationInfo: GetApplicationInfoUseCase
+        lateinit var lookup: FakePackageLookup
         lateinit var viewModel: MainViewModel
 
         fun buildViewModel(io: CoroutineDispatcher = Dispatchers.Main) =
-            MainViewModel(ProcessApkUseCase(importer, io), getInstalledApps, getApplicationInfo, importer)
+            MainViewModel(
+                ProcessApkUseCase(importer, io),
+                GetInstalledAppsUseCase(lookup),
+                GetApplicationInfoUseCase(lookup),
+                importer,
+            )
+
+        fun installed(packageName: String) = ApplicationInfo().also { it.packageName = packageName }
 
         beforeEach {
             importer = FakeApkImporter()
-            getInstalledApps = mockk()
-            getApplicationInfo = mockk()
-            coEvery { getInstalledApps() } returns emptyList()
+            lookup = FakePackageLookup()
             viewModel = buildViewModel()
         }
 
@@ -72,24 +75,25 @@ class MainViewModelTest : ShouldSpec(
 
         should("installedApps is Loading until the load returns, then Loaded with the apps") {
             val app = mockk<AppInfoData>()
-            val gate = CompletableDeferred<List<AppInfoData>>()
-            coEvery { getInstalledApps() } coAnswers { gate.await() }
+            val gate = CompletableDeferred<Unit>()
+            lookup.gate = gate
+            lookup.installedAppsResult = Result.success(listOf(app))
             viewModel = buildViewModel()
             viewModel.installedApps.test {
                 awaitItem() shouldBe InstalledApps.Loading
-                gate.complete(listOf(app))
+                gate.complete(Unit)
                 awaitItem() shouldBe InstalledApps.Loaded(listOf(app))
             }
         }
 
         should("installedApps is Failed and not yet handled when getInstalledApps throws") {
-            coEvery { getInstalledApps() } throws RuntimeException("load failed")
+            lookup.installedAppsResult = Result.failure(RuntimeException("load failed"))
             viewModel = buildViewModel()
             viewModel.installedApps.value shouldBe InstalledApps.Failed(handled = false)
         }
 
         should("onInstalledAppsFailureHandled marks the failure handled") {
-            coEvery { getInstalledApps() } throws RuntimeException("load failed")
+            lookup.installedAppsResult = Result.failure(RuntimeException("load failed"))
             viewModel = buildViewModel()
             viewModel.installedApps.test {
                 awaitItem() shouldBe InstalledApps.Failed(handled = false)
@@ -213,43 +217,42 @@ class MainViewModelTest : ShouldSpec(
         }
 
         should("onAppSelected holds Found with the looked-up ApplicationInfo") {
-            val appInfo = mockk<ApplicationInfo>()
-            coEvery { getApplicationInfo("com.example.app") } returns appInfo
+            val appInfo = installed("com.example.app")
+            lookup.applicationInfos["com.example.app"] = appInfo
             viewModel.onAppSelected("com.example.app")
             viewModel.appLookup.value shouldBe AppLookup.Found(appInfo)
         }
 
         should("onAppSelected holds NotFound for a package that is not installed") {
-            coEvery { getApplicationInfo("com.example.missing") } returns null
             viewModel.onAppSelected("com.example.missing")
             viewModel.appLookup.value shouldBe AppLookup.NotFound
         }
 
         should("a lookup is Running until it returns, and a second selection meanwhile does nothing") {
-            val appInfo = mockk<ApplicationInfo>()
-            val gate = CompletableDeferred<ApplicationInfo?>()
-            coEvery { getApplicationInfo("com.example.app") } coAnswers { gate.await() }
+            val appInfo = installed("com.example.app")
+            lookup.applicationInfos["com.example.app"] = appInfo
+            val gate = CompletableDeferred<Unit>()
+            lookup.gate = gate
             viewModel.appLookup.test {
                 awaitItem() shouldBe AppLookup.Idle
                 viewModel.onAppSelected("com.example.app")
                 awaitItem() shouldBe AppLookup.Running
                 viewModel.onAppSelected("com.example.other")
-                gate.complete(appInfo)
+                gate.complete(Unit)
                 awaitItem() shouldBe AppLookup.Found(appInfo)
             }
-            coVerify(exactly = 0) { getApplicationInfo("com.example.other") }
+            lookup.lookedUpPackages shouldBe listOf("com.example.app")
         }
 
         should("onAppLookupHandled returns to Idle") {
-            coEvery { getApplicationInfo("com.example.missing") } returns null
             viewModel.onAppSelected("com.example.missing")
             viewModel.onAppLookupHandled(AppLookup.NotFound)
             viewModel.appLookup.value shouldBe AppLookup.Idle
         }
 
         should("onAppLookupHandled keeps a result other than the handled one") {
-            val appInfo = mockk<ApplicationInfo>()
-            coEvery { getApplicationInfo("com.example.app") } returns appInfo
+            val appInfo = installed("com.example.app")
+            lookup.applicationInfos["com.example.app"] = appInfo
             viewModel.onAppSelected("com.example.app")
             viewModel.onAppLookupHandled(AppLookup.NotFound)
             viewModel.appLookup.value shouldBe AppLookup.Found(appInfo)
