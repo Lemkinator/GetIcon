@@ -441,6 +441,7 @@ class IconActivityTest {
             ShadowToast.shownToastCount() shouldBe 1
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity shouldBe null
+                File(activity.cacheDir, "share").walk().count { it.isFile } shouldBe 1
                 ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe IconExport.Idle
             }
         }
