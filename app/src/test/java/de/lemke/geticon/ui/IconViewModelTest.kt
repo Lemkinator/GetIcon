@@ -28,9 +28,9 @@ import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
 import de.lemke.commonutils.ui.utils.DocumentPick
+import de.lemke.commonutils.ui.utils.FakeBitmapExporter
+import de.lemke.commonutils.ui.utils.FakeBitmapExporter.Call
 import de.lemke.geticon.data.FakeApkImporter
-import de.lemke.geticon.data.FakeIconExporter
-import de.lemke.geticon.data.FakeIconExporter.Call
 import de.lemke.geticon.data.FakeIconRenderer
 import de.lemke.geticon.data.FakeIconRenderer.Render
 import de.lemke.geticon.data.UserSettings
@@ -58,7 +58,7 @@ private fun IconViewModel.triggerOnCleared() {
 class IconViewModelTest : ShouldSpec(
     {
         lateinit var userSettings: UserSettings
-        lateinit var exporter: FakeIconExporter
+        lateinit var exporter: FakeBitmapExporter
         lateinit var renderer: FakeIconRenderer
         lateinit var apkImporter: FakeApkImporter
 
@@ -76,7 +76,7 @@ class IconViewModelTest : ShouldSpec(
 
         beforeEach {
             userSettings = UserSettings(FakeSharedPreferences())
-            exporter = FakeIconExporter()
+            exporter = FakeBitmapExporter()
             renderer = FakeIconRenderer(icon)
             apkImporter = FakeApkImporter()
         }
@@ -418,17 +418,10 @@ class IconViewModelTest : ShouldSpec(
             context("export") {
                 val fileName = "com.example.test_mask"
 
-                should("onSave writes the icon to the stored location and holds the toast result") {
+                should("onSave asks the exporter for the stored location and holds OpenPicker with the file name") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
                     exporter.calls shouldBe listOf(Call.SaveToDirectory(SaveLocation.CUSTOM, icon, fileName))
-                    viewModel.export.value shouldBe IconExport.SaveFinished(BitmapSaveResult.Saved(SaveLocation.DOWNLOADS))
-                }
-
-                should("onSave holds OpenPicker with the file name when the location needs the picker") {
-                    exporter.directoryResult = BitmapSaveResult.NeedsPicker
-                    val viewModel = buildViewModel(appInfo)
-                    viewModel.onSave()
                     viewModel.export.value shouldBe IconExport.OpenPicker(fileName)
                 }
 
@@ -445,21 +438,20 @@ class IconViewModelTest : ShouldSpec(
                         viewModel.onShare()
                         exporter.calls.size shouldBe 1
                         gate.complete(Unit)
-                        awaitItem() shouldBe IconExport.SaveFinished(BitmapSaveResult.Saved(SaveLocation.DOWNLOADS))
+                        awaitItem() shouldBe IconExport.OpenPicker(fileName)
                     }
                 }
 
                 should("onExportHandled returns to Idle and admits the next export") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
-                    viewModel.onExportHandled(IconExport.SaveFinished(BitmapSaveResult.Saved(SaveLocation.DOWNLOADS)))
+                    viewModel.onExportHandled(IconExport.OpenPicker(fileName))
                     viewModel.export.value shouldBe IconExport.Idle
                     viewModel.onShare()
                     exporter.calls.size shouldBe 2
                 }
 
                 should("onExportHandled keeps a result other than the handled one") {
-                    exporter.directoryResult = BitmapSaveResult.NeedsPicker
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
                     viewModel.onExportHandled(IconExport.CopyFailed)
@@ -467,7 +459,6 @@ class IconViewModelTest : ShouldSpec(
                 }
 
                 should("a tap while a result waits for the activity replaces that result") {
-                    exporter.directoryResult = BitmapSaveResult.NeedsPicker
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
                     viewModel.onCopy()

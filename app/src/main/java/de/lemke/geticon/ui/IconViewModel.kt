@@ -23,11 +23,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.lemke.commonutils.ui.utils.BitmapExporter
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
 import de.lemke.commonutils.ui.utils.DocumentPick
 import de.lemke.geticon.data.ApkImporter
-import de.lemke.geticon.data.IconExporter
 import de.lemke.geticon.data.IconRenderer
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
@@ -103,7 +103,7 @@ class IconViewModel @Inject constructor(
     private val userSettings: UserSettings,
     private val generateIcon: GenerateIconUseCase,
     private val renderer: IconRenderer,
-    private val exporter: IconExporter,
+    private val exporter: BitmapExporter,
     private val apkImporter: ApkImporter,
 ) : ViewModel() {
     private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
