@@ -84,13 +84,12 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
   (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
 - **`App.kt`** — `@HiltAndroidApp` entry point; injects `settings: SettingsRepository`
   and calls `settings.applyDarkMode()` in `onCreate()`
-- **`di/SettingsModule.kt`** — two Hilt modules: `SettingsProvideModule`
+- **`di/`** — Hilt modules. `SettingsModule.kt` holds `SettingsProvideModule`
   (`@Provides @Singleton` builds the single `UserSettings` instance) and
   `SettingsBindModule` (`@Binds` redirects `SettingsRepository`-typed requests
-  to that instance)
-- **`di/`** — also binds the common-utils `PackageLookup` to `DefaultPackageLookup` and provides
-  `DefaultBitmapExporter`, which writes the icon to a public directory, a picked document, the
-  clipboard cache or the share cache
+  to that instance). `PackageLookupModule` binds the common-utils `PackageLookup` to
+  `DefaultPackageLookup`; `BitmapExporterModule` provides `DefaultBitmapExporter`, which writes
+  the icon to a public directory, a picked document, the clipboard cache or the share cache
 
 DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
 ViewBinding enabled. ViewModels expose state only: activities collect each `StateFlow` via
