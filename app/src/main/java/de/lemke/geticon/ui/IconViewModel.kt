@@ -19,13 +19,13 @@ package de.lemke.geticon.ui
 import android.content.ClipData
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
-import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
+import de.lemke.commonutils.ui.utils.DocumentPick
 import de.lemke.geticon.data.ApkImporter
 import de.lemke.geticon.data.IconExporter
 import de.lemke.geticon.data.IconRenderer
@@ -84,14 +84,6 @@ sealed interface IconExport {
     data class Share(val file: BitmapShareFile.Written) : Result
 
     data object ShareFailed : Result
-}
-
-sealed interface DocumentPick {
-    data class Created(val uri: Uri) : DocumentPick
-
-    data object MissingUri : DocumentPick
-
-    data object Canceled : DocumentPick
 }
 
 /** Whether the screen must close. The activity shows a [Reason], finishes and then reports it handled. */

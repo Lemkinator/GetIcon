@@ -16,7 +16,6 @@
 
 package de.lemke.geticon.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
@@ -50,6 +49,7 @@ import de.lemke.commonutils.ui.utils.shareBitmap
 import de.lemke.commonutils.ui.utils.showOnce
 import de.lemke.commonutils.ui.utils.singleLaunch
 import de.lemke.commonutils.ui.utils.singleLaunchMenuItem
+import de.lemke.commonutils.ui.utils.toDocumentPick
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
@@ -293,12 +293,3 @@ private val LaunchOutcome.isSettled: Boolean
             LaunchOutcome.Started, LaunchOutcome.Failed -> true
             LaunchOutcome.Dropped -> false
         }
-
-private fun ActivityResult.toDocumentPick(): DocumentPick {
-    val uri = data?.data
-    return when {
-        resultCode != Activity.RESULT_OK -> DocumentPick.Canceled
-        uri == null -> DocumentPick.MissingUri
-        else -> DocumentPick.Created(uri)
-    }
-}
