@@ -75,8 +75,7 @@ Single-module (`:app`) Android app — extracts and exports app icons.
 Layered architecture (data/domain/ui) with ViewModels per activity:
 
 - **`data/`** — `UserSettings`: a common-utils `SettingsRepository` subclass,
-  SharedPreferences-backed (icon size, mask, colors); `IconExporter`: writes the icon to a public
-  directory, a picked document, the clipboard cache or the share cache; `IconRenderer`: loads an app
+  SharedPreferences-backed (icon size, mask, colors); `IconRenderer`: loads an app
   label, and draws an app icon in an `IconStyle` and reports its `IconKind`; `ApkImporter`: creates the cache
   file, opens the picked document, parses the copied APK and checks for or deletes a cached APK
 - **`domain/`** — thin use cases: `GenerateIconUseCase`, `ProcessApkUseCase`. `domain/model/` holds
@@ -89,6 +88,9 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
   (`@Provides @Singleton` builds the single `UserSettings` instance) and
   `SettingsBindModule` (`@Binds` redirects `SettingsRepository`-typed requests
   to that instance)
+- **`di/`** — also binds the common-utils `PackageLookup` to `DefaultPackageLookup` and provides
+  `DefaultBitmapExporter`, which writes the icon to a public directory, a picked document, the
+  clipboard cache or the share cache
 
 DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
 ViewBinding enabled. ViewModels expose state only: activities collect each `StateFlow` via
