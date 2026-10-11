@@ -23,7 +23,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.CompoundButton
 import androidx.activity.result.ActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
@@ -36,6 +35,8 @@ import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.commonutils.ui.utils.LaunchOutcome
+import de.lemke.commonutils.ui.utils.SingleLaunchResultLauncher
 import de.lemke.commonutils.ui.utils.bindColorSwatch
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.copyToClipboard
@@ -74,7 +75,7 @@ class IconActivity :
     private var isRendering = false
     private var suggestViewSet = false
 
-    private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
+    private val exportBitmapResultLauncher: SingleLaunchResultLauncher<Intent> =
         registerForSingleLaunchResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,11 +140,11 @@ class IconActivity :
         val handled =
             when (result) {
                 is IconExport.OpenPicker -> {
-                    true.also { exportBitmap(result.fileName, exportBitmapResultLauncher) }
+                    exportBitmap(result.fileName, exportBitmapResultLauncher).isSettled
                 }
 
                 is IconExport.Share -> {
-                    shareBitmap(result.file)
+                    shareBitmap(result.file).isSettled
                 }
 
                 is IconExport.SaveFinished -> {
@@ -285,6 +286,13 @@ class IconActivity :
         private const val FOREGROUND_COLOR_PICKER_TAG = "foregroundColorPicker"
     }
 }
+
+private val LaunchOutcome.isSettled: Boolean
+    get() =
+        when (this) {
+            LaunchOutcome.Started, LaunchOutcome.Failed -> true
+            LaunchOutcome.Dropped -> false
+        }
 
 private fun ActivityResult.toDocumentPick(): DocumentPick {
     val uri = data?.data

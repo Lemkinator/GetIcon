@@ -393,6 +393,60 @@ class IconActivityTest {
     }
 
     @Test
+    fun saveAsImage_latchDropsPickerLaunch_keepsResultAndOpensPickerOnNextResume() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
+                ViewModelProvider(activity)[IconViewModel::class.java].onSave()
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                val shadowActivity = shadowOf(activity)
+                shadowActivity.nextStartedActivityForResult
+                    ?.intent
+                    ?.component
+                    ?.className shouldBe
+                    CommonUtilsAboutActivity::class.java.name
+                shadowActivity.nextStartedActivityForResult shouldBe null
+                ViewModelProvider(activity)[IconViewModel::class.java]
+                    .export.value
+                    .shouldBeInstanceOf<IconExport.OpenPicker>()
+            }
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivityForResult?.intent?.action shouldBe Intent.ACTION_CREATE_DOCUMENT
+                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe IconExport.Idle
+            }
+            ShadowToast.shownToastCount() shouldBe 0
+        }
+    }
+
+    @Test
+    fun share_noShareSheet_showsShareErrorOnceAcrossResume() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            shadowOf(ApplicationProvider.getApplicationContext<HiltTestApplication>()).checkActivities(true)
+            scenario.onActivity { activity ->
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 1
+            ShadowToast.getTextOfLatestToast() shouldBe "Error: Sharing content is not supported on your device."
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 1
+            scenario.onActivity { activity ->
+                shadowOf(activity).nextStartedActivity shouldBe null
+                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe IconExport.Idle
+            }
+        }
+    }
+
+    @Test
     fun exportControls_disabledWhileWorkRuns() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
