@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.lemke.geticon.ui
+package de.lemke.geticon.data
 
 import android.content.ClipData
 import android.graphics.Bitmap
@@ -22,7 +22,6 @@ import android.net.Uri
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
-import de.lemke.geticon.data.IconExporter
 import kotlinx.coroutines.CompletableDeferred
 
 internal class FakeIconExporter : IconExporter {

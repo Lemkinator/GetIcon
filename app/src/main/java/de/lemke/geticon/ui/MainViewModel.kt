@@ -24,6 +24,7 @@ import androidx.picker.model.AppInfoData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.domain.GetInstalledAppsUseCase
+import de.lemke.geticon.data.ApkImporter
 import de.lemke.geticon.domain.ApkProcessResult
 import de.lemke.geticon.domain.ProcessApkUseCase
 import java.io.File
@@ -77,6 +78,7 @@ class MainViewModel @Inject constructor(
     private val processApk: ProcessApkUseCase,
     private val getInstalledApps: GetInstalledAppsUseCase,
     private val getApplicationInfo: GetApplicationInfoUseCase,
+    private val apkImporter: ApkImporter,
 ) : ViewModel() {
     val installedApps: StateFlow<InstalledApps>
         field = MutableStateFlow<InstalledApps>(InstalledApps.Loading)
@@ -139,6 +141,6 @@ class MainViewModel @Inject constructor(
     }
 
     private fun ApkImport.discard() {
-        if (this is ApkImport.Imported) File(applicationInfo.sourceDir).delete()
+        if (this is ApkImport.Imported) apkImporter.discard(File(applicationInfo.sourceDir))
     }
 }

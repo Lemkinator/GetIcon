@@ -16,16 +16,11 @@
 
 package de.lemke.geticon.domain
 
-import android.content.ContentResolver
-import android.content.Context
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
 import android.net.Uri
+import de.lemke.geticon.data.FakeApkImporter
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.every
 import io.mockk.mockk
 import java.io.File
 import java.io.IOException
@@ -40,118 +35,87 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProcessApkUseCaseTest : ShouldSpec(
     {
-        val context = mockk<Context>(relaxed = true)
-        val packageManager = mockk<PackageManager>(relaxed = true)
-        val contentResolver = mockk<ContentResolver>(relaxed = true)
         val uri = mockk<Uri>()
-        lateinit var cacheDir: File
+        lateinit var importer: FakeApkImporter
         lateinit var useCase: ProcessApkUseCase
 
         beforeEach {
-            cacheDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp", "pauTest_${System.nanoTime()}")
-            cacheDir.mkdirs()
-            every { context.packageManager } returns packageManager
-            every { context.contentResolver } returns contentResolver
-            every { context.cacheDir } returns cacheDir
-            every { contentResolver.openInputStream(any()) } returns null
-            useCase = ProcessApkUseCase(context, UnconfinedTestDispatcher())
+            importer = FakeApkImporter()
+            useCase = ProcessApkUseCase(importer, UnconfinedTestDispatcher())
         }
 
-        afterEach { cacheDir.deleteRecursively() }
+        afterEach { importer.cacheDir.deleteRecursively() }
 
-        should("return Error when openInputStream returns null") {
-            // null stream = provider could not open the content, not an invalid APK
-            val result = useCase(uri)
-            result shouldBe ApkProcessResult.Error
+        should("return Success with the cached APK as source when the document is an APK") {
+            importer.addApk(uri, "com.example.app")
+            val success = useCase(uri).shouldBeInstanceOf<ApkProcessResult.Success>()
+            val cached = importer.cachedFiles().single()
+            success.applicationInfo.packageName shouldBe "com.example.app"
+            success.applicationInfo.sourceDir shouldBe cached.absolutePath
+            success.applicationInfo.publicSourceDir shouldBe cached.absolutePath
+            cached.readText() shouldBe "apk:com.example.app"
         }
 
-        should("delete temp file when openInputStream returns null") {
-            useCase(uri)
-            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
+        should("return Error and delete the cache file when the provider has no content") {
+            useCase(uri) shouldBe ApkProcessResult.Error
+            importer.opened shouldBe listOf(uri)
+            importer.cachedFiles() shouldBe emptyList()
         }
 
-        should("return InvalidApk when package manager returns no applicationInfo") {
-            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
-            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } returns null
-            val result = useCase(uri)
-            result shouldBe ApkProcessResult.InvalidApk
-        }
-
-        should("return InvalidApk when the archive info has no applicationInfo") {
-            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
-            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } returns PackageInfo()
+        should("return InvalidApk and delete the cache file when the document is no APK") {
+            importer.addDocument(uri, "fake content")
             useCase(uri) shouldBe ApkProcessResult.InvalidApk
-            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
+            importer.cachedFiles() shouldBe emptyList()
         }
 
-        should("delete temp file when applicationInfo is null") {
-            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
-            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } returns null
-            useCase(uri)
-            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
-        }
-
-        should("return Error on IOException from openInputStream") {
-            every { contentResolver.openInputStream(any()) } throws IOException("stream error")
-            val result = useCase(uri)
-            result shouldBe ApkProcessResult.Error
-        }
-
-        should("delete temp file on IOException") {
-            every { contentResolver.openInputStream(any()) } throws IOException("stream error")
-            useCase(uri)
-            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
-        }
-
-        should("return Error on SecurityException") {
-            every { contentResolver.openInputStream(any()) } throws SecurityException("no permission")
-            val result = useCase(uri)
-            result shouldBe ApkProcessResult.Error
-        }
-
-        should("return Error on RuntimeException from getPackageArchiveInfo") {
-            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
-            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } throws RuntimeException("parse error")
-            val result = useCase(uri)
-            result shouldBe ApkProcessResult.Error
-        }
-
-        should("delete temp file on RuntimeException") {
-            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
-            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } throws RuntimeException("parse error")
-            useCase(uri)
-            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
-        }
-
-        should("rethrow CancellationException instead of returning Error") {
-            every { contentResolver.openInputStream(any()) } throws CancellationException("cancelled")
-            val exception = runCatching { useCase(uri) }.exceptionOrNull()
-            exception.shouldBeInstanceOf<CancellationException>()
-        }
-
-        should("delete temp file when cancelled while processing") {
-            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
-            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } throws CancellationException("cancelled")
-            runCatching { useCase(uri) }
-            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
-        }
-
-        should("delete temp file when the caller is cancelled before a Success is delivered") {
-            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
-            lateinit var caller: Job
-            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } answers {
-                caller.cancel()
-                PackageInfo().also { it.applicationInfo = ApplicationInfo() }
+        listOf(IOException("stream error"), SecurityException("no permission")).forEach { failure ->
+            should("return Error and delete the cache file when opening throws ${failure::class.simpleName}") {
+                importer.addUnreadable(uri, failure)
+                useCase(uri) shouldBe ApkProcessResult.Error
+                importer.cachedFiles() shouldBe emptyList()
             }
+        }
+
+        should("return Error and delete the cache file when parsing throws") {
+            importer.addApk(uri, "com.example.app")
+            importer.beforeReading = { throw IllegalStateException("parse error") }
+            useCase(uri) shouldBe ApkProcessResult.Error
+            importer.cachedFiles() shouldBe emptyList()
+        }
+
+        should("return Error when the cache file cannot be created") {
+            val blocked = FakeApkImporter(File(importer.cacheDir, "notADir").also { it.createNewFile() })
+            ProcessApkUseCase(blocked, UnconfinedTestDispatcher())(uri) shouldBe ApkProcessResult.Error
+            blocked.opened shouldBe emptyList()
+        }
+
+        should("rethrow a CancellationException from opening instead of returning Error") {
+            importer.addUnreadable(uri, CancellationException("cancelled"))
+            runCatching { useCase(uri) }.exceptionOrNull().shouldBeInstanceOf<CancellationException>()
+            importer.cachedFiles() shouldBe emptyList()
+        }
+
+        should("delete the cache file when parsing is cancelled") {
+            importer.addApk(uri, "com.example.app")
+            importer.beforeReading = { throw CancellationException("cancelled") }
+            runCatching { useCase(uri) }.exceptionOrNull().shouldBeInstanceOf<CancellationException>()
+            importer.cachedFiles() shouldBe emptyList()
+        }
+
+        should("delete the cache file when the caller is cancelled before a Success is delivered") {
+            importer.addApk(uri, "com.example.app")
+            lateinit var caller: Job
+            importer.beforeReading = { caller.cancel() }
             coroutineScope {
                 caller = launch(start = CoroutineStart.LAZY) { useCase(uri) }
                 caller.join()
             }
             caller.isCancelled shouldBe true
-            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
+            importer.cachedFiles() shouldBe emptyList()
         }
 
-        should("create no temp file when the caller is cancelled before processing starts") {
+        should("open nothing when the caller is cancelled before processing starts") {
+            importer.addApk(uri, "com.example.app")
             val caller =
                 coroutineScope {
                     launch {
@@ -160,26 +124,8 @@ class ProcessApkUseCaseTest : ShouldSpec(
                     }
                 }
             caller.isCancelled shouldBe true
-            cacheDir.listFiles()?.filter { it.name.startsWith("extractIcon") } shouldBe emptyList()
-        }
-
-        should("return Error and handle null tempFile when createTempFile throws IOException") {
-            val notADir = File(cacheDir, "notADir").also { it.createNewFile() }
-            every { context.cacheDir } returns notADir
-            val result = useCase(uri)
-            result shouldBe ApkProcessResult.Error
-        }
-
-        should("return Success with sourceDir set when applicationInfo is non-null") {
-            every { contentResolver.openInputStream(any()) } returns "fake content".byteInputStream()
-            val fakeAppInfo = ApplicationInfo()
-            val fakePackageInfo = PackageInfo().also { it.applicationInfo = fakeAppInfo }
-            every { packageManager.getPackageArchiveInfo(any(), any<Int>()) } returns fakePackageInfo
-            val result = useCase(uri)
-            val success = result.shouldBeInstanceOf<ApkProcessResult.Success>()
-            success.applicationInfo.sourceDir.isNotEmpty() shouldBe true
-            success.applicationInfo.sourceDir shouldBe success.applicationInfo.publicSourceDir
-            File(success.applicationInfo.sourceDir).exists() shouldBe true
+            importer.opened shouldBe emptyList()
+            importer.cachedFiles() shouldBe emptyList()
         }
     },
 )

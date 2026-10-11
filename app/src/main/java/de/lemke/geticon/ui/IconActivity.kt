@@ -181,21 +181,22 @@ class IconActivity :
             binding.icon.contentDescription = getString(R.string.app_icon_of, state.appName)
         }
         state.icon?.let { binding.icon.setImageBitmap(it) }
-        binding.maskedCheckbox.isChecked = state.maskEnabled && state.hasMaskedAppIcon
-        binding.maskedCheckbox.isEnabled = state.hasMaskedAppIcon
-        binding.colorCheckbox.isChecked = state.colorEnabled && state.isAdaptiveIcon
-        binding.colorCheckbox.isEnabled = state.isAdaptiveIcon
-        if (binding.sizeSeekbar.progress != state.size) binding.sizeSeekbar.progress = state.size
+        val style = state.style
+        binding.maskedCheckbox.isChecked = style.maskEnabled && state.kind.canMask
+        binding.maskedCheckbox.isEnabled = state.kind.canMask
+        binding.colorCheckbox.isChecked = style.colorEnabled && state.kind.canTint
+        binding.colorCheckbox.isEnabled = state.kind.canTint
+        if (binding.sizeSeekbar.progress != style.size) binding.sizeSeekbar.progress = style.size
         if (binding.sizeEdittext.text
                 .toString()
-                .toIntOrNull() != state.size
+                .toIntOrNull() != style.size
         ) {
-            binding.sizeEdittext.setText("%d".format(Locale.getDefault(), state.size))
+            binding.sizeEdittext.setText("%d".format(Locale.getDefault(), style.size))
         }
         isRendering = false
-        val colorButtonsEnabled = state.isAdaptiveIcon && state.colorEnabled
-        binding.colorButtonBackground.bindColorSwatch(state.backgroundColor, colorButtonsEnabled)
-        binding.colorButtonForeground.bindColorSwatch(state.foregroundColor, colorButtonsEnabled)
+        val colorButtonsEnabled = state.kind.canTint && style.colorEnabled
+        binding.colorButtonBackground.bindColorSwatch(style.backgroundColor, colorButtonsEnabled)
+        binding.colorButtonForeground.bindColorSwatch(style.foregroundColor, colorButtonsEnabled)
         if (!suggestViewSet && state.icon != null) {
             binding.root.setAppBarSuggestView(createSuggestAppBarModel())
             suggestViewSet = true
@@ -242,7 +243,7 @@ class IconActivity :
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun showColorPicker(isBackground: Boolean) {
         val state = viewModel.state.value
-        val currentColor = if (isBackground) state.backgroundColor else state.foregroundColor
+        val currentColor = if (isBackground) state.style.backgroundColor else state.style.foregroundColor
         val recentColors = if (isBackground) state.recentBackgroundColors else state.recentForegroundColors
         val dialog =
             SeslColorPickerDialog(
