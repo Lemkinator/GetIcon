@@ -216,7 +216,7 @@ or `PreferenceManager.getDefaultSharedPreferences(...)` directly.
   `lib/src/testFixtures/java/de/lemke/commonutils/data/FakeSharedPreferences.kt`) — a pure-JVM
   double used only by the one Kotest spec with no Context (`IconViewModelTest`); everywhere else
   Robolectric's real `SharedPreferences` (via the module above) or a Context-backed file
-  (`UserSettingsTest`, using `freshTestPreferences()` directly) is used instead.
+  (`UserSettingsTest` and `IconViewModelSaveTest`, using `freshTestPreferences()` directly) is used instead.
 - **`bypassOobe()`** — also published by common-utils testFixtures
   (`de.lemke.commonutils.bypassOobe()`, a plain `SettingsRepository` extension), for any test
   that launches `MainActivity`. GetIcon has no settings-test code of its own left beyond
