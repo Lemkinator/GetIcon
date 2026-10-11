@@ -29,7 +29,7 @@ import androidx.appcompat.view.menu.MenuItemImpl
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
-import androidx.picker.helper.SeslAppInfoDataHelper
+import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.model.AppInfo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -39,6 +39,8 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import dagger.hilt.android.testing.UninstallModules
 import de.lemke.commonutils.bypassOobe
+import de.lemke.commonutils.data.FakePackageLookup
+import de.lemke.commonutils.data.PackageLookup
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
@@ -53,16 +55,15 @@ import de.lemke.geticon.data.ApkImporter
 import de.lemke.geticon.data.FakeApkImporter
 import de.lemke.geticon.di.ApkImporterModule
 import de.lemke.geticon.di.DispatchersModule
+import de.lemke.geticon.di.PackageLookupModule
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
 import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
-import io.mockk.every
-import io.mockk.mockkConstructor
-import io.mockk.unmockkConstructor
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import leakcanary.AppWatcher
@@ -86,7 +87,7 @@ import dev.oneuiproject.oneui.design.R as oneuiDesignR
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@UninstallModules(DispatchersModule::class, ApkImporterModule::class)
+@UninstallModules(DispatchersModule::class, ApkImporterModule::class, PackageLookupModule::class)
 class MainActivityTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
@@ -96,6 +97,17 @@ class MainActivityTest {
     @BindValue
     @JvmField
     val apkImporter: ApkImporter = importer
+
+    private val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
+
+    private val lookup =
+        FakePackageLookup(context.applicationInfo).apply {
+            installedAppsResult = Result.success(listOf(GridAppDataBuilder(AppInfo(context.packageName, "")).build()))
+        }
+
+    @BindValue
+    @JvmField
+    val packageLookup: PackageLookup = lookup
 
     @BindValue
     @IoDispatcher
@@ -113,6 +125,8 @@ class MainActivityTest {
             AppWatcher.manualInstall(ApplicationProvider.getApplicationContext<HiltTestApplication>())
         }
     }
+
+    private fun holdLookups(): CompletableDeferred<Unit> = CompletableDeferred<Unit>().also { lookup.gate = it }
 
     @After
     fun deleteCachedApks() {
@@ -519,8 +533,10 @@ class MainActivityTest {
         try {
             val activity = controller.get()
             val view = activity.findViewById<View>(R.id.appPicker)
+            val lookupGate = holdLookups()
             activity.onAppPickerItemClick(view, AppInfo(packageName = activity.packageName, activityName = ""))
             controller.pause().stop()
+            lookupGate.complete(Unit)
             shadowOf(Looper.getMainLooper()).idle()
             controller.restart().start().resume()
             shadowOf(Looper.getMainLooper()).idle()
@@ -534,11 +550,13 @@ class MainActivityTest {
     @Test
     fun onAppPickerItemClick_doubleTap_startsIconActivityOnce() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val lookupGate = holdLookups()
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
                 activity.onAppPickerItemClick(null, appInfo)
                 activity.onAppPickerItemClick(null, appInfo)
             }
+            lookupGate.complete(Unit)
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
@@ -552,6 +570,7 @@ class MainActivityTest {
     fun onAppPickerItemClick_secondAppTappedDuringLookup_opensFirstAppWithItsTransition() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             lateinit var secondView: View
+            val lookupGate = holdLookups()
             scenario.onActivity { activity ->
                 secondView = activity.findViewById(R.id.noEntryView)
                 activity.onAppPickerItemClick(
@@ -560,6 +579,7 @@ class MainActivityTest {
                 )
                 activity.onAppPickerItemClick(secondView, AppInfo(packageName = "com.nonexistent.pkg.test", activityName = ""))
             }
+            lookupGate.complete(Unit)
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 val started = shadowOf(activity).nextStartedActivity
@@ -580,10 +600,12 @@ class MainActivityTest {
     @Test
     fun onAppPickerItemClick_latchDropsLaunch_opensIconActivityOnNextResume() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val lookupGate = holdLookups()
             scenario.onActivity { activity ->
                 activity.onAppPickerItemClick(null, AppInfo(packageName = activity.packageName, activityName = ""))
                 activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
             }
+            lookupGate.complete(Unit)
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
@@ -604,6 +626,7 @@ class MainActivityTest {
     @Test
     fun onAppPickerItemClick_rotationDuringLookup_opensIconActivityFromRecreatedActivity() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val lookupGate = holdLookups()
             scenario.onActivity { activity ->
                 activity.onAppPickerItemClick(
                     activity.findViewById(R.id.appPicker),
@@ -611,6 +634,7 @@ class MainActivityTest {
                 )
             }
             scenario.recreate()
+            lookupGate.complete(Unit)
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
@@ -623,11 +647,13 @@ class MainActivityTest {
     @Test
     fun onAppPickerItemClick_doubleTapOnMissingPackage_showsOneToast() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val lookupGate = holdLookups()
             scenario.onActivity { activity ->
                 val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
                 activity.onAppPickerItemClick(null, appInfo)
                 activity.onAppPickerItemClick(null, appInfo)
             }
+            lookupGate.complete(Unit)
             shadowOf(Looper.getMainLooper()).idle()
             ShadowToast.shownToastCount() shouldBe 1
         }
@@ -683,31 +709,25 @@ class MainActivityTest {
 
     @Test
     fun loadInstalledApps_onError_showsErrorOnceAcrossRecreation() {
-        mockkConstructor(SeslAppInfoDataHelper::class)
-        every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws RuntimeException("test")
-        try {
-            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-                shadowOf(Looper.getMainLooper()).idle()
-                scenario.state shouldBe Lifecycle.State.RESUMED
-                scenario.onActivity { activity ->
-                    ShadowToast.shownToastCount() shouldBe 1
-                    ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error)
-                    ViewModelProvider(activity)[MainViewModel::class.java].installedApps.value shouldBe
-                        InstalledApps.Failed(handled = true)
-                }
-                scenario.recreate()
-                shadowOf(Looper.getMainLooper()).idle()
+        lookup.installedAppsResult = Result.failure(RuntimeException("test"))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.state shouldBe Lifecycle.State.RESUMED
+            scenario.onActivity { activity ->
                 ShadowToast.shownToastCount() shouldBe 1
+                ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error)
+                ViewModelProvider(activity)[MainViewModel::class.java].installedApps.value shouldBe
+                    InstalledApps.Failed(handled = true)
             }
-        } finally {
-            unmockkConstructor(SeslAppInfoDataHelper::class)
+            scenario.recreate()
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.shownToastCount() shouldBe 1
         }
     }
 
     @Test
     fun loadInstalledApps_errorBeforeResume_showsErrorOnceAfterRecreation() {
-        mockkConstructor(SeslAppInfoDataHelper::class)
-        every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws RuntimeException("test")
+        lookup.installedAppsResult = Result.failure(RuntimeException("test"))
         val controller = Robolectric.buildActivity(MainActivity::class.java).create().start()
         try {
             shadowOf(Looper.getMainLooper()).idle()
@@ -721,22 +741,16 @@ class MainActivityTest {
             ShadowToast.getTextOfLatestToast() shouldBe controller.get().getString(commonutilsR.string.commonutils_error)
         } finally {
             controller.destroy()
-            unmockkConstructor(SeslAppInfoDataHelper::class)
         }
     }
 
     @Test
     fun loadInstalledApps_cancellationException_doesNotCrash() {
-        mockkConstructor(SeslAppInfoDataHelper::class)
-        every { anyConstructed<SeslAppInfoDataHelper>().getPackages() } throws CancellationException("cancelled")
-        try {
-            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-                shadowOf(Looper.getMainLooper()).idle()
-                scenario.state shouldBe Lifecycle.State.RESUMED
-                ShadowToast.shownToastCount() shouldBe 0
-            }
-        } finally {
-            unmockkConstructor(SeslAppInfoDataHelper::class)
+        lookup.installedAppsResult = Result.failure(CancellationException("cancelled"))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.state shouldBe Lifecycle.State.RESUMED
+            ShadowToast.shownToastCount() shouldBe 0
         }
     }
 }

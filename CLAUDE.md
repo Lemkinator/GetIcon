@@ -75,8 +75,7 @@ Single-module (`:app`) Android app — extracts and exports app icons.
 Layered architecture (data/domain/ui) with ViewModels per activity:
 
 - **`data/`** — `UserSettings`: a common-utils `SettingsRepository` subclass,
-  SharedPreferences-backed (icon size, mask, colors); `IconExporter`: writes the icon to a public
-  directory, a picked document, the clipboard cache or the share cache; `IconRenderer`: loads an app
+  SharedPreferences-backed (icon size, mask, colors); `IconRenderer`: loads an app
   label, and draws an app icon in an `IconStyle` and reports its `IconKind`; `ApkImporter`: creates the cache
   file, opens the picked document, parses the copied APK and checks for or deletes a cached APK
 - **`domain/`** — thin use cases: `GenerateIconUseCase`, `ProcessApkUseCase`. `domain/model/` holds
@@ -85,10 +84,12 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
   (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
 - **`App.kt`** — `@HiltAndroidApp` entry point; injects `settings: SettingsRepository`
   and calls `settings.applyDarkMode()` in `onCreate()`
-- **`di/SettingsModule.kt`** — two Hilt modules: `SettingsProvideModule`
+- **`di/`** — Hilt modules. `SettingsModule.kt` holds `SettingsProvideModule`
   (`@Provides @Singleton` builds the single `UserSettings` instance) and
   `SettingsBindModule` (`@Binds` redirects `SettingsRepository`-typed requests
-  to that instance)
+  to that instance). `PackageLookupModule` binds the common-utils `PackageLookup` to
+  `DefaultPackageLookup`; `BitmapExporterModule` provides `DefaultBitmapExporter`, which writes
+  the icon to a public directory, a picked document, the clipboard cache or the share cache
 
 DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
 ViewBinding enabled. ViewModels expose state only: activities collect each `StateFlow` via
@@ -215,7 +216,7 @@ or `PreferenceManager.getDefaultSharedPreferences(...)` directly.
   `lib/src/testFixtures/java/de/lemke/commonutils/data/FakeSharedPreferences.kt`) — a pure-JVM
   double used only by the one Kotest spec with no Context (`IconViewModelTest`); everywhere else
   Robolectric's real `SharedPreferences` (via the module above) or a Context-backed file
-  (`UserSettingsTest`, using `freshTestPreferences()` directly) is used instead.
+  (`UserSettingsTest` and `IconViewModelSaveTest`, using `freshTestPreferences()` directly) is used instead.
 - **`bypassOobe()`** — also published by common-utils testFixtures
   (`de.lemke.commonutils.bypassOobe()`, a plain `SettingsRepository` extension), for any test
   that launches `MainActivity`. GetIcon has no settings-test code of its own left beyond

@@ -20,12 +20,12 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import de.lemke.geticon.data.DefaultIconExporter
-import de.lemke.geticon.data.IconExporter
+import de.lemke.commonutils.data.DefaultPackageLookup
+import de.lemke.commonutils.data.PackageLookup
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class IconExporterModule {
+abstract class PackageLookupModule {
     @Binds
-    abstract fun bindIconExporter(exporter: DefaultIconExporter): IconExporter
+    abstract fun bindPackageLookup(lookup: DefaultPackageLookup): PackageLookup
 }

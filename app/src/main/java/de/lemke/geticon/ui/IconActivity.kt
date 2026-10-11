@@ -16,14 +16,12 @@
 
 package de.lemke.geticon.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.CompoundButton
 import androidx.activity.result.ActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
@@ -36,6 +34,8 @@ import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.data.SettingsRepository
+import de.lemke.commonutils.ui.utils.LaunchOutcome
+import de.lemke.commonutils.ui.utils.SingleLaunchResultLauncher
 import de.lemke.commonutils.ui.utils.bindColorSwatch
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.copyToClipboard
@@ -49,6 +49,7 @@ import de.lemke.commonutils.ui.utils.shareBitmap
 import de.lemke.commonutils.ui.utils.showOnce
 import de.lemke.commonutils.ui.utils.singleLaunch
 import de.lemke.commonutils.ui.utils.singleLaunchMenuItem
+import de.lemke.commonutils.ui.utils.toDocumentPick
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
@@ -74,7 +75,7 @@ class IconActivity :
     private var isRendering = false
     private var suggestViewSet = false
 
-    private val exportBitmapResultLauncher: ActivityResultLauncher<Intent> =
+    private val exportBitmapResultLauncher: SingleLaunchResultLauncher<Intent> =
         registerForSingleLaunchResult(StartActivityForResult()) { onExportBitmapResult(it) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,11 +140,11 @@ class IconActivity :
         val handled =
             when (result) {
                 is IconExport.OpenPicker -> {
-                    true.also { exportBitmap(result.fileName, exportBitmapResultLauncher) }
+                    exportBitmap(result.fileName, exportBitmapResultLauncher).isSettled
                 }
 
                 is IconExport.Share -> {
-                    shareBitmap(result.file)
+                    shareBitmap(result.file).isSettled
                 }
 
                 is IconExport.SaveFinished -> {
@@ -286,11 +287,9 @@ class IconActivity :
     }
 }
 
-private fun ActivityResult.toDocumentPick(): DocumentPick {
-    val uri = data?.data
-    return when {
-        resultCode != Activity.RESULT_OK -> DocumentPick.Canceled
-        uri == null -> DocumentPick.MissingUri
-        else -> DocumentPick.Created(uri)
-    }
-}
+private val LaunchOutcome.isSettled: Boolean
+    get() =
+        when (this) {
+            LaunchOutcome.Started, LaunchOutcome.Failed -> true
+            LaunchOutcome.Dropped -> false
+        }
