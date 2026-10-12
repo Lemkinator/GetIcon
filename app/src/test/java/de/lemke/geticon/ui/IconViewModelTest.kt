@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
 import de.lemke.commonutils.data.FakeSharedPreferences
 import de.lemke.commonutils.data.SaveLocation
+import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
 import de.lemke.commonutils.ui.utils.DocumentPick
@@ -148,7 +149,7 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.onCopy()
                 viewModel.onShare()
                 exporter.calls shouldBe emptyList()
-                viewModel.export.value shouldBe IconExport.Idle
+                viewModel.export.value shouldBe BitmapExport.Idle
             }
         }
 
@@ -422,7 +423,7 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
                     exporter.calls shouldBe listOf(Call.SaveToDirectory(SaveLocation.CUSTOM, icon, fileName))
-                    viewModel.export.value shouldBe IconExport.OpenPicker(fileName)
+                    viewModel.export.value shouldBe BitmapExport.OpenPicker(fileName)
                 }
 
                 should("an export is Running until its work returns, and a second tap meanwhile does nothing") {
@@ -430,23 +431,23 @@ class IconViewModelTest : ShouldSpec(
                     exporter.gate = gate
                     val viewModel = buildViewModel(appInfo)
                     viewModel.export.test {
-                        awaitItem() shouldBe IconExport.Idle
+                        awaitItem() shouldBe BitmapExport.Idle
                         viewModel.onSave()
-                        awaitItem() shouldBe IconExport.Running
+                        awaitItem() shouldBe BitmapExport.Running
                         viewModel.onSave()
                         viewModel.onCopy()
                         viewModel.onShare()
                         exporter.calls.size shouldBe 1
                         gate.complete(Unit)
-                        awaitItem() shouldBe IconExport.OpenPicker(fileName)
+                        awaitItem() shouldBe BitmapExport.OpenPicker(fileName)
                     }
                 }
 
                 should("onExportHandled returns to Idle and admits the next export") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
-                    viewModel.onExportHandled(IconExport.OpenPicker(fileName))
-                    viewModel.export.value shouldBe IconExport.Idle
+                    viewModel.onExportHandled(BitmapExport.OpenPicker(fileName))
+                    viewModel.export.value shouldBe BitmapExport.Idle
                     viewModel.onShare()
                     exporter.calls.size shouldBe 2
                 }
@@ -454,15 +455,15 @@ class IconViewModelTest : ShouldSpec(
                 should("onExportHandled keeps a result other than the handled one") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
-                    viewModel.onExportHandled(IconExport.CopyFailed)
-                    viewModel.export.value shouldBe IconExport.OpenPicker(fileName)
+                    viewModel.onExportHandled(BitmapExport.CopyFailed)
+                    viewModel.export.value shouldBe BitmapExport.OpenPicker(fileName)
                 }
 
                 should("a tap while a result waits for the activity replaces that result") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
                     viewModel.onCopy()
-                    viewModel.export.value shouldBe IconExport.CopyFailed
+                    viewModel.export.value shouldBe BitmapExport.CopyFailed
                 }
 
                 should("onCopy holds the written clip") {
@@ -471,13 +472,13 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onCopy()
                     exporter.calls shouldBe listOf(Call.CreateClip(icon))
-                    viewModel.export.value shouldBe IconExport.Copy(clip)
+                    viewModel.export.value shouldBe BitmapExport.Copy(clip)
                 }
 
                 should("onCopy holds CopyFailed when no clip could be written") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onCopy()
-                    viewModel.export.value shouldBe IconExport.CopyFailed
+                    viewModel.export.value shouldBe BitmapExport.CopyFailed
                 }
 
                 should("onShare holds the written share file") {
@@ -486,21 +487,21 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onShare()
                     exporter.calls shouldBe listOf(Call.CreateShareFile(icon))
-                    viewModel.export.value shouldBe IconExport.Share(file)
+                    viewModel.export.value shouldBe BitmapExport.Share(file)
                 }
 
                 should("onShare holds ShareFailed when the share file could not be written") {
                     exporter.shareFile = BitmapShareFile.Failed
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onShare()
-                    viewModel.export.value shouldBe IconExport.ShareFailed
+                    viewModel.export.value shouldBe BitmapExport.ShareFailed
                 }
 
                 should("onShare returns to Idle when the share file write was dropped") {
                     exporter.shareFile = BitmapShareFile.Dropped
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onShare()
-                    viewModel.export.value shouldBe IconExport.Idle
+                    viewModel.export.value shouldBe BitmapExport.Idle
                 }
 
                 should("onDocumentPicked writes the icon into the created document") {
@@ -508,7 +509,7 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onDocumentPicked(DocumentPick.Created(uri))
                     exporter.calls shouldBe listOf(Call.SaveToCreatedDocument(uri, icon))
-                    viewModel.export.value shouldBe IconExport.SaveFinished(BitmapSaveResult.Saved(SaveLocation.CUSTOM))
+                    viewModel.export.value shouldBe BitmapExport.SaveFinished(BitmapSaveResult.Saved(SaveLocation.CUSTOM))
                 }
 
                 should("onDocumentPicked hands a failed generation's missing icon to the write, which reports WriteFailed") {
@@ -518,28 +519,28 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onDocumentPicked(DocumentPick.Created(uri))
                     exporter.calls shouldBe listOf(Call.SaveToCreatedDocument(uri, null))
-                    viewModel.export.value shouldBe IconExport.SaveFinished(BitmapSaveResult.WriteFailed)
+                    viewModel.export.value shouldBe BitmapExport.SaveFinished(BitmapSaveResult.WriteFailed)
                 }
 
                 should("onDocumentPicked returns to Idle when the write reports Canceled") {
                     exporter.documentResult = BitmapSaveResult.Canceled
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onDocumentPicked(DocumentPick.Created(mockk<Uri>()))
-                    viewModel.export.value shouldBe IconExport.Idle
+                    viewModel.export.value shouldBe BitmapExport.Idle
                 }
 
                 should("onDocumentPicked holds WriteFailed for a result without a URI") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onDocumentPicked(DocumentPick.MissingUri)
                     exporter.calls shouldBe emptyList()
-                    viewModel.export.value shouldBe IconExport.SaveFinished(BitmapSaveResult.WriteFailed)
+                    viewModel.export.value shouldBe BitmapExport.SaveFinished(BitmapSaveResult.WriteFailed)
                 }
 
                 should("onDocumentPicked stays silent for a canceled picker") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onDocumentPicked(DocumentPick.Canceled)
                     exporter.calls shouldBe emptyList()
-                    viewModel.export.value shouldBe IconExport.Idle
+                    viewModel.export.value shouldBe BitmapExport.Idle
                 }
 
                 should("a regenerated icon keeps the running export") {
@@ -547,7 +548,7 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onShare()
                     viewModel.onSizeChanged(300)
-                    viewModel.export.value shouldBe IconExport.Running
+                    viewModel.export.value shouldBe BitmapExport.Running
                 }
             }
         }

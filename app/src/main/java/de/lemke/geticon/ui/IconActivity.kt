@@ -34,18 +34,16 @@ import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.data.SettingsRepository
-import de.lemke.commonutils.ui.utils.LaunchOutcome
+import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.SingleLaunchResultLauncher
 import de.lemke.commonutils.ui.utils.bindColorSwatch
 import de.lemke.commonutils.ui.utils.collectState
-import de.lemke.commonutils.ui.utils.copyToClipboard
-import de.lemke.commonutils.ui.utils.exportBitmap
+import de.lemke.commonutils.ui.utils.launchBitmapExport
 import de.lemke.commonutils.ui.utils.onSingleLaunchClick
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationTo
 import de.lemke.commonutils.ui.utils.registerForSingleLaunchResult
 import de.lemke.commonutils.ui.utils.setCustomBackAnimation
 import de.lemke.commonutils.ui.utils.setWindowTransparent
-import de.lemke.commonutils.ui.utils.shareBitmap
 import de.lemke.commonutils.ui.utils.showOnce
 import de.lemke.commonutils.ui.utils.singleLaunch
 import de.lemke.commonutils.ui.utils.singleLaunchMenuItem
@@ -87,14 +85,14 @@ class IconActivity :
         initViews()
         collectState(viewModel.state) { renderState(it) }
         collectState(viewModel.export) { renderExportControls(it) }
-        collectState(viewModel.export, minActiveState = RESUMED) { if (it is IconExport.Result) onExportResult(it) }
+        collectState(viewModel.export, minActiveState = RESUMED) { if (it is BitmapExport.Result) onExportResult(it) }
         collectState(viewModel.exit, minActiveState = RESUMED) { if (it is IconExit.Reason) onExit(it) }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val enabled = viewModel.export.value != IconExport.Running
+        val enabled = viewModel.export.value != BitmapExport.Running
         menu.findItem(R.id.menu_item_icon_save_as_image).isEnabled = enabled
         menu.findItem(R.id.menu_item_icon_share).isEnabled = enabled
         return super.onPrepareOptionsMenu(menu)
@@ -136,32 +134,8 @@ class IconActivity :
         binding.colorButtonForeground.onSingleLaunchClick { showColorPicker(isBackground = false) }
     }
 
-    private fun onExportResult(result: IconExport.Result) {
-        val handled =
-            when (result) {
-                is IconExport.OpenPicker -> {
-                    exportBitmap(result.fileName, exportBitmapResultLauncher).isSettled
-                }
-
-                is IconExport.Share -> {
-                    shareBitmap(result.file).isSettled
-                }
-
-                is IconExport.SaveFinished -> {
-                    true.also { toast(result.result) }
-                }
-
-                is IconExport.Copy -> {
-                    true.also { copyToClipboard(result.clip) }
-                }
-
-                IconExport.CopyFailed, IconExport.ShareFailed -> {
-                    true.also {
-                        toast(commonutilsR.string.commonutils_error_share_content_not_supported_on_device)
-                    }
-                }
-            }
-        if (handled) viewModel.onExportHandled(result)
+    private fun onExportResult(result: BitmapExport.Result) {
+        if (launchBitmapExport(result, exportBitmapResultLauncher)) viewModel.onExportHandled(result)
     }
 
     private fun onExit(reason: IconExit.Reason) {
@@ -204,8 +178,8 @@ class IconActivity :
         }
     }
 
-    private fun renderExportControls(export: IconExport) {
-        binding.icon.isLongClickable = export != IconExport.Running
+    private fun renderExportControls(export: BitmapExport) {
+        binding.icon.isLongClickable = export != BitmapExport.Running
         invalidateOptionsMenu()
     }
 
@@ -286,10 +260,3 @@ class IconActivity :
         private const val FOREGROUND_COLOR_PICKER_TAG = "foregroundColorPicker"
     }
 }
-
-private val LaunchOutcome.isSettled: Boolean
-    get() =
-        when (this) {
-            LaunchOutcome.Started, LaunchOutcome.Failed -> true
-            LaunchOutcome.Dropped -> false
-        }

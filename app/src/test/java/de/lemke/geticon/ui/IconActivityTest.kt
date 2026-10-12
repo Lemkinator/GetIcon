@@ -55,11 +55,12 @@ import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
+import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.geticon.R
 import de.lemke.geticon.data.FakeIconRenderer
 import de.lemke.geticon.data.IconRenderer
-import de.lemke.geticon.di.DispatchersModule
+import de.lemke.geticon.di.AppCoroutinesModule
 import de.lemke.geticon.di.IconRendererModule
 import de.lemke.geticon.domain.model.IconKind
 import io.kotest.matchers.longs.shouldBeGreaterThan
@@ -91,7 +92,7 @@ import de.lemke.commonutils.R as commonutilsR
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36], shadows = [ShadowFileProvider::class])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@UninstallModules(DispatchersModule::class, IconRendererModule::class)
+@UninstallModules(AppCoroutinesModule::class, IconRendererModule::class)
 class IconActivityTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
@@ -358,14 +359,14 @@ class IconActivityTest {
                 shadowActivity.nextStartedActivity shouldBe null
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .export.value
-                    .shouldBeInstanceOf<IconExport.Share>()
+                    .shouldBeInstanceOf<BitmapExport.Share>()
             }
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
-                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe IconExport.Idle
+                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe BitmapExport.Idle
             }
         }
     }
@@ -387,7 +388,7 @@ class IconActivityTest {
             ShadowToast.shownToastCount() shouldBe 1
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivityForResult shouldBe null
-                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe IconExport.Idle
+                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe BitmapExport.Idle
             }
         }
     }
@@ -411,14 +412,14 @@ class IconActivityTest {
                 shadowActivity.nextStartedActivityForResult shouldBe null
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .export.value
-                    .shouldBeInstanceOf<IconExport.OpenPicker>()
+                    .shouldBeInstanceOf<BitmapExport.OpenPicker>()
             }
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivityForResult?.intent?.action shouldBe Intent.ACTION_CREATE_DOCUMENT
-                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe IconExport.Idle
+                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe BitmapExport.Idle
             }
             ShadowToast.shownToastCount() shouldBe 0
         }
@@ -442,7 +443,7 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity shouldBe null
                 File(activity.cacheDir, "share").walk().count { it.isFile } shouldBe 1
-                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe IconExport.Idle
+                ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe BitmapExport.Idle
             }
         }
     }

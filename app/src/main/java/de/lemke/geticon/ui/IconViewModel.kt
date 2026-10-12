@@ -16,16 +16,15 @@
 
 package de.lemke.geticon.ui
 
-import android.content.ClipData
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.lemke.commonutils.ui.utils.BitmapExport
+import de.lemke.commonutils.ui.utils.BitmapExportStateHolder
 import de.lemke.commonutils.ui.utils.BitmapExporter
-import de.lemke.commonutils.ui.utils.BitmapSaveResult
-import de.lemke.commonutils.ui.utils.BitmapShareFile
 import de.lemke.commonutils.ui.utils.DocumentPick
 import de.lemke.geticon.data.ApkImporter
 import de.lemke.geticon.data.IconRenderer
@@ -65,27 +64,6 @@ data class IconUiState(
     val isLoading: Boolean = true,
 )
 
-/** A save, copy or share of the icon. The activity acts on a [Result] and then reports it handled. */
-sealed interface IconExport {
-    sealed interface Result : IconExport
-
-    data object Idle : IconExport
-
-    data object Running : IconExport
-
-    data class OpenPicker(val fileName: String) : Result
-
-    data class SaveFinished(val result: BitmapSaveResult.Finished) : Result
-
-    data class Copy(val clip: ClipData) : Result
-
-    data object CopyFailed : Result
-
-    data class Share(val file: BitmapShareFile.Written) : Result
-
-    data object ShareFailed : Result
-}
-
 /** Whether the screen must close. The activity shows a [Reason], finishes and then reports it handled. */
 sealed interface IconExit {
     sealed interface Reason : IconExit
@@ -103,7 +81,7 @@ class IconViewModel @Inject constructor(
     private val userSettings: UserSettings,
     private val generateIcon: GenerateIconUseCase,
     private val renderer: IconRenderer,
-    private val exporter: BitmapExporter,
+    exporter: BitmapExporter,
     private val apkImporter: ApkImporter,
 ) : ViewModel() {
     private val applicationInfo: ApplicationInfo? = savedStateHandle.get<ApplicationInfo>(IconActivity.KEY_APPLICATION_INFO)
@@ -111,8 +89,9 @@ class IconViewModel @Inject constructor(
     val state: StateFlow<IconUiState>
         field = MutableStateFlow(IconUiState())
 
-    val export: StateFlow<IconExport>
-        field = MutableStateFlow<IconExport>(IconExport.Idle)
+    private val exportHolder = BitmapExportStateHolder(viewModelScope, exporter)
+
+    val export: StateFlow<BitmapExport> = exportHolder.state
 
     val exit: StateFlow<IconExit>
         field = MutableStateFlow<IconExit>(IconExit.None)
@@ -198,40 +177,25 @@ class IconViewModel @Inject constructor(
     fun onSave() {
         val current = state.value
         val icon = current.icon ?: return
-        startExport {
-            when (val result = exporter.saveToDirectory(userSettings.imageSaveLocation, icon, current.fileName)) {
-                is BitmapSaveResult.Finished -> IconExport.SaveFinished(result)
-                BitmapSaveResult.NeedsPicker -> IconExport.OpenPicker(current.fileName)
-            }
-        }
+        exportHolder.save(icon, current.fileName, userSettings.imageSaveLocation)
     }
 
     fun onDocumentPicked(pick: DocumentPick) {
-        when (pick) {
-            DocumentPick.Canceled -> Unit
-            DocumentPick.MissingUri -> export.value = IconExport.SaveFinished(BitmapSaveResult.WriteFailed)
-            is DocumentPick.Created -> launchExport { exporter.saveToCreatedDocument(pick.uri, state.value.icon).toExport() }
-        }
+        exportHolder.onDocumentPicked(pick, state.value.icon)
     }
 
     fun onCopy() {
         val icon = state.value.icon ?: return
-        startExport { exporter.createClip(icon)?.let(IconExport::Copy) ?: IconExport.CopyFailed }
+        exportHolder.copy(icon)
     }
 
     fun onShare() {
         val icon = state.value.icon ?: return
-        startExport {
-            when (val file = exporter.createShareFile(icon)) {
-                is BitmapShareFile.Written -> IconExport.Share(file)
-                BitmapShareFile.Failed -> IconExport.ShareFailed
-                BitmapShareFile.Dropped -> null
-            }
-        }
+        exportHolder.share(icon)
     }
 
-    fun onExportHandled(result: IconExport.Result) {
-        export.update { if (it == result) IconExport.Idle else it }
+    fun onExportHandled(result: BitmapExport.Result) {
+        exportHolder.onHandled(result)
     }
 
     fun onExitHandled(reason: IconExit.Reason) {
@@ -240,16 +204,6 @@ class IconViewModel @Inject constructor(
 
     private fun exitWith(reason: IconExit.Reason) {
         exit.update { if (it == IconExit.None) reason else it }
-    }
-
-    private fun startExport(work: suspend () -> IconExport.Result?) {
-        if (export.value == IconExport.Running) return
-        launchExport(work)
-    }
-
-    private fun launchExport(work: suspend () -> IconExport.Result?) {
-        export.value = IconExport.Running
-        viewModelScope.launch { export.value = work() ?: IconExport.Idle }
     }
 
     // generateIcon runs synchronously on Main (~5 ms). Dispatching to Default caused slider jank:
@@ -263,12 +217,6 @@ class IconViewModel @Inject constructor(
             exitWith(IconExit.GenerateFailed)
         }
     }
-
-    private fun BitmapSaveResult.UriResult.toExport(): IconExport.Result? =
-        when (this) {
-            is BitmapSaveResult.Finished -> IconExport.SaveFinished(this)
-            BitmapSaveResult.Canceled -> null
-        }
 }
 
 private fun IconUiState.withStyle(transform: IconStyle.() -> IconStyle): IconUiState = copy(style = style.transform())

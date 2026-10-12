@@ -54,7 +54,7 @@ import de.lemke.geticon.R
 import de.lemke.geticon.data.ApkImporter
 import de.lemke.geticon.data.FakeApkImporter
 import de.lemke.geticon.di.ApkImporterModule
-import de.lemke.geticon.di.DispatchersModule
+import de.lemke.geticon.di.AppCoroutinesModule
 import de.lemke.geticon.di.PackageLookupModule
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
 import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
@@ -87,7 +87,7 @@ import dev.oneuiproject.oneui.design.R as oneuiDesignR
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@UninstallModules(DispatchersModule::class, ApkImporterModule::class, PackageLookupModule::class)
+@UninstallModules(AppCoroutinesModule::class, ApkImporterModule::class, PackageLookupModule::class)
 class MainActivityTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
