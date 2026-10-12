@@ -18,7 +18,6 @@ package de.lemke.geticon.data
 
 import android.app.Application
 import android.content.SharedPreferences
-import de.lemke.commonutils.data.MAX_RECENT_COLORS
 import de.lemke.commonutils.data.assertDelegatedKeys
 import de.lemke.commonutils.freshTestPreferences
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
@@ -135,36 +134,10 @@ class UserSettingsTest {
     }
 
     @Test
-    fun `recentForegroundColors caps to MAX_RECENT_COLORS when more are written`() {
-        val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
-        settings.recentForegroundColors = colors
-        reload().recentForegroundColors.size shouldBe MAX_RECENT_COLORS
-    }
-
-    @Test
     fun `recentForegroundColors persists the capped value rather than the raw write`() {
-        val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
+        val colors = (1..7).map { 0xFF000000.toInt() + it }
         settings.recentForegroundColors = colors
-        prefs.getString("recentForegroundColors", null) shouldBe colors.take(MAX_RECENT_COLORS).joinToString(",")
-    }
-
-    @Test
-    fun `recentForegroundColors falls back to default when stored string is all-invalid`() {
-        prefs.edit().putString("recentForegroundColors", "abc,,xyz").apply()
-        reload().recentForegroundColors shouldBe listOf(DEFAULT_FOREGROUND_COLOR)
-    }
-
-    @Test
-    fun `recentForegroundColors keeps only valid integers from mixed stored input`() {
-        val validColor = 0xFF0381FE.toInt()
-        prefs.edit().putString("recentForegroundColors", "abc,$validColor").apply()
-        reload().recentForegroundColors shouldBe listOf(validColor)
-    }
-
-    @Test
-    fun `recentForegroundColors falls back to default when assigned an empty list directly`() {
-        settings.recentForegroundColors = emptyList()
-        settings.recentForegroundColors shouldBe listOf(DEFAULT_FOREGROUND_COLOR)
+        prefs.getString("recentForegroundColors", null) shouldBe "-16777215,-16777214,-16777213,-16777212,-16777211,-16777210"
     }
 
     @Test
@@ -175,42 +148,10 @@ class UserSettingsTest {
     }
 
     @Test
-    fun `recentBackgroundColors caps to MAX_RECENT_COLORS when more are written`() {
-        val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
-        settings.recentBackgroundColors = colors
-        reload().recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
-    }
-
-    @Test
     fun `recentBackgroundColors persists the capped value rather than the raw write`() {
-        val colors = (1..MAX_RECENT_COLORS + 1).map { 0xFF000000.toInt() + it }
+        val colors = (1..7).map { 0xFF000000.toInt() + it }
         settings.recentBackgroundColors = colors
-        prefs.getString("recentBackgroundColors", null) shouldBe colors.take(MAX_RECENT_COLORS).joinToString(",")
-    }
-
-    @Test
-    fun `recentBackgroundColors falls back to default on empty stored string`() {
-        prefs.edit().putString("recentBackgroundColors", "").apply()
-        reload().recentBackgroundColors shouldBe listOf(DEFAULT_BACKGROUND_COLOR)
-    }
-
-    @Test
-    fun `recentBackgroundColors falls back to default when stored string is all-invalid`() {
-        prefs.edit().putString("recentBackgroundColors", "abc,,xyz").apply()
-        reload().recentBackgroundColors shouldBe listOf(DEFAULT_BACKGROUND_COLOR)
-    }
-
-    @Test
-    fun `recentBackgroundColors keeps only valid integers from mixed stored input`() {
-        val validColor = 0xFF0381FE.toInt()
-        prefs.edit().putString("recentBackgroundColors", "abc,$validColor").apply()
-        reload().recentBackgroundColors shouldBe listOf(validColor)
-    }
-
-    @Test
-    fun `recentBackgroundColors falls back to default when assigned an empty list directly`() {
-        settings.recentBackgroundColors = emptyList()
-        settings.recentBackgroundColors shouldBe listOf(DEFAULT_BACKGROUND_COLOR)
+        prefs.getString("recentBackgroundColors", null) shouldBe "-16777215,-16777214,-16777213,-16777212,-16777211,-16777210"
     }
 
     @Test

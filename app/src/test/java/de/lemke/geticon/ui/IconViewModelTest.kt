@@ -24,7 +24,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
 import de.lemke.commonutils.data.FakeSharedPreferences
-import de.lemke.commonutils.data.MAX_RECENT_COLORS
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
@@ -404,16 +403,18 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.fileName shouldBe "com.example.test_mask"
             }
 
-            should("onForegroundColorChanged caps recent colors to MAX_RECENT_COLORS") {
+            should("onForegroundColorChanged caps recent colors to the six newest") {
                 val viewModel = buildViewModel(appInfo)
-                repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onForegroundColorChanged(0xFF000000.toInt() + i + 1) }
-                viewModel.state.value.recentForegroundColors.size shouldBe MAX_RECENT_COLORS
+                repeat(7) { i -> viewModel.onForegroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentForegroundColors shouldBe
+                    listOf(-16777209, -16777210, -16777211, -16777212, -16777213, -16777214)
             }
 
-            should("onBackgroundColorChanged caps recent colors to MAX_RECENT_COLORS") {
+            should("onBackgroundColorChanged caps recent colors to the six newest") {
                 val viewModel = buildViewModel(appInfo)
-                repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
-                viewModel.state.value.recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
+                repeat(7) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentBackgroundColors shouldBe
+                    listOf(-16777209, -16777210, -16777211, -16777212, -16777213, -16777214)
             }
 
             context("export") {

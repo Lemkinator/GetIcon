@@ -892,7 +892,7 @@ class IconActivityTest {
                 confirmRecentColor(slot = 1)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.backgroundColor shouldBe Color.RED
-                state.recentBackgroundColors.first() shouldBe Color.RED
+                state.recentBackgroundColors shouldBe listOf(Color.RED, Color.GREEN, 0xFF0381FE.toInt())
             }
         }
     }
@@ -908,7 +908,7 @@ class IconActivityTest {
                 confirmRecentColor(slot = 1)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.foregroundColor shouldBe Color.RED
-                state.recentForegroundColors.first() shouldBe Color.RED
+                state.recentForegroundColors shouldBe listOf(Color.RED, Color.GREEN, Color.WHITE)
             }
         }
     }
@@ -1017,7 +1017,7 @@ class IconActivityTest {
                 activity.onColorPicked(Color.RED, true)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.backgroundColor shouldBe Color.RED
-                state.recentBackgroundColors.first() shouldBe Color.RED
+                state.recentBackgroundColors shouldBe listOf(Color.RED, 0xFF0381FE.toInt())
             }
         }
     }
