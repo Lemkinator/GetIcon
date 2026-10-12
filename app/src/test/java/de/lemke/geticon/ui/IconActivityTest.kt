@@ -20,6 +20,7 @@ import android.app.Activity
 import android.content.ClipboardManager
 import android.content.ContentProvider
 import android.content.ContentValues
+import android.content.DialogInterface
 import android.content.Intent
 import android.database.Cursor
 import android.graphics.Bitmap
@@ -29,15 +30,16 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.PopupMenu
-import androidx.activity.result.ActivityResult
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.picker3.app.SeslColorPickerDialog
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
@@ -56,6 +58,7 @@ import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.utils.BitmapExport
+import de.lemke.commonutils.ui.utils.DocumentPick
 import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.geticon.R
 import de.lemke.geticon.data.FakeIconRenderer
@@ -116,6 +119,21 @@ class IconActivityTest {
     @Before
     fun setup() {
         hiltRule.inject()
+    }
+
+    private fun pickDocument(
+        activity: IconActivity,
+        pick: DocumentPick,
+    ) = ViewModelProvider(activity)[IconViewModel::class.java].onDocumentPicked(pick)
+
+    private fun confirmRecentColor(slot: Int) {
+        val dialog = ShadowDialog.getLatestDialog() as SeslColorPickerDialog
+        dialog
+            .requireViewById<ViewGroup>(androidx.picker.R.id.sesl_color_picker_used_color_item_list_layout)
+            .getChildAt(slot)
+            .performClick()
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
     }
 
     private fun appInfoIntent(): Intent {
@@ -864,6 +882,38 @@ class IconActivityTest {
     }
 
     @Test
+    fun colorPicker_confirmRecentColor_changesBackgroundColor() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onColorPicked(Color.RED, isBackground = true)
+                activity.onColorPicked(Color.GREEN, isBackground = true)
+                activity.showColorPicker(isBackground = true)
+                confirmRecentColor(slot = 1)
+                val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
+                state.style.backgroundColor shouldBe Color.RED
+                state.recentBackgroundColors.first() shouldBe Color.RED
+            }
+        }
+    }
+
+    @Test
+    fun colorPicker_confirmRecentColor_changesForegroundColor() {
+        launchWithAppInfo().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            scenario.onActivity { activity ->
+                activity.onColorPicked(Color.RED, isBackground = false)
+                activity.onColorPicked(Color.GREEN, isBackground = false)
+                activity.showColorPicker(isBackground = false)
+                confirmRecentColor(slot = 1)
+                val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
+                state.style.foregroundColor shouldBe Color.RED
+                state.recentForegroundColors.first() shouldBe Color.RED
+            }
+        }
+    }
+
+    @Test
     fun colorButton_doubleTap_showsOneColorPicker() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
@@ -878,13 +928,13 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_afterGenerationFailed_deletesDocumentAndShowsCreateError() {
+    fun documentPicked_afterGenerationFailed_deletesDocumentAndShowsCreateError() {
         renderer.failure = IOException("generation failed")
         val provider = documentProvider()
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(provider.uri)))
+                pickDocument(activity, DocumentPick.Created(provider.uri))
             }
             shadowOf(Looper.getMainLooper()).idle()
             provider.document.exists() shouldBe false
@@ -894,12 +944,12 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_resultOk_savesIcon() {
+    fun documentPicked_resultOk_savesIcon() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             val file = File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png")
             scenario.onActivity { activity ->
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file))))
+                pickDocument(activity, DocumentPick.Created(Uri.fromFile(file)))
             }
             shadowOf(Looper.getMainLooper()).idle()
             ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
@@ -908,13 +958,13 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_rotationDuringWrite_finishesWriteAndAdmitsNextSave() {
+    fun documentPicked_rotationDuringWrite_finishesWriteAndAdmitsNextSave() {
         val document = createPickedDocument()
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             pausableIoDispatcher.pause()
             scenario.onActivity { activity ->
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(document))))
+                pickDocument(activity, DocumentPick.Created(Uri.fromFile(document)))
             }
             shadowOf(Looper.getMainLooper()).idle()
             document.length() shouldBe 0L
@@ -935,11 +985,11 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_resultCanceled_showsNoToast() {
+    fun documentPicked_resultCanceled_showsNoToast() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_CANCELED, null))
+                pickDocument(activity, DocumentPick.Canceled)
             }
             shadowOf(Looper.getMainLooper()).idle()
             ShadowToast.shownToastCount() shouldBe 0
@@ -947,25 +997,11 @@ class IconActivityTest {
     }
 
     @Test
-    fun onExportBitmapResult_unknownResultCode_showsNoToast() {
+    fun documentPicked_resultOkWithoutUri_showsCreateError() {
         launchWithAppInfo().use { scenario ->
             shadowOf(Looper.getMainLooper()).idle()
             scenario.onActivity { activity ->
-                activity.onExportBitmapResult(
-                    ActivityResult(Activity.RESULT_FIRST_USER, Intent().setData(Uri.parse("content://unknown/1"))),
-                )
-            }
-            shadowOf(Looper.getMainLooper()).idle()
-            ShadowToast.shownToastCount() shouldBe 0
-        }
-    }
-
-    @Test
-    fun onExportBitmapResult_resultOkWithoutUri_showsCreateError() {
-        launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
-            scenario.onActivity { activity ->
-                activity.onExportBitmapResult(ActivityResult(Activity.RESULT_OK, Intent()))
+                pickDocument(activity, DocumentPick.MissingUri)
             }
             shadowOf(Looper.getMainLooper()).idle()
             ShadowToast.shownToastCount() shouldBe 1
