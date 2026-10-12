@@ -24,6 +24,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
 import de.lemke.commonutils.data.FakeSharedPreferences
+import de.lemke.commonutils.data.MAX_RECENT_COLORS
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
@@ -36,7 +37,6 @@ import de.lemke.geticon.data.FakeIconRenderer
 import de.lemke.geticon.data.FakeIconRenderer.Render
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
-import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.model.IconKind

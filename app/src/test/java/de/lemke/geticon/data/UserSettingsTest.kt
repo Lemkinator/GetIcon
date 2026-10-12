@@ -18,13 +18,13 @@ package de.lemke.geticon.data
 
 import android.app.Application
 import android.content.SharedPreferences
+import de.lemke.commonutils.data.MAX_RECENT_COLORS
 import de.lemke.commonutils.data.assertDelegatedKeys
 import de.lemke.commonutils.freshTestPreferences
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
-import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue

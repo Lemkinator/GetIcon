@@ -22,6 +22,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.lemke.commonutils.data.withRecentColor
 import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.BitmapExportStateHolder
 import de.lemke.commonutils.ui.utils.BitmapExporter
@@ -33,7 +34,6 @@ import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_FOREGROUND_COLOR
 import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_ICON_SIZE
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
-import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.model.IconKind
@@ -163,13 +163,13 @@ class IconViewModel @Inject constructor(
     }
 
     fun onForegroundColorChanged(color: Int) {
-        val recentColors = (listOf(color) + state.value.recentForegroundColors).distinct().take(MAX_RECENT_COLORS)
+        val recentColors = state.value.recentForegroundColors.withRecentColor(color)
         userSettings.recentForegroundColors = recentColors
         regenerateIcon(state.value.withStyle { copy(foregroundColor = color) }.copy(recentForegroundColors = recentColors))
     }
 
     fun onBackgroundColorChanged(color: Int) {
-        val recentColors = (listOf(color) + state.value.recentBackgroundColors).distinct().take(MAX_RECENT_COLORS)
+        val recentColors = state.value.recentBackgroundColors.withRecentColor(color)
         userSettings.recentBackgroundColors = recentColors
         regenerateIcon(state.value.withStyle { copy(backgroundColor = color) }.copy(recentBackgroundColors = recentColors))
     }
