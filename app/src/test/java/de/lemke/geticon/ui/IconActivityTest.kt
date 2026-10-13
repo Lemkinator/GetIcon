@@ -52,6 +52,7 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import dagger.hilt.android.testing.UninstallModules
+import de.lemke.commonutils.PausableDispatcher
 import de.lemke.commonutils.ShadowFileProvider
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.data.SettingsRepository
