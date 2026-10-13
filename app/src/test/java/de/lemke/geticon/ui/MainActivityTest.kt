@@ -43,6 +43,7 @@ import de.lemke.commonutils.data.PackageLookup
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.idleMainLooper
+import de.lemke.commonutils.returnFromLaunchedScreen
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
@@ -350,8 +351,7 @@ class MainActivityTest {
                     .shouldBeInstanceOf<ApkImport.Imported>()
                     .applicationInfo.packageName shouldBe "com.test"
             }
-            scenario.moveToState(Lifecycle.State.STARTED)
-            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.returnFromLaunchedScreen()
             idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
@@ -613,8 +613,7 @@ class MainActivityTest {
                 shadowActivity.nextStartedActivity shouldBe null
                 ViewModelProvider(activity)[MainViewModel::class.java].appLookup.value.shouldBeInstanceOf<AppLookup.Found>()
             }
-            scenario.moveToState(Lifecycle.State.STARTED)
-            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.returnFromLaunchedScreen()
             idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name

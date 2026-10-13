@@ -31,7 +31,6 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.PopupMenu
 import androidx.core.content.IntentCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker3.app.SeslColorPickerDialog
 import androidx.test.core.app.ActivityScenario
@@ -56,6 +55,8 @@ import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.hasPngSignature
 import de.lemke.commonutils.idleMainLooper
+import de.lemke.commonutils.receivePickerResult
+import de.lemke.commonutils.returnFromLaunchedScreen
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.DocumentPick
@@ -379,8 +380,7 @@ class IconActivityTest {
                     .export.value
                     .shouldBeInstanceOf<BitmapExport.Share>()
             }
-            scenario.moveToState(Lifecycle.State.STARTED)
-            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.returnFromLaunchedScreen()
             idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
@@ -400,8 +400,7 @@ class IconActivityTest {
             idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Error: Saving content is not supported on your device."
-            scenario.moveToState(Lifecycle.State.STARTED)
-            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.returnFromLaunchedScreen()
             idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             scenario.onActivity { activity ->
@@ -432,8 +431,7 @@ class IconActivityTest {
                     .export.value
                     .shouldBeInstanceOf<BitmapExport.OpenPicker>()
             }
-            scenario.moveToState(Lifecycle.State.STARTED)
-            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.returnFromLaunchedScreen()
             idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivityForResult?.intent?.action shouldBe Intent.ACTION_CREATE_DOCUMENT
@@ -454,8 +452,7 @@ class IconActivityTest {
             idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Error: Sharing content is not supported on your device."
-            scenario.moveToState(Lifecycle.State.STARTED)
-            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.returnFromLaunchedScreen()
             idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             scenario.onActivity { activity ->
@@ -535,10 +532,10 @@ class IconActivityTest {
             idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
-                val picker = shadowActivity.nextStartedActivityForResult.intent
+                val picker = shadowActivity.peekNextStartedActivityForResult().intent
                 picker.action shouldBe Intent.ACTION_CREATE_DOCUMENT
                 picker.getStringExtra(Intent.EXTRA_TITLE)!! shouldMatch """de_lemke_geticon_debug_mask_\d{4}(_\d{2}){5}\.png"""
-                shadowActivity.receiveResult(picker, Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))
+                activity.receivePickerResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))
             }
             idleMainLooper()
             val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -937,6 +934,7 @@ class IconActivityTest {
                 pickDocument(activity, DocumentPick.Created(provider.uri))
             }
             idleMainLooper()
+            provider.deleted shouldBe listOf(provider.uri)
             provider.file.exists() shouldBe false
             ShadowToast.shownToastCount() shouldBe 2
             ShadowToast.getTextOfLatestToast() shouldBe "Error creating file"
