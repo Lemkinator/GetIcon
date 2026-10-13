@@ -19,10 +19,10 @@ package de.lemke.geticon.ui
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
-import android.os.Looper
 import androidx.lifecycle.SavedStateHandle
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.freshTestPreferences
+import de.lemke.commonutils.idleMainLooper
 import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.FakeBitmapExporter
@@ -36,7 +36,6 @@ import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -65,9 +64,9 @@ class IconViewModelSaveTest {
                 exporter,
                 apkImporter,
             )
-        shadowOf(Looper.getMainLooper()).idle()
+        idleMainLooper()
         viewModel.onSave()
-        shadowOf(Looper.getMainLooper()).idle()
+        idleMainLooper()
         return viewModel
     }
 

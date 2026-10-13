@@ -22,7 +22,6 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Bundle
-import android.os.Looper
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.view.menu.MenuItemImpl
@@ -43,6 +42,7 @@ import de.lemke.commonutils.data.FakePackageLookup
 import de.lemke.commonutils.data.PackageLookup
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
+import de.lemke.commonutils.idleMainLooper
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
@@ -161,7 +161,7 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
             controller.get().onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search))
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             val outState = Bundle()
             controller.pause().saveInstanceState(outState)
             outState.getBoolean(COMMONUTILS_KEY_IS_SEARCH_MODE) shouldBe true
@@ -191,9 +191,9 @@ class MainActivityTest {
         try {
             val activity = controller.get()
             activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search))
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             controller.newIntent(Intent(Intent.ACTION_SEARCH).putExtra(SearchManager.QUERY, "sometext"))
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             activity.findViewById<TextView>(appcompatR.id.search_src_text).text.toString() shouldBe "sometext"
         } finally {
             controller.destroy()
@@ -206,7 +206,7 @@ class MainActivityTest {
         try {
             val activity = controller.get()
             controller.newIntent(Intent("some.other.action"))
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe false
         } finally {
             controller.destroy()
@@ -255,7 +255,7 @@ class MainActivityTest {
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ShadowToast.shownToastCount() shouldBe 1
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_no_valid_file_selected)
@@ -272,7 +272,7 @@ class MainActivityTest {
                 ViewModelProvider(activity)[MainViewModel::class.java]
                     .onApkPicked(Uri.parse("content://test"))
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val started = shadowOf(activity).nextStartedActivity!!
                 started.component!!.className shouldBe IconActivity::class.java.name
@@ -290,12 +290,12 @@ class MainActivityTest {
         try {
             val paused = controller.get()
             ViewModelProvider(paused)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 0
             controller.recreate()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             controller.resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             val recreated = controller.get()
             recreated shouldNotBeSameInstanceAs paused
             ShadowToast.shownToastCount() shouldBe 1
@@ -313,12 +313,12 @@ class MainActivityTest {
         try {
             val paused = controller.get()
             ViewModelProvider(paused)[MainViewModel::class.java].onApkPicked(Uri.parse("content://test"))
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             shadowOf(paused).nextStartedActivity shouldBe null
             controller.recreate()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             controller.resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             val recreated = controller.get()
             recreated shouldNotBeSameInstanceAs paused
             val shadowActivity = shadowOf(recreated)
@@ -340,7 +340,7 @@ class MainActivityTest {
                 activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
             }
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
@@ -352,7 +352,7 @@ class MainActivityTest {
             }
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
                 ViewModelProvider(activity)[MainViewModel::class.java].apkImport.value shouldBe ApkImport.Idle
@@ -398,10 +398,10 @@ class MainActivityTest {
             scenario.onActivity { activity ->
                 shadowOf(activity).receiveResult(pickerIntent, Activity.RESULT_OK, Intent().setData(Uri.parse("content://test.apk")))
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity -> shadowOf(activity).nextStartedActivity shouldBe null }
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
             }
@@ -488,7 +488,7 @@ class MainActivityTest {
                 val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
                 activity.onAppPickerItemClick(null, appInfo) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
             }
@@ -503,7 +503,7 @@ class MainActivityTest {
                 val view = activity.findViewById<View>(R.id.appPicker)
                 activity.onAppPickerItemClick(view, appInfo) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
                 activity.findViewById<View>(R.id.appPicker).transitionName shouldBe "commonUtilsActivityTransitionName"
@@ -519,7 +519,7 @@ class MainActivityTest {
                 view = View(activity)
                 activity.onAppPickerItemClick(view, AppInfo(packageName = activity.packageName, activityName = ""))
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
             }
@@ -537,9 +537,9 @@ class MainActivityTest {
             activity.onAppPickerItemClick(view, AppInfo(packageName = activity.packageName, activityName = ""))
             controller.pause().stop()
             lookupGate.complete(Unit)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             controller.restart().start().resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
             view.transitionName shouldBe null
         } finally {
@@ -557,7 +557,7 @@ class MainActivityTest {
                 activity.onAppPickerItemClick(null, appInfo)
             }
             lookupGate.complete(Unit)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
@@ -580,7 +580,7 @@ class MainActivityTest {
                 activity.onAppPickerItemClick(secondView, AppInfo(packageName = "com.nonexistent.pkg.test", activityName = ""))
             }
             lookupGate.complete(Unit)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val started = shadowOf(activity).nextStartedActivity
                 val applicationInfo =
@@ -606,7 +606,7 @@ class MainActivityTest {
                 activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
             }
             lookupGate.complete(Unit)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
@@ -615,7 +615,7 @@ class MainActivityTest {
             }
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
                 ViewModelProvider(activity)[MainViewModel::class.java].appLookup.value shouldBe AppLookup.Idle
@@ -635,7 +635,7 @@ class MainActivityTest {
             }
             scenario.recreate()
             lookupGate.complete(Unit)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
@@ -654,7 +654,7 @@ class MainActivityTest {
                 activity.onAppPickerItemClick(null, appInfo)
             }
             lookupGate.complete(Unit)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
         }
     }
@@ -666,7 +666,7 @@ class MainActivityTest {
                 val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
                 activity.onAppPickerItemClick(null, appInfo) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_app_not_found)
             }
@@ -677,7 +677,7 @@ class MainActivityTest {
     @Config(sdk = [29])
     fun initAppPicker_belowApiR_skipsImmBottomPadding() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.state shouldBe Lifecycle.State.RESUMED
             scenario.onActivity { activity ->
                 activity.findViewById<View>(R.id.appPicker).getTag(oneuiDesignR.id.tag_rv_imm_bottom_padding_listener) shouldBe null
@@ -711,7 +711,7 @@ class MainActivityTest {
     fun loadInstalledApps_onError_showsErrorOnceAcrossRecreation() {
         lookup.installedAppsResult = Result.failure(RuntimeException("test"))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.state shouldBe Lifecycle.State.RESUMED
             scenario.onActivity { activity ->
                 ShadowToast.shownToastCount() shouldBe 1
@@ -720,7 +720,7 @@ class MainActivityTest {
                     InstalledApps.Failed(handled = true)
             }
             scenario.recreate()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
         }
     }
@@ -730,13 +730,13 @@ class MainActivityTest {
         lookup.installedAppsResult = Result.failure(RuntimeException("test"))
         val controller = Robolectric.buildActivity(MainActivity::class.java).create().start()
         try {
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             controller.stop()
             ShadowToast.shownToastCount() shouldBe 0
             controller.recreate()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             controller.restart().start().resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe controller.get().getString(commonutilsR.string.commonutils_error)
         } finally {
@@ -748,7 +748,7 @@ class MainActivityTest {
     fun loadInstalledApps_cancellationException_doesNotCrash() {
         lookup.installedAppsResult = Result.failure(CancellationException("cancelled"))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.state shouldBe Lifecycle.State.RESUMED
             ShadowToast.shownToastCount() shouldBe 0
         }

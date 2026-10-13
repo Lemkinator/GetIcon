@@ -21,8 +21,8 @@ import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
+import de.lemke.commonutils.clearForTest
 import de.lemke.commonutils.data.FakeSharedPreferences
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.ui.utils.BitmapExport
@@ -50,10 +50,6 @@ import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-
-private fun IconViewModel.triggerOnCleared() {
-    ViewModelStore().also { it.put("vm", this) }.clear()
-}
 
 class IconViewModelTest : ShouldSpec(
     {
@@ -139,7 +135,7 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("onCleared does nothing when applicationInfo is null") {
-                buildViewModel(appInfo = null).triggerOnCleared()
+                buildViewModel(appInfo = null).clearForTest()
             }
 
             should("onSave, onCopy and onShare export nothing without an icon") {
@@ -286,13 +282,13 @@ class IconViewModelTest : ShouldSpec(
 
             should("onCleared does nothing when sourceDir is null") {
                 val infoWithNullSourceDir = ApplicationInfo().also { it.packageName = "com.example.test" }
-                buildViewModel(appInfo = infoWithNullSourceDir).triggerOnCleared()
+                buildViewModel(appInfo = infoWithNullSourceDir).clearForTest()
             }
 
             should("onCleared keeps an installed APK outside the cache") {
                 val installedApk = File.createTempFile("installed", ".apk")
                 try {
-                    buildViewModel(appInfoAt(installedApk)).triggerOnCleared()
+                    buildViewModel(appInfoAt(installedApk)).clearForTest()
                     installedApk.exists() shouldBe true
                 } finally {
                     installedApk.delete()
@@ -301,7 +297,7 @@ class IconViewModelTest : ShouldSpec(
 
             should("onCleared deletes the cached APK") {
                 val cachedApk = apkImporter.createCacheFile()
-                buildViewModel(appInfoAt(cachedApk)).triggerOnCleared()
+                buildViewModel(appInfoAt(cachedApk)).clearForTest()
                 cachedApk.exists() shouldBe false
             }
 

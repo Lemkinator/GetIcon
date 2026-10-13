@@ -18,18 +18,12 @@ package de.lemke.geticon.ui
 
 import android.app.Activity
 import android.content.ClipboardManager
-import android.content.ContentProvider
-import android.content.ContentValues
 import android.content.DialogInterface
 import android.content.Intent
-import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
-import android.os.Bundle
 import android.os.Environment
-import android.os.Looper
-import android.os.ParcelFileDescriptor
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
@@ -53,10 +47,15 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import dagger.hilt.android.testing.UninstallModules
 import de.lemke.commonutils.PausableDispatcher
+import de.lemke.commonutils.RecordingDocumentsProvider
 import de.lemke.commonutils.ShadowFileProvider
+import de.lemke.commonutils.cacheFileOf
+import de.lemke.commonutils.cacheWriteUriPattern
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
+import de.lemke.commonutils.hasPngSignature
+import de.lemke.commonutils.idleMainLooper
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.DocumentPick
@@ -134,7 +133,7 @@ class IconActivityTest {
             .getChildAt(slot)
             .performClick()
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
-        shadowOf(Looper.getMainLooper()).idle()
+        idleMainLooper()
     }
 
     private fun appInfoIntent(): Intent {
@@ -153,7 +152,7 @@ class IconActivityTest {
     @Test
     fun exit_noAppInfo_showsAppNotFoundAndFinishes() {
         launchWithoutAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ShadowToast.shownToastCount() shouldBe 1
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_app_not_found)
@@ -167,7 +166,7 @@ class IconActivityTest {
     fun exit_generateFailed_showsGenerationErrorAndFinishes() {
         failIconRendering()
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ShadowToast.shownToastCount() shouldBe 1
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(R.string.error_icon_generation_failed)
@@ -181,17 +180,17 @@ class IconActivityTest {
     fun exit_regenerationFailsWhileStopped_showsErrorOnceAfterRecreationAndFinishes() {
         val controller = Robolectric.buildActivity(IconActivity::class.java, appInfoIntent()).setup()
         try {
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             controller.pause().stop()
             failIconRendering()
             val stopped = controller.get()
             ViewModelProvider(stopped)[IconViewModel::class.java].onMaskChanged(false)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 0
             controller.recreate()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             controller.restart().start().resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             val recreated = controller.get()
             recreated shouldNotBeSameInstanceAs stopped
             ShadowToast.shownToastCount() shouldBe 1
@@ -208,17 +207,17 @@ class IconActivityTest {
     fun exit_regenerationFailsWhilePaused_waitsForResumeThenFinishes() {
         val controller = Robolectric.buildActivity(IconActivity::class.java, appInfoIntent()).setup()
         try {
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             controller.pause()
             failIconRendering()
             val activity = controller.get()
             ViewModelProvider(activity)[IconViewModel::class.java].onMaskChanged(false)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 0
             activity.isFinishing shouldBe false
             ViewModelProvider(activity)[IconViewModel::class.java].exit.value shouldBe IconExit.GenerateFailed
             controller.resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe activity.getString(R.string.error_icon_generation_failed)
             activity.isFinishing shouldBe true
@@ -235,7 +234,7 @@ class IconActivityTest {
     @Test
     fun onOptionsItemSelected_saveAsImage() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
                 val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
@@ -251,21 +250,21 @@ class IconActivityTest {
     @Test
     fun onOptionsItemSelected_share() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
                 val item = RoboMenuItem(R.id.menu_item_icon_share)
                 activity.onOptionsItemSelected(item) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val startedIntent = shadowOf(activity).nextStartedActivity
                 startedIntent?.action shouldBe Intent.ACTION_CHOOSER
                 val innerIntent = IntentCompat.getParcelableExtra(startedIntent!!, Intent.EXTRA_INTENT, Intent::class.java)!!
                 innerIntent.type shouldBe "image/png"
                 val stream = IntentCompat.getParcelableExtra(innerIntent, Intent.EXTRA_STREAM, Uri::class.java)!!
-                stream.toString() shouldMatch activity.iconContentUriPattern("share", "icon.png")
-                activity.cacheFile(stream).length() shouldBeGreaterThan 0L
+                stream.toString() shouldMatch activity.cacheWriteUriPattern("icons", "share", "icon.png")
+                activity.cacheFileOf(stream).length() shouldBeGreaterThan 0L
                 innerIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION shouldBe Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
         }
@@ -274,7 +273,7 @@ class IconActivityTest {
     @Test
     fun saveAsImage_doubleTap_launchesDocumentPickerOnce() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
                 activity.onOptionsItemSelected(item) shouldBe true
@@ -289,13 +288,13 @@ class IconActivityTest {
     @Test
     fun share_doubleTap_opensShareSheetOnce() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val item = RoboMenuItem(R.id.menu_item_icon_share)
                 activity.onOptionsItemSelected(item) shouldBe true
                 activity.onOptionsItemSelected(item) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
@@ -308,14 +307,14 @@ class IconActivityTest {
     @Test
     fun share_whileCopyWrites_startsNothingAndShowsNoToast() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             pausableIoDispatcher.pause()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
             }
             pausableIoDispatcher.resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity shouldBe null
                 File(activity.cacheDir, "share").exists() shouldBe false
@@ -328,14 +327,14 @@ class IconActivityTest {
     @Test
     fun share_rotationDuringWrite_opensShareSheetOnceInRecreatedActivity() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             pausableIoDispatcher.pause()
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
             }
             scenario.recreate()
             pausableIoDispatcher.resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
@@ -348,14 +347,14 @@ class IconActivityTest {
     fun saveAsImage_fixedLocation_rotationDuringWrite_showsToastInRecreatedActivity() {
         settings.imageSaveLocation = SaveLocation.DOWNLOADS
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             pausableIoDispatcher.pause()
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
             }
             scenario.recreate()
             pausableIoDispatcher.resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Image saved: Downloads"
         }
@@ -364,14 +363,14 @@ class IconActivityTest {
     @Test
     fun share_latchDropsLaunch_keepsResultAndOpensShareSheetOnNextResume() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             pausableIoDispatcher.pause()
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
                 activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
             }
             pausableIoDispatcher.resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
@@ -382,7 +381,7 @@ class IconActivityTest {
             }
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.action shouldBe Intent.ACTION_CHOOSER
                 ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe BitmapExport.Idle
@@ -393,17 +392,17 @@ class IconActivityTest {
     @Test
     fun saveAsImage_noDocumentPicker_showsSavingErrorOnceAcrossResume() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             shadowOf(ApplicationProvider.getApplicationContext<HiltTestApplication>()).checkActivities(true)
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Error: Saving content is not supported on your device."
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivityForResult shouldBe null
@@ -415,12 +414,12 @@ class IconActivityTest {
     @Test
     fun saveAsImage_latchDropsPickerLaunch_keepsResultAndOpensPickerOnNextResume() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
                 ViewModelProvider(activity)[IconViewModel::class.java].onSave()
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivityForResult
@@ -435,7 +434,7 @@ class IconActivityTest {
             }
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivityForResult?.intent?.action shouldBe Intent.ACTION_CREATE_DOCUMENT
                 ViewModelProvider(activity)[IconViewModel::class.java].export.value shouldBe BitmapExport.Idle
@@ -447,17 +446,17 @@ class IconActivityTest {
     @Test
     fun share_noShareSheet_showsShareErrorOnceAcrossResume() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             shadowOf(ApplicationProvider.getApplicationContext<HiltTestApplication>()).checkActivities(true)
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Error: Sharing content is not supported on your device."
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity shouldBe null
@@ -470,18 +469,18 @@ class IconActivityTest {
     @Test
     fun exportControls_disabledWhileWorkRuns() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             pausableIoDispatcher.pause()
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).isLongClickable shouldBe false
                 activity.preparedExportMenuItemsEnabled() shouldBe listOf(false, false)
             }
             pausableIoDispatcher.resume()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).isLongClickable shouldBe true
                 activity.preparedExportMenuItemsEnabled() shouldBe listOf(true, true)
@@ -492,12 +491,12 @@ class IconActivityTest {
     @Test
     fun share_shareFileCannotBeWritten_showsShareError() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 File(activity.cacheDir, "share").createNewFile() shouldBe true
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity shouldBe null
                 ShadowToast.getTextOfLatestToast() shouldBe
@@ -510,13 +509,13 @@ class IconActivityTest {
     fun saveAsImage_fixedLocation_doubleTap_writesOneFileAndShowsOneToast() {
         settings.imageSaveLocation = SaveLocation.DOWNLOADS
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
                 activity.onOptionsItemSelected(item) shouldBe true
                 activity.onOptionsItemSelected(item) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).listFiles()?.size shouldBe 1
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Image saved: Downloads"
@@ -529,11 +528,11 @@ class IconActivityTest {
         settings.imageSaveLocation = SaveLocation.DOWNLOADS
         val file = File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png")
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val shadowActivity = shadowOf(activity)
                 val picker = shadowActivity.nextStartedActivityForResult.intent
@@ -541,7 +540,7 @@ class IconActivityTest {
                 picker.getStringExtra(Intent.EXTRA_TITLE)!! shouldMatch """de_lemke_geticon_debug_mask_\d{4}(_\d{2}){5}\.png"""
                 shadowActivity.receiveResult(picker, Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             downloads.list().orEmpty().toList() shouldBe emptyList()
             file.length() shouldBeGreaterThan 0L
@@ -564,7 +563,7 @@ class IconActivityTest {
     @Test
     fun onOptionsItemSelected_unknownItem_callsSuper() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
                 val item = RoboMenuItem(android.R.id.home)
@@ -581,7 +580,7 @@ class IconActivityTest {
                 // with isRendering=false regardless of whether the checkbox is enabled.
                 activity.findViewById<CheckBox>(R.id.masked_checkbox).performClick()
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .state.value.style.maskEnabled shouldBe false
@@ -592,9 +591,9 @@ class IconActivityTest {
     @Test
     fun colorCheckbox_click_togglesColor() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             onView(withId(R.id.color_checkbox)).perform(click())
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .state.value.style.colorEnabled shouldBe true
@@ -615,7 +614,7 @@ class IconActivityTest {
             }
             // renderState: colorCheckbox.isChecked = colorEnabled && kind.canTint = true && false = false
             // → changes from true→false while isRendering=true → listener fires with isRendering=true (skips body).
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .state.value.style.colorEnabled shouldBe true
@@ -643,19 +642,19 @@ class IconActivityTest {
     @Test
     fun icon_longClick_copiesClipboard() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
                 activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_copied_to_clipboard)
                 val clip = activity.getSystemService(ClipboardManager::class.java).primaryClip!!
                 val uri = clip.getItemAt(0).uri
                 clip.description.label shouldBe "icon"
                 clip.description.getMimeType(0) shouldBe "image/png"
-                uri.toString() shouldMatch activity.iconContentUriPattern("clipboard", "icon.png")
+                uri.toString() shouldMatch activity.cacheWriteUriPattern("icons", "clipboard", "icon.png")
                 activity.contentResolver.getType(uri) shouldBe "image/png"
             }
         }
@@ -665,14 +664,14 @@ class IconActivityTest {
     fun icon_doubleLongClick_copiesOneClipWithOneToast() {
         launchWithAppInfo().use { scenario ->
             var clipChanges = 0
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.getSystemService(ClipboardManager::class.java).addPrimaryClipChangedListener { clipChanges++ }
                 val icon = activity.findViewById<ImageView>(R.id.icon)
                 icon.performLongClick() shouldBe true
                 icon.performLongClick() shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             clipChanges shouldBe 1
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Copied to clipboard"
@@ -682,12 +681,12 @@ class IconActivityTest {
     @Test
     fun icon_longClick_clipCannotBeWritten_showsShareError() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 File(activity.cacheDir, "clipboard").createNewFile() shouldBe true
                 activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.getSystemService(ClipboardManager::class.java).hasPrimaryClip() shouldBe false
                 ShadowToast.getTextOfLatestToast() shouldBe
@@ -699,12 +698,12 @@ class IconActivityTest {
     @Test
     fun icon_longClickWhileShareSheetPending_copiesNothing() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_share)) shouldBe true
                 activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.getSystemService(ClipboardManager::class.java).hasPrimaryClip() shouldBe false
             }
@@ -715,9 +714,9 @@ class IconActivityTest {
     @Test
     fun sizeEdittext_editorAction_updatesSize() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("256"), pressImeActionButton())
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .state.value.style.size shouldBe 256
@@ -728,7 +727,7 @@ class IconActivityTest {
     @Test
     fun sizeEdittext_showsDefaultSize() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "512"
             }
@@ -739,12 +738,12 @@ class IconActivityTest {
     @Config(qualifiers = "ar-rEG")
     fun sizeEdittext_arabicLocale_showsLocaleDigitsAndParsesThemBack() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٥١٢"
             }
             onView(withId(R.id.size_edittext)).perform(replaceText("٢٥٦"), pressImeActionButton())
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .state.value.style.size shouldBe 256
@@ -756,12 +755,12 @@ class IconActivityTest {
     @Config(qualifiers = "ar-rEG")
     fun sizeEdittext_arabicLocale_mixedDigitsForCurrentSize_reformatsWithLocaleDigits() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٥١٢"
             }
             onView(withId(R.id.size_edittext)).perform(replaceText("٥١2"), pressImeActionButton())
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٥١٢"
                 ViewModelProvider(activity)[IconViewModel::class.java]
@@ -774,9 +773,9 @@ class IconActivityTest {
     @Config(qualifiers = "ar-rEG")
     fun sizeEdittext_arabicLocale_mixedDigitsForNewSize_reformatsWithLocaleDigits() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("٢٥6"), pressImeActionButton())
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "٢٥٦"
                 ViewModelProvider(activity)[IconViewModel::class.java]
@@ -788,11 +787,11 @@ class IconActivityTest {
     @Test
     fun sizeEdittext_editorAction_aboveMaxAtMaxSize_showsClampedSizeWithCursorAtEnd() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity -> activity.onSeekbarProgressChanged(1024) }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("5000"), pressImeActionButton())
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val field = activity.findViewById<EditText>(R.id.size_edittext)
                 field.text.toString() shouldBe "1024"
@@ -806,11 +805,11 @@ class IconActivityTest {
     @Test
     fun sizeEdittext_editorAction_belowMinAtMinSize_showsClampedSize() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity -> activity.onSeekbarProgressChanged(16) }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("3"), pressImeActionButton())
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<EditText>(R.id.size_edittext).text.toString() shouldBe "16"
                 ViewModelProvider(activity)[IconViewModel::class.java]
@@ -822,11 +821,11 @@ class IconActivityTest {
     @Test
     fun sizeEdittext_editorAction_sameSizeSubmitted_keepsTextAndCursorAtEnd() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("512"))
             scenario.onActivity { activity -> activity.findViewById<EditText>(R.id.size_edittext).setSelection(3) }
             onView(withId(R.id.size_edittext)).perform(pressImeActionButton())
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val field = activity.findViewById<EditText>(R.id.size_edittext)
                 field.text.toString() shouldBe "512"
@@ -840,9 +839,9 @@ class IconActivityTest {
     @Test
     fun sizeEdittext_editorAction_nonNumericText_doesNotUpdateSize() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("abc"), pressImeActionButton())
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .state.value.style.size shouldBe 512
@@ -853,7 +852,7 @@ class IconActivityTest {
     @Test
     fun seekbar_progressChanged_updatesSizeViaViewModel() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(100)
                 activity.onSeekbarProgressChanged(100) // same size → early return (no-op)
@@ -869,7 +868,7 @@ class IconActivityTest {
     @Test
     fun colorButtons_click_showColorPicker() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.showColorPicker(isBackground = true)
                 val backgroundDialog = ShadowDialog.getLatestDialog()
@@ -885,7 +884,7 @@ class IconActivityTest {
     @Test
     fun colorPicker_confirmRecentColor_changesBackgroundColor() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onColorPicked(Color.RED, isBackground = true)
                 activity.onColorPicked(Color.GREEN, isBackground = true)
@@ -901,7 +900,7 @@ class IconActivityTest {
     @Test
     fun colorPicker_confirmRecentColor_changesForegroundColor() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onColorPicked(Color.RED, isBackground = false)
                 activity.onColorPicked(Color.GREEN, isBackground = false)
@@ -917,7 +916,7 @@ class IconActivityTest {
     @Test
     fun colorButton_doubleTap_showsOneColorPicker() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val button = activity.findViewById<Button>(R.id.colorButtonBackground)
                 button.performClick()
@@ -931,14 +930,14 @@ class IconActivityTest {
     @Test
     fun documentPicked_afterGenerationFailed_deletesDocumentAndShowsCreateError() {
         renderer.failure = IOException("generation failed")
-        val provider = documentProvider()
+        val provider = RecordingDocumentsProvider.create(ApplicationProvider.getApplicationContext<HiltTestApplication>())
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 pickDocument(activity, DocumentPick.Created(provider.uri))
             }
-            shadowOf(Looper.getMainLooper()).idle()
-            provider.document.exists() shouldBe false
+            idleMainLooper()
+            provider.file.exists() shouldBe false
             ShadowToast.shownToastCount() shouldBe 2
             ShadowToast.getTextOfLatestToast() shouldBe "Error creating file"
         }
@@ -947,12 +946,12 @@ class IconActivityTest {
     @Test
     fun documentPicked_resultOk_savesIcon() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             val file = File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png")
             scenario.onActivity { activity ->
                 pickDocument(activity, DocumentPick.Created(Uri.fromFile(file)))
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
             file.length() shouldBeGreaterThan 0L
         }
@@ -962,23 +961,23 @@ class IconActivityTest {
     fun documentPicked_rotationDuringWrite_finishesWriteAndAdmitsNextSave() {
         val document = createPickedDocument()
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             pausableIoDispatcher.pause()
             scenario.onActivity { activity ->
                 pickDocument(activity, DocumentPick.Created(Uri.fromFile(document)))
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             document.length() shouldBe 0L
             scenario.recreate()
             pausableIoDispatcher.resume()
-            shadowOf(Looper.getMainLooper()).idle()
-            document.readBytes().take(PNG_SIGNATURE.size) shouldBe PNG_SIGNATURE
+            idleMainLooper()
+            document.hasPngSignature() shouldBe true
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Image saved"
             scenario.onActivity { activity ->
                 activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_icon_save_as_image)) shouldBe true
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivityForResult.intent.action shouldBe Intent.ACTION_CREATE_DOCUMENT
             }
@@ -988,11 +987,11 @@ class IconActivityTest {
     @Test
     fun documentPicked_resultCanceled_showsNoToast() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 pickDocument(activity, DocumentPick.Canceled)
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 0
         }
     }
@@ -1000,11 +999,11 @@ class IconActivityTest {
     @Test
     fun documentPicked_resultOkWithoutUri_showsCreateError() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 pickDocument(activity, DocumentPick.MissingUri)
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             ShadowToast.shownToastCount() shouldBe 1
             ShadowToast.getTextOfLatestToast() shouldBe "Error creating file"
         }
@@ -1013,7 +1012,7 @@ class IconActivityTest {
     @Test
     fun onColorPicked_isBackground_true() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onColorPicked(Color.RED, true)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
@@ -1026,7 +1025,7 @@ class IconActivityTest {
     @Test
     fun onColorPicked_isBackground_false() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onColorPicked(Color.BLUE, false)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
@@ -1039,7 +1038,7 @@ class IconActivityTest {
     @Test
     fun colorButtons_colorDisabled_showDisabledPresentation() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 listOf(R.id.colorButtonBackground, R.id.colorButtonForeground).forEach { id ->
                     val button = activity.findViewById<Button>(id)
@@ -1057,11 +1056,11 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onColorPicked(Color.WHITE, isBackground = true)
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val button = activity.findViewById<Button>(R.id.colorButtonBackground)
                 button.isEnabled shouldBe true
@@ -1077,11 +1076,11 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onColorPicked(Color.BLACK, isBackground = false)
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val button = activity.findViewById<Button>(R.id.colorButtonForeground)
                 button.isEnabled shouldBe true
@@ -1098,11 +1097,11 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onColorPicked(translucentBlack, isBackground = false)
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val button = activity.findViewById<Button>(R.id.colorButtonForeground)
                 button.isEnabled shouldBe true
@@ -1120,11 +1119,11 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onColorPicked(translucentBlack, isBackground = false)
             }
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 val button = activity.findViewById<Button>(R.id.colorButtonForeground)
                 button.isEnabled shouldBe true
@@ -1137,7 +1136,7 @@ class IconActivityTest {
     @Test
     fun icon_contentDescription_namesApp() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Example App icon"
             }
@@ -1148,7 +1147,7 @@ class IconActivityTest {
     @Config(qualifiers = "de")
     fun icon_contentDescription_namesApp_inGerman() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Example App"
             }
@@ -1159,7 +1158,7 @@ class IconActivityTest {
     @Config(qualifiers = "land")
     fun icon_contentDescription_namesApp_inLandscape() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Example App icon"
             }
@@ -1170,7 +1169,7 @@ class IconActivityTest {
     @Config(qualifiers = "de-land")
     fun icon_contentDescription_namesApp_inGermanLandscape() {
         launchWithAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "Icon von Example App"
             }
@@ -1180,7 +1179,7 @@ class IconActivityTest {
     @Test
     fun icon_contentDescription_withoutAppName_keepsGenericFallback() {
         launchWithoutAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App icon"
             }
@@ -1191,7 +1190,7 @@ class IconActivityTest {
     @Config(qualifiers = "de")
     fun icon_contentDescription_withoutAppName_keepsGermanGenericFallback() {
         launchWithoutAppInfo().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleMainLooper()
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).contentDescription shouldBe "App-Icon"
             }
@@ -1208,69 +1207,7 @@ class IconActivityTest {
     private fun createPickedDocument(): File =
         File(ApplicationProvider.getApplicationContext<HiltTestApplication>().cacheDir, "icon_export_test.png").apply { createNewFile() }
 
-    private fun documentProvider(): FakeDocumentProvider =
-        Robolectric
-            .buildContentProvider(FakeDocumentProvider::class.java)
-            .create(DOCUMENTS_AUTHORITY)
-            .get()
-            .apply { document = createPickedDocument() }
-
     companion object {
-        private val PNG_SIGNATURE = listOf<Byte>(-119, 80, 78, 71, 13, 10, 26, 10)
         private val testBitmap: Bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
     }
-}
-
-private const val DOCUMENTS_AUTHORITY = "de.lemke.geticon.test.documents"
-
-// The hidden DocumentsContract.METHOD_DELETE_DOCUMENT that deleteDocument sends to the provider.
-private const val METHOD_DELETE_DOCUMENT = "android:deleteDocument"
-
-private class FakeDocumentProvider : ContentProvider() {
-    lateinit var document: File
-    val uri: Uri = Uri.parse("content://$DOCUMENTS_AUTHORITY/document/1")
-
-    override fun onCreate() = true
-
-    override fun call(
-        method: String,
-        arg: String?,
-        extras: Bundle?,
-    ): Bundle? {
-        if (method == METHOD_DELETE_DOCUMENT) document.delete()
-        return null
-    }
-
-    override fun openFile(
-        uri: Uri,
-        mode: String,
-    ): ParcelFileDescriptor = ParcelFileDescriptor.open(document, ParcelFileDescriptor.parseMode(mode))
-
-    override fun query(
-        uri: Uri,
-        projection: Array<out String>?,
-        selection: String?,
-        selectionArgs: Array<out String>?,
-        sortOrder: String?,
-    ): Cursor? = null
-
-    override fun getType(uri: Uri): String? = null
-
-    override fun insert(
-        uri: Uri,
-        values: ContentValues?,
-    ): Uri? = null
-
-    override fun delete(
-        uri: Uri,
-        selection: String?,
-        selectionArgs: Array<out String>?,
-    ) = 0
-
-    override fun update(
-        uri: Uri,
-        values: ContentValues?,
-        selection: String?,
-        selectionArgs: Array<out String>?,
-    ) = 0
 }
