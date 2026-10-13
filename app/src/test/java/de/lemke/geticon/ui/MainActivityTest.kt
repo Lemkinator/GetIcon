@@ -33,10 +33,10 @@ import androidx.picker.model.AppInfo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import dagger.hilt.android.testing.BindValue
-import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import dagger.hilt.android.testing.UninstallModules
+import de.lemke.commonutils.HiltTestRule
 import de.lemke.commonutils.bypassOobe
 import de.lemke.commonutils.data.FakePackageLookup
 import de.lemke.commonutils.data.PackageLookup
@@ -90,7 +90,7 @@ import dev.oneuiproject.oneui.design.R as oneuiDesignR
 @UninstallModules(AppCoroutinesModule::class, ApkImporterModule::class, PackageLookupModule::class)
 class MainActivityTest {
     @get:Rule(order = 0)
-    val hiltRule = HiltAndroidRule(this)
+    val hiltRule = HiltTestRule(this)
 
     private val importer = FakeApkImporter()
 

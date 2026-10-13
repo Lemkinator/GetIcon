@@ -42,10 +42,10 @@ import androidx.test.espresso.action.ViewActions.pressImeActionButton
 import androidx.test.espresso.action.ViewActions.replaceText
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import dagger.hilt.android.testing.BindValue
-import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import dagger.hilt.android.testing.UninstallModules
+import de.lemke.commonutils.HiltTestRule
 import de.lemke.commonutils.PausableDispatcher
 import de.lemke.commonutils.RecordingDocumentsProvider
 import de.lemke.commonutils.ShadowFileProvider
@@ -98,7 +98,7 @@ import de.lemke.commonutils.R as commonutilsR
 @UninstallModules(AppCoroutinesModule::class, IconRendererModule::class)
 class IconActivityTest {
     @get:Rule(order = 0)
-    val hiltRule = HiltAndroidRule(this)
+    val hiltRule = HiltTestRule(this)
 
     private val renderer = FakeIconRenderer(testBitmap)
 
