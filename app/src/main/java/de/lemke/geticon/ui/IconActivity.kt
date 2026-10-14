@@ -21,35 +21,29 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.CompoundButton
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle.State.RESUMED
-import androidx.picker3.app.SeslColorPickerDialog
 import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
 import de.lemke.commonutils.data.SettingsRepository
-import de.lemke.commonutils.ui.utils.LaunchOutcome
+import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.SingleLaunchResultLauncher
 import de.lemke.commonutils.ui.utils.bindColorSwatch
 import de.lemke.commonutils.ui.utils.collectState
-import de.lemke.commonutils.ui.utils.copyToClipboard
-import de.lemke.commonutils.ui.utils.exportBitmap
+import de.lemke.commonutils.ui.utils.launchBitmapExport
 import de.lemke.commonutils.ui.utils.onSingleLaunchClick
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationTo
-import de.lemke.commonutils.ui.utils.registerForSingleLaunchResult
+import de.lemke.commonutils.ui.utils.registerForDocumentPick
 import de.lemke.commonutils.ui.utils.setCustomBackAnimation
 import de.lemke.commonutils.ui.utils.setWindowTransparent
-import de.lemke.commonutils.ui.utils.shareBitmap
-import de.lemke.commonutils.ui.utils.showOnce
+import de.lemke.commonutils.ui.utils.showColorPickerOnce
 import de.lemke.commonutils.ui.utils.singleLaunch
 import de.lemke.commonutils.ui.utils.singleLaunchMenuItem
-import de.lemke.commonutils.ui.utils.toDocumentPick
 import de.lemke.commonutils.ui.utils.toast
 import de.lemke.geticon.R
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
@@ -76,7 +70,7 @@ class IconActivity :
     private var suggestViewSet = false
 
     private val exportBitmapResultLauncher: SingleLaunchResultLauncher<Intent> =
-        registerForSingleLaunchResult(StartActivityForResult()) { onExportBitmapResult(it) }
+        registerForDocumentPick { viewModel.onDocumentPicked(it) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         prepareActivityTransformationTo()
@@ -87,14 +81,14 @@ class IconActivity :
         initViews()
         collectState(viewModel.state) { renderState(it) }
         collectState(viewModel.export) { renderExportControls(it) }
-        collectState(viewModel.export, minActiveState = RESUMED) { if (it is IconExport.Result) onExportResult(it) }
+        collectState(viewModel.export, minActiveState = RESUMED) { if (it is BitmapExport.Result) onExportResult(it) }
         collectState(viewModel.exit, minActiveState = RESUMED) { if (it is IconExit.Reason) onExit(it) }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val enabled = viewModel.export.value != IconExport.Running
+        val enabled = viewModel.export.value != BitmapExport.Running
         menu.findItem(R.id.menu_item_icon_save_as_image).isEnabled = enabled
         menu.findItem(R.id.menu_item_icon_share).isEnabled = enabled
         return super.onPrepareOptionsMenu(menu)
@@ -107,11 +101,6 @@ class IconActivity :
             R.id.menu_item_icon_share -> singleLaunchMenuItem { viewModel.onShare() }
             else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onExportBitmapResult(result: ActivityResult) {
-        viewModel.onDocumentPicked(result.toDocumentPick())
     }
 
     private fun initViews() {
@@ -136,32 +125,8 @@ class IconActivity :
         binding.colorButtonForeground.onSingleLaunchClick { showColorPicker(isBackground = false) }
     }
 
-    private fun onExportResult(result: IconExport.Result) {
-        val handled =
-            when (result) {
-                is IconExport.OpenPicker -> {
-                    exportBitmap(result.fileName, exportBitmapResultLauncher).isSettled
-                }
-
-                is IconExport.Share -> {
-                    shareBitmap(result.file).isSettled
-                }
-
-                is IconExport.SaveFinished -> {
-                    true.also { toast(result.result) }
-                }
-
-                is IconExport.Copy -> {
-                    true.also { copyToClipboard(result.clip) }
-                }
-
-                IconExport.CopyFailed, IconExport.ShareFailed -> {
-                    true.also {
-                        toast(commonutilsR.string.commonutils_error_share_content_not_supported_on_device)
-                    }
-                }
-            }
-        if (handled) viewModel.onExportHandled(result)
+    private fun onExportResult(result: BitmapExport.Result) {
+        if (launchBitmapExport(result, exportBitmapResultLauncher)) viewModel.onExportHandled(result)
     }
 
     private fun onExit(reason: IconExit.Reason) {
@@ -204,8 +169,8 @@ class IconActivity :
         }
     }
 
-    private fun renderExportControls(export: IconExport) {
-        binding.icon.isLongClickable = export != IconExport.Running
+    private fun renderExportControls(export: BitmapExport) {
+        binding.icon.isLongClickable = export != BitmapExport.Running
         invalidateOptionsMenu()
     }
 
@@ -246,16 +211,12 @@ class IconActivity :
         val state = viewModel.state.value
         val currentColor = if (isBackground) state.style.backgroundColor else state.style.foregroundColor
         val recentColors = if (isBackground) state.recentBackgroundColors else state.recentForegroundColors
-        val dialog =
-            SeslColorPickerDialog(
-                this,
-                { color: Int -> onColorPicked(color, isBackground) },
-                currentColor,
-                recentColors.toIntArray(),
-                true,
-            )
-        dialog.setTransparencyControlEnabled(true)
-        dialog.showOnce(if (isBackground) BACKGROUND_COLOR_PICKER_TAG else FOREGROUND_COLOR_PICKER_TAG)
+        showColorPickerOnce(
+            tag = if (isBackground) BACKGROUND_COLOR_PICKER_TAG else FOREGROUND_COLOR_PICKER_TAG,
+            currentColor = currentColor,
+            recentColors = recentColors,
+            onColorPicked = { onColorPicked(it, isBackground) },
+        )
     }
 
     private fun copyIcon(): Boolean {
@@ -286,10 +247,3 @@ class IconActivity :
         private const val FOREGROUND_COLOR_PICKER_TAG = "foregroundColorPicker"
     }
 }
-
-private val LaunchOutcome.isSettled: Boolean
-    get() =
-        when (this) {
-            LaunchOutcome.Started, LaunchOutcome.Failed -> true
-            LaunchOutcome.Dropped -> false
-        }

@@ -18,9 +18,9 @@ package de.lemke.geticon.ui
 
 import android.content.pm.ApplicationInfo
 import android.net.Uri
-import androidx.lifecycle.ViewModelStore
 import androidx.picker.model.AppInfoData
 import app.cash.turbine.test
+import de.lemke.commonutils.clearForTest
 import de.lemke.commonutils.data.FakePackageLookup
 import de.lemke.commonutils.domain.GetApplicationInfoUseCase
 import de.lemke.commonutils.domain.GetInstalledAppsUseCase
@@ -36,10 +36,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-
-private fun MainViewModel.triggerOnCleared() {
-    ViewModelStore().also { it.put("vm", this) }.clear()
-}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest : ShouldSpec(
@@ -206,13 +202,13 @@ class MainViewModelTest : ShouldSpec(
         should("a handled Imported result keeps its cached APK for the screen it opened") {
             val imported = pick("com.example.app")
             viewModel.onApkImportHandled(imported)
-            viewModel.triggerOnCleared()
+            viewModel.clearForTest()
             importer.cachedFiles() shouldBe listOf(File(imported.applicationInfo.sourceDir))
         }
 
         should("onCleared deletes the cached APK of an Imported result that was never handled") {
             pick("com.example.app")
-            viewModel.triggerOnCleared()
+            viewModel.clearForTest()
             importer.cachedFiles() shouldBe emptyList()
         }
 

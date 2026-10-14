@@ -21,10 +21,11 @@ import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModelStore
 import app.cash.turbine.test
+import de.lemke.commonutils.clearForTest
 import de.lemke.commonutils.data.FakeSharedPreferences
 import de.lemke.commonutils.data.SaveLocation
+import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.BitmapShareFile
 import de.lemke.commonutils.ui.utils.DocumentPick
@@ -35,7 +36,6 @@ import de.lemke.geticon.data.FakeIconRenderer
 import de.lemke.geticon.data.FakeIconRenderer.Render
 import de.lemke.geticon.data.UserSettings
 import de.lemke.geticon.data.UserSettings.Companion.MAX_ICON_SIZE
-import de.lemke.geticon.data.UserSettings.Companion.MAX_RECENT_COLORS
 import de.lemke.geticon.data.UserSettings.Companion.MIN_ICON_SIZE
 import de.lemke.geticon.domain.GenerateIconUseCase
 import de.lemke.geticon.domain.model.IconKind
@@ -50,10 +50,6 @@ import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-
-private fun IconViewModel.triggerOnCleared() {
-    ViewModelStore().also { it.put("vm", this) }.clear()
-}
 
 class IconViewModelTest : ShouldSpec(
     {
@@ -139,7 +135,7 @@ class IconViewModelTest : ShouldSpec(
             }
 
             should("onCleared does nothing when applicationInfo is null") {
-                buildViewModel(appInfo = null).triggerOnCleared()
+                buildViewModel(appInfo = null).clearForTest()
             }
 
             should("onSave, onCopy and onShare export nothing without an icon") {
@@ -148,7 +144,7 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.onCopy()
                 viewModel.onShare()
                 exporter.calls shouldBe emptyList()
-                viewModel.export.value shouldBe IconExport.Idle
+                viewModel.export.value shouldBe BitmapExport.Idle
             }
         }
 
@@ -286,13 +282,13 @@ class IconViewModelTest : ShouldSpec(
 
             should("onCleared does nothing when sourceDir is null") {
                 val infoWithNullSourceDir = ApplicationInfo().also { it.packageName = "com.example.test" }
-                buildViewModel(appInfo = infoWithNullSourceDir).triggerOnCleared()
+                buildViewModel(appInfo = infoWithNullSourceDir).clearForTest()
             }
 
             should("onCleared keeps an installed APK outside the cache") {
                 val installedApk = File.createTempFile("installed", ".apk")
                 try {
-                    buildViewModel(appInfoAt(installedApk)).triggerOnCleared()
+                    buildViewModel(appInfoAt(installedApk)).clearForTest()
                     installedApk.exists() shouldBe true
                 } finally {
                     installedApk.delete()
@@ -301,7 +297,7 @@ class IconViewModelTest : ShouldSpec(
 
             should("onCleared deletes the cached APK") {
                 val cachedApk = apkImporter.createCacheFile()
-                buildViewModel(appInfoAt(cachedApk)).triggerOnCleared()
+                buildViewModel(appInfoAt(cachedApk)).clearForTest()
                 cachedApk.exists() shouldBe false
             }
 
@@ -403,16 +399,18 @@ class IconViewModelTest : ShouldSpec(
                 viewModel.state.value.fileName shouldBe "com.example.test_mask"
             }
 
-            should("onForegroundColorChanged caps recent colors to MAX_RECENT_COLORS") {
+            should("onForegroundColorChanged caps recent colors to the six newest") {
                 val viewModel = buildViewModel(appInfo)
-                repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onForegroundColorChanged(0xFF000000.toInt() + i + 1) }
-                viewModel.state.value.recentForegroundColors.size shouldBe MAX_RECENT_COLORS
+                repeat(7) { i -> viewModel.onForegroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentForegroundColors shouldBe
+                    listOf(-16777209, -16777210, -16777211, -16777212, -16777213, -16777214)
             }
 
-            should("onBackgroundColorChanged caps recent colors to MAX_RECENT_COLORS") {
+            should("onBackgroundColorChanged caps recent colors to the six newest") {
                 val viewModel = buildViewModel(appInfo)
-                repeat(MAX_RECENT_COLORS + 1) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
-                viewModel.state.value.recentBackgroundColors.size shouldBe MAX_RECENT_COLORS
+                repeat(7) { i -> viewModel.onBackgroundColorChanged(0xFF000000.toInt() + i + 1) }
+                viewModel.state.value.recentBackgroundColors shouldBe
+                    listOf(-16777209, -16777210, -16777211, -16777212, -16777213, -16777214)
             }
 
             context("export") {
@@ -422,7 +420,7 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
                     exporter.calls shouldBe listOf(Call.SaveToDirectory(SaveLocation.CUSTOM, icon, fileName))
-                    viewModel.export.value shouldBe IconExport.OpenPicker(fileName)
+                    viewModel.export.value shouldBe BitmapExport.OpenPicker(fileName)
                 }
 
                 should("an export is Running until its work returns, and a second tap meanwhile does nothing") {
@@ -430,39 +428,25 @@ class IconViewModelTest : ShouldSpec(
                     exporter.gate = gate
                     val viewModel = buildViewModel(appInfo)
                     viewModel.export.test {
-                        awaitItem() shouldBe IconExport.Idle
+                        awaitItem() shouldBe BitmapExport.Idle
                         viewModel.onSave()
-                        awaitItem() shouldBe IconExport.Running
+                        awaitItem() shouldBe BitmapExport.Running
                         viewModel.onSave()
                         viewModel.onCopy()
                         viewModel.onShare()
                         exporter.calls.size shouldBe 1
                         gate.complete(Unit)
-                        awaitItem() shouldBe IconExport.OpenPicker(fileName)
+                        awaitItem() shouldBe BitmapExport.OpenPicker(fileName)
                     }
                 }
 
                 should("onExportHandled returns to Idle and admits the next export") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onSave()
-                    viewModel.onExportHandled(IconExport.OpenPicker(fileName))
-                    viewModel.export.value shouldBe IconExport.Idle
+                    viewModel.onExportHandled(BitmapExport.OpenPicker(fileName))
+                    viewModel.export.value shouldBe BitmapExport.Idle
                     viewModel.onShare()
                     exporter.calls.size shouldBe 2
-                }
-
-                should("onExportHandled keeps a result other than the handled one") {
-                    val viewModel = buildViewModel(appInfo)
-                    viewModel.onSave()
-                    viewModel.onExportHandled(IconExport.CopyFailed)
-                    viewModel.export.value shouldBe IconExport.OpenPicker(fileName)
-                }
-
-                should("a tap while a result waits for the activity replaces that result") {
-                    val viewModel = buildViewModel(appInfo)
-                    viewModel.onSave()
-                    viewModel.onCopy()
-                    viewModel.export.value shouldBe IconExport.CopyFailed
                 }
 
                 should("onCopy holds the written clip") {
@@ -471,13 +455,13 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onCopy()
                     exporter.calls shouldBe listOf(Call.CreateClip(icon))
-                    viewModel.export.value shouldBe IconExport.Copy(clip)
+                    viewModel.export.value shouldBe BitmapExport.Copy(clip)
                 }
 
                 should("onCopy holds CopyFailed when no clip could be written") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onCopy()
-                    viewModel.export.value shouldBe IconExport.CopyFailed
+                    viewModel.export.value shouldBe BitmapExport.CopyFailed
                 }
 
                 should("onShare holds the written share file") {
@@ -486,21 +470,14 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onShare()
                     exporter.calls shouldBe listOf(Call.CreateShareFile(icon))
-                    viewModel.export.value shouldBe IconExport.Share(file)
+                    viewModel.export.value shouldBe BitmapExport.Share(file)
                 }
 
                 should("onShare holds ShareFailed when the share file could not be written") {
                     exporter.shareFile = BitmapShareFile.Failed
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onShare()
-                    viewModel.export.value shouldBe IconExport.ShareFailed
-                }
-
-                should("onShare returns to Idle when the share file write was dropped") {
-                    exporter.shareFile = BitmapShareFile.Dropped
-                    val viewModel = buildViewModel(appInfo)
-                    viewModel.onShare()
-                    viewModel.export.value shouldBe IconExport.Idle
+                    viewModel.export.value shouldBe BitmapExport.ShareFailed
                 }
 
                 should("onDocumentPicked writes the icon into the created document") {
@@ -508,7 +485,7 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onDocumentPicked(DocumentPick.Created(uri))
                     exporter.calls shouldBe listOf(Call.SaveToCreatedDocument(uri, icon))
-                    viewModel.export.value shouldBe IconExport.SaveFinished(BitmapSaveResult.Saved(SaveLocation.CUSTOM))
+                    viewModel.export.value shouldBe BitmapExport.SaveFinished(BitmapSaveResult.Saved(SaveLocation.CUSTOM))
                 }
 
                 should("onDocumentPicked hands a failed generation's missing icon to the write, which reports WriteFailed") {
@@ -518,28 +495,21 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onDocumentPicked(DocumentPick.Created(uri))
                     exporter.calls shouldBe listOf(Call.SaveToCreatedDocument(uri, null))
-                    viewModel.export.value shouldBe IconExport.SaveFinished(BitmapSaveResult.WriteFailed)
-                }
-
-                should("onDocumentPicked returns to Idle when the write reports Canceled") {
-                    exporter.documentResult = BitmapSaveResult.Canceled
-                    val viewModel = buildViewModel(appInfo)
-                    viewModel.onDocumentPicked(DocumentPick.Created(mockk<Uri>()))
-                    viewModel.export.value shouldBe IconExport.Idle
+                    viewModel.export.value shouldBe BitmapExport.SaveFinished(BitmapSaveResult.WriteFailed)
                 }
 
                 should("onDocumentPicked holds WriteFailed for a result without a URI") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onDocumentPicked(DocumentPick.MissingUri)
                     exporter.calls shouldBe emptyList()
-                    viewModel.export.value shouldBe IconExport.SaveFinished(BitmapSaveResult.WriteFailed)
+                    viewModel.export.value shouldBe BitmapExport.SaveFinished(BitmapSaveResult.WriteFailed)
                 }
 
                 should("onDocumentPicked stays silent for a canceled picker") {
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onDocumentPicked(DocumentPick.Canceled)
                     exporter.calls shouldBe emptyList()
-                    viewModel.export.value shouldBe IconExport.Idle
+                    viewModel.export.value shouldBe BitmapExport.Idle
                 }
 
                 should("a regenerated icon keeps the running export") {
@@ -547,7 +517,7 @@ class IconViewModelTest : ShouldSpec(
                     val viewModel = buildViewModel(appInfo)
                     viewModel.onShare()
                     viewModel.onSizeChanged(300)
-                    viewModel.export.value shouldBe IconExport.Running
+                    viewModel.export.value shouldBe BitmapExport.Running
                 }
             }
         }

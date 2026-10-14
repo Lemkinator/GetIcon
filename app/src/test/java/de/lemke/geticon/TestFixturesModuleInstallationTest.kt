@@ -18,9 +18,9 @@ package de.lemke.geticon
 
 import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
-import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import de.lemke.commonutils.HiltTestRule
 import de.lemke.geticon.data.UserSettings
 import javax.inject.Inject
 import org.junit.Assert.assertEquals
@@ -41,8 +41,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [36])
 class TestFixturesModuleInstallationTest {
-    @get:Rule
-    val hiltRule = HiltAndroidRule(this)
+    @get:Rule(order = 0)
+    val hiltRule = HiltTestRule(this)
 
     @Inject
     lateinit var settings: UserSettings

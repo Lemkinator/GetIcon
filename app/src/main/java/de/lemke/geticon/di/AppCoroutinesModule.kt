@@ -17,17 +17,10 @@
 package de.lemke.geticon.di
 
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import de.lemke.commonutils.di.IoDispatcher
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
+import de.lemke.commonutils.di.CommonUtilsCoroutinesModule
 
-@Module
+@Module(includes = [CommonUtilsCoroutinesModule::class])
 @InstallIn(SingletonComponent::class)
-object DispatchersModule {
-    @Provides
-    @IoDispatcher
-    fun provideIo(): CoroutineDispatcher = Dispatchers.IO
-}
+interface AppCoroutinesModule

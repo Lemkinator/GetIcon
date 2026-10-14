@@ -28,12 +28,8 @@ class UserSettings(
     var iconSize: Int by preferences.delegates.int(DEFAULT_ICON_SIZE).sanitized { it.coerceIn(MIN_ICON_SIZE, MAX_ICON_SIZE) }
     var maskEnabled: Boolean by preferences.delegates.boolean(true)
     var colorEnabled: Boolean by preferences.delegates.boolean(false)
-    var recentForegroundColors: List<Int> by preferences.delegates
-        .intList(listOf(DEFAULT_FOREGROUND_COLOR))
-        .sanitized { it.take(MAX_RECENT_COLORS).ifEmpty { listOf(DEFAULT_FOREGROUND_COLOR) } }
-    var recentBackgroundColors: List<Int> by preferences.delegates
-        .intList(listOf(DEFAULT_BACKGROUND_COLOR))
-        .sanitized { it.take(MAX_RECENT_COLORS).ifEmpty { listOf(DEFAULT_BACKGROUND_COLOR) } }
+    var recentForegroundColors: List<Int> by preferences.delegates.recentColors(DEFAULT_FOREGROUND_COLOR)
+    var recentBackgroundColors: List<Int> by preferences.delegates.recentColors(DEFAULT_BACKGROUND_COLOR)
 
     companion object {
         const val DEFAULT_FOREGROUND_COLOR = -1
@@ -41,6 +37,5 @@ class UserSettings(
         const val DEFAULT_ICON_SIZE = 512
         const val MIN_ICON_SIZE = 16
         const val MAX_ICON_SIZE = 1024
-        const val MAX_RECENT_COLORS = 6
     }
 }

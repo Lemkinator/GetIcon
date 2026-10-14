@@ -88,14 +88,15 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
   (`@Provides @Singleton` builds the single `UserSettings` instance) and
   `SettingsBindModule` (`@Binds` redirects `SettingsRepository`-typed requests
   to that instance). `PackageLookupModule` binds the common-utils `PackageLookup` to
-  `DefaultPackageLookup`; `BitmapExporterModule` provides `DefaultBitmapExporter`, which writes
+  `DefaultPackageLookup`; `AppCoroutinesModule` includes the common-utils `CommonUtilsCoroutinesModule` (dispatcher and application-scope
+  qualifiers); `BitmapExporterModule` provides `DefaultBitmapExporter`, which writes
   the icon to a public directory, a picked document, the clipboard cache or the share cache
 
 DI is Hilt throughout. Async via coroutines (`viewModelScope.launch`, `suspend`).
 ViewBinding enabled. ViewModels expose state only: activities collect each `StateFlow` via
-`collectState`. A one-off result (toast, finish, launch) is a sealed state such as `IconExport`,
+`collectState`. A one-off result (toast, finish, launch) is a sealed state such as `BitmapExport`,
 `IconExit`, `AppLookup` or `ApkImport`. The activity acts on it and reports it through `on…Handled()`.
-`ArchitectureTest` bans `Channel`/`SharedFlow` in ViewModel files and `collectEvents` in `ui`.
+`ArchitectureTest` runs the common-utils `assertArchitecture`, which bans `Channel`/`SharedFlow` in ViewModel files.
 
 **Multi-activity (not single-activity).** OneUI (sesl-androidx) is activity-oriented;
 single-activity + Navigation Component was tried and reverted (buggy menu, leaky
@@ -138,8 +139,9 @@ Four tools run as part of `./gradlew build`:
 - **Konsist** — architecture rules in
   `app/src/test/java/de/lemke/geticon/ArchitectureTest.kt`. Enforces
   `data/domain/ui` layering. Runs as part of `./gradlew test`. `CodingConventionsTest.kt` also
-  enforces the common-utils launch latch through `assertLaunchLatchConventions()` from the
-  common-utils testFixtures: it bans raw activity launches and result registration by name, and a
+  runs the common-utils testFixtures rules `assertClassBodyOrder()`, `assertNoCommonUtilsTypeExtensions()` and
+  `assertHiltTestRuleConventions()` (every Hilt test declares `@get:Rule(order = 0) val hiltRule = HiltTestRule(this)`),
+  and enforces the launch latch through `assertLaunchLatchConventions()`: it bans raw activity launches and result registration by name, and a
   `show`/`showNow` call whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
   `singleLaunchActivity`, `transformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,

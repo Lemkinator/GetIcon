@@ -19,10 +19,11 @@ package de.lemke.geticon.ui
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
-import android.os.Looper
 import androidx.lifecycle.SavedStateHandle
 import de.lemke.commonutils.data.SaveLocation
 import de.lemke.commonutils.freshTestPreferences
+import de.lemke.commonutils.idleMainLooper
+import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.BitmapSaveResult
 import de.lemke.commonutils.ui.utils.FakeBitmapExporter
 import de.lemke.commonutils.ui.utils.FakeBitmapExporter.Call
@@ -35,7 +36,6 @@ import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -64,9 +64,9 @@ class IconViewModelSaveTest {
                 exporter,
                 apkImporter,
             )
-        shadowOf(Looper.getMainLooper()).idle()
+        idleMainLooper()
         viewModel.onSave()
-        shadowOf(Looper.getMainLooper()).idle()
+        idleMainLooper()
         return viewModel
     }
 
@@ -74,13 +74,13 @@ class IconViewModelSaveTest {
     fun `onSave writes the icon to the stored location and holds the saved result`() {
         val viewModel = saveToDownloads()
         exporter.calls shouldBe listOf(Call.SaveToDirectory(SaveLocation.DOWNLOADS, icon, "com.example.test_mask"))
-        viewModel.export.value shouldBe IconExport.SaveFinished(BitmapSaveResult.Saved(SaveLocation.DOWNLOADS))
+        viewModel.export.value shouldBe BitmapExport.SaveFinished(BitmapSaveResult.Saved(SaveLocation.DOWNLOADS))
     }
 
     @Test
     fun `onSave holds a failed write to the stored location`() {
         exporter.directoryResult = BitmapSaveResult.WriteFailed
         val viewModel = saveToDownloads()
-        viewModel.export.value shouldBe IconExport.SaveFinished(BitmapSaveResult.WriteFailed)
+        viewModel.export.value shouldBe BitmapExport.SaveFinished(BitmapSaveResult.WriteFailed)
     }
 }
