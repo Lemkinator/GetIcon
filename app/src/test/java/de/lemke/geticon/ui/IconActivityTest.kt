@@ -531,11 +531,9 @@ class IconActivityTest {
             }
             idleMainLooper()
             scenario.onActivity { activity ->
-                val shadowActivity = shadowOf(activity)
-                val picker = shadowActivity.peekNextStartedActivityForResult().intent
+                val picker = activity.receivePickerResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))
                 picker.action shouldBe Intent.ACTION_CREATE_DOCUMENT
                 picker.getStringExtra(Intent.EXTRA_TITLE)!! shouldMatch """de_lemke_geticon_debug_mask_\d{4}(_\d{2}){5}\.png"""
-                activity.receivePickerResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))
             }
             idleMainLooper()
             val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
