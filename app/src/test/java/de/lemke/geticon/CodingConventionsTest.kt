@@ -36,6 +36,9 @@ class CodingConventionsTest : ShouldSpec() {
         should("declare no extension on a common-utils type") {
             codeScope.assertNoCommonUtilsTypeExtensions()
         }
+        should("mock no type declared in this project") {
+            Konsist.scopeFromTest().assertNoMockedOwnTypes()
+        }
         should("declare the Hilt rule of every Hilt test through HiltTestRule") {
             Konsist.scopeFromTest().assertHiltTestRuleConventions(requireCloseRuleOnPlainHiltApplicationTests = true)
         }

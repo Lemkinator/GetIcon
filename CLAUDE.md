@@ -146,6 +146,8 @@ Four tools run as part of `./gradlew build`:
   `singleLaunchActivity`, `transformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
   `singleLaunchSuspending`); show dialogs with `showOnce(tag)`.
+  `assertNoMockedOwnTypes()` (local `MockingConventions.kt`) fails on any `mockk`/`spyk`/`mockkStatic`/`mockkObject` call or
+  `@MockK` property whose type the project declares: own types get a fake, MockK stays at external boundaries.
 
 **Pre-commit hook** — blocks commits with formatting violations. Opt in
 once per clone:
