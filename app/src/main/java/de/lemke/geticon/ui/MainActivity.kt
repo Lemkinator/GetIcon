@@ -223,7 +223,7 @@ class MainActivity :
             R.id.commonutils_about_dest -> transformToActivity<CommonUtilsAboutActivity>(R.id.commonutils_about_dest)
             R.id.commonutils_about_me_dest -> transformToActivity<CommonUtilsAboutMeActivity>(R.id.commonutils_about_me_dest)
             R.id.commonutils_settings_dest -> transformToActivity<CommonUtilsSettingsActivity>(R.id.commonutils_settings_dest)
-            R.id.leaks_dest -> openLeakCanary(this)
+            R.id.leaks_dest -> openLeakCanary()
             else -> return false
         }
         return true

@@ -18,4 +18,4 @@ package de.lemke.geticon
 
 import android.content.Context
 
-fun openLeakCanary(context: Context) = Unit
+fun Context.openLeakCanary() = Unit

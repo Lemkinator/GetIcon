@@ -68,6 +68,14 @@ class DefaultApkImporterTest {
     }
 
     @Test
+    fun `opens each picked document with its own content`() {
+        val first = documents.add(File(documentDir, "first.apk").apply { writeText("first bytes") })
+        val second = documents.add(File(documentDir, "second.apk").apply { writeText("second bytes") })
+        importer.open(second)?.reader()?.use { it.readText() } shouldBe "second bytes"
+        importer.open(first)?.reader()?.use { it.readText() } shouldBe "first bytes"
+    }
+
+    @Test
     fun `returns null when the provider has no content`() {
         importer.open(Uri.parse("content://$AUTHORITY/missing")) shouldBe null
     }
