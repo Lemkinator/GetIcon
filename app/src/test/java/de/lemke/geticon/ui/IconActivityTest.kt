@@ -60,6 +60,7 @@ import de.lemke.commonutils.returnFromLaunchedScreen
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.DocumentPick
+import de.lemke.commonutils.ui.utils.FakeInAppReview
 import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.geticon.R
 import de.lemke.geticon.data.FakeIconRenderer
@@ -117,6 +118,9 @@ class IconActivityTest {
     @Inject
     lateinit var settings: SettingsRepository
 
+    @Inject
+    lateinit var inAppReview: FakeInAppReview
+
     @Before
     fun setup() {
         hiltRule.inject()
@@ -148,6 +152,18 @@ class IconActivityTest {
     private fun launchWithoutAppInfo(): ActivityScenario<IconActivity> {
         val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
         return ActivityScenario.launch(Intent(context, IconActivity::class.java))
+    }
+
+    @Test
+    fun back_inAppReviewAvailable_showsReviewAndFinishes() {
+        launchWithAppInfo().use { scenario ->
+            idleMainLooper()
+            scenario.onActivity { activity ->
+                activity.onBackPressedDispatcher.onBackPressed()
+                inAppReview.calls shouldBe listOf(FakeInAppReview.Call.ShowOrFinish(activity))
+                activity.isFinishing shouldBe true
+            }
+        }
     }
 
     @Test
