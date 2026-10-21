@@ -21,6 +21,7 @@ import de.lemke.commonutils.assertClassBodyOrder
 import de.lemke.commonutils.assertHiltTestRuleConventions
 import de.lemke.commonutils.assertLaunchLatchConventions
 import de.lemke.commonutils.assertNoCommonUtilsTypeExtensions
+import de.lemke.commonutils.assertNoMockedOwnTypes
 import io.kotest.core.spec.style.ShouldSpec
 
 class CodingConventionsTest : ShouldSpec() {
@@ -38,6 +39,9 @@ class CodingConventionsTest : ShouldSpec() {
         }
         should("declare the Hilt rule of every Hilt test through HiltTestRule") {
             Konsist.scopeFromTest().assertHiltTestRuleConventions(requireCloseRuleOnPlainHiltApplicationTests = true)
+        }
+        should("mock no type of the project") {
+            Konsist.scopeFromTest().assertNoMockedOwnTypes()
         }
     }
 }
