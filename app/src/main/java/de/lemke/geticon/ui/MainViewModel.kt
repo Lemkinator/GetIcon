@@ -119,7 +119,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun onAppLookupHandled(result: AppLookup.Result) {
-        appLookup.update { if (it == result) AppLookup.Idle else it }
+        appLookup.compareAndSet(result, AppLookup.Idle)
     }
 
     fun onApkPicked(uri: Uri?) {
@@ -137,7 +137,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun onApkImportHandled(result: ApkImport.Result) {
-        apkImport.update { if (it == result) ApkImport.Idle else it }
+        apkImport.compareAndSet(result, ApkImport.Idle)
     }
 
     private fun ApkImport.discard() {
