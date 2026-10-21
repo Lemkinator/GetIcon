@@ -30,8 +30,8 @@ import com.google.android.material.appbar.model.ButtonModel
 import com.google.android.material.appbar.model.SuggestAppBarModel
 import com.google.android.material.appbar.model.view.SuggestAppBarView
 import dagger.hilt.android.AndroidEntryPoint
-import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.ui.utils.BitmapExport
+import de.lemke.commonutils.ui.utils.InAppReview
 import de.lemke.commonutils.ui.utils.SingleLaunchResultLauncher
 import de.lemke.commonutils.ui.utils.bindColorSwatch
 import de.lemke.commonutils.ui.utils.collectState
@@ -62,7 +62,7 @@ class IconActivity :
     AppCompatActivity(),
     ViewYTranslator by AppBarAwareYTranslator() {
     @Inject
-    lateinit var settings: SettingsRepository
+    lateinit var inAppReview: InAppReview
 
     private lateinit var binding: ActivityIconBinding
     private val viewModel: IconViewModel by viewModels()
@@ -104,7 +104,7 @@ class IconActivity :
     }
 
     private fun initViews() {
-        setCustomBackAnimation(binding.root, inAppReview = settings)
+        setCustomBackAnimation(binding.root, inAppReview = inAppReview)
         binding.icon.translateYWithAppBar(binding.root.appBarLayout, this)
         binding.icon.setOnLongClickListener { copyIcon() }
         binding.maskedCheckbox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->

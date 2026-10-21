@@ -221,7 +221,6 @@ class MainActivityTest {
                 val item = RoboMenuItem(R.id.menu_item_search)
                 activity.onOptionsItemSelected(item) shouldBe true
                 activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
-                // End search mode to trigger onEnd lambda → applyFilter()
                 activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).endSearchMode()
                 activity.findViewById<NoEntryView>(R.id.noEntryView).visibility shouldBe View.GONE
             }

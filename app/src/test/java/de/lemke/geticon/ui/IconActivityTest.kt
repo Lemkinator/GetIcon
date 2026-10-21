@@ -60,6 +60,7 @@ import de.lemke.commonutils.returnFromLaunchedScreen
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.utils.BitmapExport
 import de.lemke.commonutils.ui.utils.DocumentPick
+import de.lemke.commonutils.ui.utils.FakeInAppReview
 import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.geticon.R
 import de.lemke.geticon.data.FakeIconRenderer
@@ -117,6 +118,9 @@ class IconActivityTest {
     @Inject
     lateinit var settings: SettingsRepository
 
+    @Inject
+    lateinit var inAppReview: FakeInAppReview
+
     @Before
     fun setup() {
         hiltRule.inject()
@@ -148,6 +152,17 @@ class IconActivityTest {
     private fun launchWithoutAppInfo(): ActivityScenario<IconActivity> {
         val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
         return ActivityScenario.launch(Intent(context, IconActivity::class.java))
+    }
+
+    @Test
+    fun back_inAppReviewAvailable_showsReviewAndFinishes() {
+        launchWithAppInfo().use { scenario ->
+            idleMainLooper()
+            scenario.onActivity { activity ->
+                activity.onBackPressedDispatcher.onBackPressed()
+                inAppReview.calls shouldBe listOf(FakeInAppReview.Call.ShowOrFinish(activity))
+            }
+        }
     }
 
     @Test
@@ -234,13 +249,13 @@ class IconActivityTest {
 
     @Test
     fun onOptionsItemSelected_saveAsImage() {
+        settings.imageSaveLocation = SaveLocation.CUSTOM
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
                 activity.onSeekbarProgressChanged(256)
                 val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
                 activity.onOptionsItemSelected(item) shouldBe true
-                // default imageSaveLocation is CUSTOM, so save routes through the document-picker launcher.
                 val startedIntent = shadowOf(activity).nextStartedActivityForResult?.intent
                 startedIntent?.action shouldBe Intent.ACTION_CREATE_DOCUMENT
                 startedIntent?.type shouldBe "image/png"
@@ -546,7 +561,6 @@ class IconActivityTest {
 
     @Test
     fun onOptionsItemSelected_nullIcon_callsSuper() {
-        // No appInfo → loadInitialState never runs, so state.icon stays null.
         launchWithoutAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
@@ -598,17 +612,11 @@ class IconActivityTest {
 
     @Test
     fun colorCheckbox_programmaticUncheck_doesNotCallViewModel() {
-        // The renderer reports a MASKABLE icon so regenerateIcon produces a state
-        // where colorCheckbox.isChecked would be set from true→false inside renderState.
         renderer.kind = IconKind.MASKABLE
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
-                // performClick() fires OnCheckedChangeListener (isRendering=false) → onColorChanged(true).
-                // regenerateIcon runs with colorEnabled=true and the MASKABLE kind from the renderer.
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
-            // renderState: colorCheckbox.isChecked = colorEnabled && kind.canTint = true && false = false
-            // → changes from true→false while isRendering=true → listener fires with isRendering=true (skips body).
             idleMainLooper()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]
@@ -626,7 +634,6 @@ class IconActivityTest {
 
     @Test
     fun icon_longClick_nullIcon_returnsFalse() {
-        // No appInfo → loadInitialState never runs, so state.icon stays null.
         launchWithoutAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe false

@@ -62,7 +62,6 @@ android {
         testInstrumentationRunner = "de.lemke.geticon.HiltTestRunner"
         buildConfigField("boolean", "FIRST_RUN_SKIPPABLE", "false")
     }
-    // Hosts the fake Hilt modules shared by testDebugUnitTest and connectedDebugAndroidTest.
     @Suppress("UnstableApiUsage")
     testFixtures {
         enable = true
@@ -117,7 +116,6 @@ android {
     lint {
         warningsAsErrors = true
         checkDependencies = true
-        // Explicit: pins intent against future AGP default changes.
         checkReleaseBuilds = true
         abortOnError = true
         baseline = file("lint-baseline.xml")
@@ -235,7 +233,6 @@ tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
 }
 
 baselineProfile {
-    // Generation is wired to the release variant only, so a debug or PR assemble never boots the GMD.
     automaticGenerationDuringBuild = false
     dexLayoutOptimization = true
     saveInSrc = false

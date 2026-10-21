@@ -43,7 +43,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class IconUiState(
@@ -199,15 +198,14 @@ class IconViewModel @Inject constructor(
     }
 
     fun onExitHandled(reason: IconExit.Reason) {
-        exit.update { if (it == reason) IconExit.None else it }
+        exit.compareAndSet(reason, IconExit.None)
     }
 
     private fun exitWith(reason: IconExit.Reason) {
-        exit.update { if (it == IconExit.None) reason else it }
+        exit.compareAndSet(IconExit.None, reason)
     }
 
-    // generateIcon runs synchronously on Main (~5 ms). Dispatching to Default caused slider jank:
-    // cancellation was ineffective mid-withContext, producing concurrent bitmap allocations (557e6db).
+    // Runs on Main: a dispatcher switch cannot cancel mid-render and doubles bitmap allocations.
     private fun regenerateIcon(newState: IconUiState) {
         val appInfo = applicationInfo ?: return
         runCatching {
