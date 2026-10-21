@@ -50,6 +50,7 @@ class BaselineProfileGenerator {
         ParcelFileDescriptor.AutoCloseInputStream(output).use { it.readBytes() }
     }
 
+    // Cold-start path only: dexLayoutOptimization lays out dex from this startup profile.
     @Test
     fun startup() =
         rule.collect(
