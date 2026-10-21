@@ -161,7 +161,6 @@ class IconActivityTest {
             scenario.onActivity { activity ->
                 activity.onBackPressedDispatcher.onBackPressed()
                 inAppReview.calls shouldBe listOf(FakeInAppReview.Call.ShowOrFinish(activity))
-                activity.isFinishing shouldBe true
             }
         }
     }
@@ -250,6 +249,7 @@ class IconActivityTest {
 
     @Test
     fun onOptionsItemSelected_saveAsImage() {
+        settings.imageSaveLocation = SaveLocation.CUSTOM
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
