@@ -50,8 +50,6 @@ class BaselineProfileGenerator {
         ParcelFileDescriptor.AutoCloseInputStream(output).use { it.readBytes() }
     }
 
-    // Startup profile drives dex layout optimization, so it must stay limited to the actual
-    // cold-start path — a secondary screen here would bloat startup-prof.txt with non-startup code.
     @Test
     fun startup() =
         rule.collect(
