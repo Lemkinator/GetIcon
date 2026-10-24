@@ -25,6 +25,7 @@ plugins {
     alias(libs.plugins.aboutlibraries)
     alias(libs.plugins.detekt)
     alias(libs.plugins.spotless)
+    alias(libs.plugins.dependency.analysis)
     alias(libs.plugins.kover)
     alias(libs.plugins.android.junit)
     alias(libs.plugins.baselineprofile)
@@ -163,11 +164,12 @@ dependencies {
     implementation(libs.oneui.design)
     implementation(libs.oneui.icons)
     implementation(libs.common.utils)
-    implementation(libs.coroutines.android)
+    implementation(libs.coroutines.core)
+    runtimeOnly(libs.coroutines.android)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    implementation(libs.profileinstaller)
+    runtimeOnly(libs.profileinstaller)
     baselineProfile(project(":benchmarks"))
     debugImplementation(libs.leakcanary)
 
@@ -177,12 +179,10 @@ dependencies {
     testFixturesImplementation(testFixtures(libs.common.utils))
     kspTestFixtures(libs.hilt.compiler)
 
-    testImplementation(libs.arch.core.testing)
     testImplementation(libs.bundles.unit.test)
     testImplementation(libs.bundles.robolectric.test)
     testImplementation(libs.hilt.android.testing)
     testImplementation(libs.konsist)
-    testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit4)
     testRuntimeOnly(libs.junit.platform.launcher)
     testRuntimeOnly(libs.junit.jupiter.engine)
@@ -191,10 +191,7 @@ dependencies {
 
     androidTestImplementation(testFixtures(libs.common.utils))
     androidTestImplementation(libs.bundles.android.test)
-    androidTestImplementation(libs.mockk.android)
-    androidTestImplementation(libs.turbine)
     androidTestImplementation(libs.kotest.assertions.core)
-    androidTestImplementation(libs.coroutines.test)
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
 }
