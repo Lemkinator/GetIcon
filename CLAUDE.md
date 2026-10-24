@@ -149,8 +149,9 @@ Four tools run as part of `./gradlew build`:
 
 **Dependency analysis** — `./gradlew buildHealth` runs in the `check-formatting` CI job. It fails on unused
 dependencies, incorrect configurations and unused annotation processors; other advice warns. The `dependencyAnalysis {}`
-block in the root `build.gradle.kts` holds the facade bundles and the two narrow excludes. Report:
-`build/reports/dependency-analysis/build-health-report.txt`.
+block in the root `build.gradle.kts` holds the facade bundles and the narrow guava exclude. Each bundle names its
+primary and only the transitive internals the report lists, so it never masks a declared artifact. The `leakcanary`
+bundle also folds the `testDebug` leakcanary advice. Report: `build/reports/dependency-analysis/build-health-report.txt`.
 
 **Pre-commit hook** — blocks commits with formatting violations. Opt in
 once per clone:
