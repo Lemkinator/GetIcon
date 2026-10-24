@@ -43,6 +43,42 @@ spotless {
     }
 }
 
+dependencyAnalysis {
+    issues {
+        all {
+            onUnusedDependencies { severity("fail") }
+            onIncorrectConfiguration { severity("fail") }
+            onUnusedAnnotationProcessors { severity("fail") }
+            onUsedTransitiveDependencies {
+                severity("warn")
+                exclude("com.google.guava:guava")
+            }
+            onRuntimeOnly { severity("warn") }
+            onCompileOnly { severity("warn") }
+            onRedundantPlugins { severity("warn") }
+            onDuplicateClassWarnings { severity("warn") }
+        }
+    }
+    structure {
+        bundle("hilt") {
+            primary(libs.hilt.android)
+            includeGroup("com.google.dagger")
+            includeDependency("javax.inject:javax.inject")
+        }
+        bundle("oneui") {
+            primary(libs.oneui.design)
+            include("^sesl[.].*")
+        }
+        bundle("leakcanary") {
+            primary(libs.leakcanary)
+            includeGroup("com.squareup.leakcanary")
+        }
+        bundle("kotest") { includeGroup("io.kotest") }
+        bundle("mockk") { includeGroup("io.mockk") }
+        bundle("robolectric") { includeGroup("org.robolectric") }
+    }
+}
+
 /**
  * Converts a camelCase or mixedCase string to ENV_VAR_STYLE (uppercase with underscores).
  * Example: githubAccessToken -> GITHUB_ACCESS_TOKEN
