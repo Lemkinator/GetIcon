@@ -72,7 +72,8 @@ dependencyAnalysis {
         }
         bundle("leakcanary") {
             primary(libs.leakcanary)
-            includeGroup("com.squareup.leakcanary")
+            includeDependency("com.squareup.leakcanary:leakcanary-android-core")
+            includeDependency("com.squareup.leakcanary:leakcanary-object-watcher-android-core")
         }
         bundle("kotest") {
             primary(libs.kotest.runner.junit5)
