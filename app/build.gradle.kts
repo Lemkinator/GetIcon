@@ -191,9 +191,7 @@ dependencies {
 
     androidTestImplementation(testFixtures(libs.common.utils))
     androidTestImplementation(libs.bundles.android.test)
-    androidTestImplementation(libs.turbine)
     androidTestImplementation(libs.kotest.assertions.core)
-    androidTestImplementation(libs.coroutines.test)
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
 }
