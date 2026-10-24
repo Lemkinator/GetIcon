@@ -62,7 +62,8 @@ dependencyAnalysis {
     structure {
         bundle("hilt") {
             primary(libs.hilt.android)
-            includeGroup("com.google.dagger")
+            includeDependency("com.google.dagger:dagger")
+            includeDependency("com.google.dagger:hilt-core")
             includeDependency("javax.inject:javax.inject")
         }
         bundle("oneui") {
@@ -73,9 +74,18 @@ dependencyAnalysis {
             primary(libs.leakcanary)
             includeGroup("com.squareup.leakcanary")
         }
-        bundle("kotest") { includeGroup("io.kotest") }
-        bundle("mockk") { includeGroup("io.mockk") }
-        bundle("robolectric") { includeGroup("org.robolectric") }
+        bundle("kotest") {
+            primary(libs.kotest.runner.junit5)
+            include("^io[.]kotest:kotest-(assertions-shared|common|framework-engine|runner-junit5)(-jvm|-android)?$")
+        }
+        bundle("mockk") {
+            primary(libs.mockk)
+            include("^io[.]mockk:mockk(-core|-dsl)?(-jvm)?$")
+        }
+        bundle("robolectric") {
+            primary(libs.robolectric)
+            include("^org[.]robolectric:(annotations|shadows-framework)$")
+        }
     }
 }
 
