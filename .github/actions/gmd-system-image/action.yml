@@ -19,10 +19,7 @@ runs:
   using: composite
   steps:
     # The inputs must match the pixel9Api35 device in the root build.gradle.kts. The runner image
-    # ships no emulator; sdkmanager pulls it in with the image, but GMD setup fails on a restored
-    # image without it, so both are cached together. The AGP version is part of the key so an AGP
-    # bump refreshes the emulator and image.
-    # Runner-image variables like ANDROID_HOME aren't in the env context, so resolve the paths here.
+    # ships no emulator, and GMD setup fails on a restored image without it.
     - name: Resolve SDK paths
       id: sdk
       shell: bash
@@ -30,7 +27,7 @@ runs:
         PACKAGE: system-images;android-${{ inputs.api-level }};${{ inputs.source }};${{ inputs.abi }}
         KEY_PREFIX: gmd-system-image-android-${{ inputs.api-level }}-${{ inputs.source }}-${{ inputs.abi }}
       run: |
-        agp=$(sed -n 's/^agp = "\(.*\)"/\1/p' gradle/libs.versions.toml)
+        agp=$(sed -nE 's/^agp[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' gradle/libs.versions.toml | head -n1)
         [ -n "$agp" ] || { echo "::error::agp version not found in gradle/libs.versions.toml"; exit 1; }
         {
           echo "package=$PACKAGE"
@@ -52,17 +49,14 @@ runs:
       env:
         IMAGE_PATH: ${{ steps.sdk.outputs.image }}
         EMULATOR_PATH: ${{ steps.sdk.outputs.emulator }}
+        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
       run: |
-        if [ "${{ steps.cache.outputs.cache-hit }}" = true ] \
+        if [ "$CACHE_HIT" = true ] \
           && [ -f "$IMAGE_PATH/package.xml" ] && [ -f "$EMULATOR_PATH/package.xml" ]; then
           echo "complete=true" >> "$GITHUB_OUTPUT"
         else
           echo "complete=false" >> "$GITHUB_OUTPUT"
         fi
-    # sdkmanager exits non-zero when the downloaded zip can't be unpacked, so a bad download is
-    # retried here; the package.xml checks also catch a zero exit that installed nothing, so a
-    # broken image never reaches the save step below. The runner image already accepts the SDK
-    # licenses, and stdin is closed so sdkmanager never waits on a prompt.
     - name: Install system image and emulator
       if: steps.restored.outputs.complete != 'true'
       shell: bash
@@ -80,10 +74,9 @@ runs:
         done
         echo "::error::SDK install failed after 3 attempts"
         exit 1
-    # Save right after a verified install, not in a post step, so a later build or test failure
-    # doesn't throw the download away. Pull request and merge queue refs can't share entries.
+    # Pull request and merge queue refs cannot share cache entries.
     - name: Save system image and emulator
-      if: steps.restored.outputs.complete != 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      if: steps.restored.outputs.complete != 'true' && github.ref == 'refs/heads/main'
       uses: actions/cache/save@v6
       with:
         path: |

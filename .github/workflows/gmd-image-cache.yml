@@ -8,12 +8,10 @@ on:
       - .github/workflows/gmd-image-cache.yml
       - gradle/libs.versions.toml
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * 3' # weekly, Wednesday 03:00 UTC, keeps the entry inside the 7-day eviction window
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
