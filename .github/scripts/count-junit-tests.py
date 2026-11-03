@@ -7,6 +7,7 @@ CLASS_ANNOTATIONS = re.compile(r"^Class #\d+ annotations:")
 METHOD_ANNOTATIONS = re.compile(r"^Annotations on method #\d+ '(.*)'$")
 ANNOTATIONS_OTHER = re.compile(r"^Annotations on (class|field|parameter)")
 TEST_ANNOTATION = "  VISIBILITY_RUNTIME Lorg/junit/Test;"
+UNRUN_PACKAGES = ("Lorg/junit/", "Lorg/hamcrest/", "Lorg/mockito/")
 CLASS_DESCRIPTOR = re.compile(r"^  Class descriptor\s*: '(.*)'")
 ACCESS_FLAGS = re.compile(r"^  Access flags\s*: 0x([0-9a-fA-F]+)")
 SUPERCLASS = re.compile(r"^  Superclass\s*: '(.*)'")
@@ -34,7 +35,7 @@ def parse(lines):
             method = match.group(1)
         elif ANNOTATIONS_OTHER.match(line):
             method = None
-        elif line == TEST_ANNOTATION and method is not None:
+        elif (line == TEST_ANNOTATION or line.startswith(TEST_ANNOTATION + " ")) and method is not None:
             pending.add(method)
         elif (match := CLASS_DESCRIPTOR.match(line)):
             current = DexClass(match.group(1), pending)
@@ -46,6 +47,14 @@ def parse(lines):
         elif current is not None and (match := SUPERCLASS.match(line)):
             current.superclass = match.group(1)
     return classes
+
+
+def is_run(cls):
+    return (
+        not cls.flags & ACC_ABSTRACT
+        and "$" not in cls.descriptor
+        and not cls.descriptor.startswith(UNRUN_PACKAGES)
+    )
 
 
 def runnable_tests(cls, classes):
@@ -60,7 +69,7 @@ def runnable_tests(cls, classes):
 
 def main():
     classes = parse(sys.stdin)
-    print(sum(runnable_tests(cls, classes) for cls in classes.values() if not cls.flags & ACC_ABSTRACT))
+    print(sum(runnable_tests(cls, classes) for cls in classes.values() if is_run(cls)))
 
 
 if __name__ == "__main__":

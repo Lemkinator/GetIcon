@@ -258,13 +258,8 @@ jobs:
               status=1
               continue
             fi
-            dexes=()
-            for dex in "$dex_dir"/classes*.dex; do
-              if grep -qF 'Lorg/junit/Test;' "$dex"; then
-                dexes+=("$dex")
-              fi
-            done
-            # testFixtures APK classes can be abstract contracts: only concrete classes and their inherited @Test methods run.
+            dexes=("$dex_dir"/classes*.dex)
+            # testFixtures APK classes can be abstract contracts: only concrete top-level classes run, with their inherited @Test methods.
             expected=0
             if [ ${#dexes[@]} -gt 0 ] && ! expected=$("$dexdump" -a "${dexes[@]}" | python3 .github/scripts/count-junit-tests.py); then
               echo "::error::$module: counting the @Test methods failed on the dex files of $apk"
