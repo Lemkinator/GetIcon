@@ -264,9 +264,10 @@ jobs:
                 dexes+=("$dex")
               fi
             done
+            # testFixtures APK classes can be abstract contracts: only concrete classes and their inherited @Test methods run.
             expected=0
-            if [ ${#dexes[@]} -gt 0 ] && ! expected=$("$dexdump" -a "${dexes[@]}" | awk '/^  VISIBILITY_RUNTIME Lorg\/junit\/Test;/ { n++ } END { print n + 0 }'); then
-              echo "::error::$module: $dexdump failed on the dex files of $apk"
+            if [ ${#dexes[@]} -gt 0 ] && ! expected=$("$dexdump" -a "${dexes[@]}" | python3 .github/scripts/count-junit-tests.py); then
+              echo "::error::$module: counting the @Test methods failed on the dex files of $apk"
               status=1
               continue
             fi
