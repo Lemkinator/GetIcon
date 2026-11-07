@@ -30,6 +30,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.model.AppInfo
+import androidx.reflect.DeviceInfo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import dagger.hilt.android.testing.BindValue
@@ -62,6 +63,9 @@ import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -131,6 +135,7 @@ class MainActivityTest {
 
     @After
     fun deleteCachedApks() {
+        unmockkStatic(DeviceInfo::class)
         importer.cacheDir.deleteRecursively()
     }
 
@@ -451,6 +456,78 @@ class MainActivityTest {
                 val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_settings_dest))
                 result shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
+            }
+        }
+    }
+
+    private fun navigateFromDrawer(
+        itemId: Int,
+        isOneUi: Boolean,
+    ): Intent {
+        mockkStatic(DeviceInfo::class)
+        every { DeviceInfo.isOneUI() } returns isOneUi
+        var started: Intent? = null
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.onNavigationItemSelected(RoboMenuItem(itemId)) shouldBe true
+                started = shadowOf(activity).nextStartedActivity
+            }
+        }
+        return started!!
+    }
+
+    private fun Intent.isPopOver() = flags and Intent.FLAG_ACTIVITY_SINGLE_TOP != 0
+
+    @Test
+    @Config(qualifiers = "sw600dp")
+    fun navItem_about_oneUiTablet_popsOver() {
+        val intent = navigateFromDrawer(R.id.commonutils_about_dest, isOneUi = true)
+        intent.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
+        intent.isPopOver() shouldBe true
+    }
+
+    @Test
+    @Config(qualifiers = "sw600dp")
+    fun navItem_aboutMe_oneUiTablet_popsOver() {
+        val intent = navigateFromDrawer(R.id.commonutils_about_me_dest, isOneUi = true)
+        intent.component?.className shouldBe CommonUtilsAboutMeActivity::class.java.name
+        intent.isPopOver() shouldBe true
+    }
+
+    @Test
+    @Config(qualifiers = "sw600dp")
+    fun navItem_settings_oneUiTablet_popsOver() {
+        val intent = navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
+        intent.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
+        intent.isPopOver() shouldBe true
+    }
+
+    @Test
+    @Config(qualifiers = "sw600dp")
+    fun navItem_settings_nonOneUiTablet_keepsContainerTransform() {
+        val intent = navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = false)
+        intent.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
+        intent.isPopOver() shouldBe false
+    }
+
+    @Test
+    fun navItem_settings_oneUiPhone_keepsContainerTransform() {
+        val intent = navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
+        intent.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
+        intent.isPopOver() shouldBe false
+    }
+
+    @Test
+    @Config(qualifiers = "sw600dp")
+    fun navItem_extractIconFromApk_oneUiTablet_opensPickerNotPopOver() {
+        mockkStatic(DeviceInfo::class)
+        every { DeviceInfo.isOneUI() } returns true
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest)) shouldBe true
+                val picker = shadowOf(activity).nextStartedActivityForResult.intent
+                picker.type shouldBe "application/vnd.android.package-archive"
+                picker.isPopOver() shouldBe false
             }
         }
     }
