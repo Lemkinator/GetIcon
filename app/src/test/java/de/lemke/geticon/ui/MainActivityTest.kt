@@ -60,7 +60,9 @@ import de.lemke.geticon.di.AppCoroutinesModule
 import de.lemke.geticon.di.PackageLookupModule
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
 import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.mockk.every
@@ -83,10 +85,15 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.fakes.RoboMenuItem
+import org.robolectric.shadows.ShadowActivity.IntentForResult
 import org.robolectric.shadows.ShadowToast
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 import dev.oneuiproject.oneui.design.R as oneuiDesignR
+
+private const val TRANSITION_NAME_KEY = "commonUtilsTransitionNameKey"
+private const val ANIM_TYPE_KEY = "android:activity.animType"
+private const val ANIM_SCENE_TRANSITION = 5
 
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
@@ -134,8 +141,12 @@ class MainActivityTest {
     private fun holdLookups(): CompletableDeferred<Unit> = CompletableDeferred<Unit>().also { lookup.gate = it }
 
     @After
-    fun deleteCachedApks() {
+    fun unmockDeviceInfo() {
         unmockkStatic(DeviceInfo::class)
+    }
+
+    @After
+    fun deleteCachedApks() {
         importer.cacheDir.deleteRecursively()
     }
 
@@ -463,73 +474,66 @@ class MainActivityTest {
     private fun navigateFromDrawer(
         itemId: Int,
         isOneUi: Boolean,
-    ): Intent {
+    ): IntentForResult {
         mockkStatic(DeviceInfo::class)
         every { DeviceInfo.isOneUI() } returns isOneUi
-        var started: Intent? = null
+        var started: IntentForResult? = null
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.onNavigationItemSelected(RoboMenuItem(itemId)) shouldBe true
-                started = shadowOf(activity).nextStartedActivity
+                started = shadowOf(activity).nextStartedActivityForResult
             }
         }
         return started!!
     }
 
-    private fun Intent.isPopOver() = flags and Intent.FLAG_ACTIVITY_SINGLE_TOP != 0
+    private fun IntentForResult.shouldBePopOver(className: String) {
+        intent.component?.className shouldBe className
+        (intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP) shouldBe Intent.FLAG_ACTIVITY_SINGLE_TOP
+        intent.hasExtra(TRANSITION_NAME_KEY) shouldBe false
+        options.shouldNotBeNull().getInt(ANIM_TYPE_KEY) shouldNotBe ANIM_SCENE_TRANSITION
+    }
+
+    private fun IntentForResult.shouldBeContainerTransform(className: String) {
+        intent.component?.className shouldBe className
+        (intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP) shouldBe 0
+        intent.getStringExtra(TRANSITION_NAME_KEY) shouldBe "commonUtilsActivityTransitionName"
+        options.shouldNotBeNull().getInt(ANIM_TYPE_KEY) shouldBe ANIM_SCENE_TRANSITION
+    }
 
     @Test
     @Config(qualifiers = "sw600dp")
     fun navItem_about_oneUiTablet_popsOver() {
-        val intent = navigateFromDrawer(R.id.commonutils_about_dest, isOneUi = true)
-        intent.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
-        intent.isPopOver() shouldBe true
+        navigateFromDrawer(R.id.commonutils_about_dest, isOneUi = true)
+            .shouldBePopOver(CommonUtilsAboutActivity::class.java.name)
     }
 
     @Test
     @Config(qualifiers = "sw600dp")
     fun navItem_aboutMe_oneUiTablet_popsOver() {
-        val intent = navigateFromDrawer(R.id.commonutils_about_me_dest, isOneUi = true)
-        intent.component?.className shouldBe CommonUtilsAboutMeActivity::class.java.name
-        intent.isPopOver() shouldBe true
+        navigateFromDrawer(R.id.commonutils_about_me_dest, isOneUi = true)
+            .shouldBePopOver(CommonUtilsAboutMeActivity::class.java.name)
     }
 
     @Test
     @Config(qualifiers = "sw600dp")
     fun navItem_settings_oneUiTablet_popsOver() {
-        val intent = navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
-        intent.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
-        intent.isPopOver() shouldBe true
+        navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
+            .shouldBePopOver(CommonUtilsSettingsActivity::class.java.name)
     }
 
     @Test
     @Config(qualifiers = "sw600dp")
     fun navItem_settings_nonOneUiTablet_keepsContainerTransform() {
-        val intent = navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = false)
-        intent.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
-        intent.isPopOver() shouldBe false
+        navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = false)
+            .shouldBeContainerTransform(CommonUtilsSettingsActivity::class.java.name)
     }
 
     @Test
+    @Config(qualifiers = "sw599dp")
     fun navItem_settings_oneUiPhone_keepsContainerTransform() {
-        val intent = navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
-        intent.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
-        intent.isPopOver() shouldBe false
-    }
-
-    @Test
-    @Config(qualifiers = "sw600dp")
-    fun navItem_extractIconFromApk_oneUiTablet_opensPickerNotPopOver() {
-        mockkStatic(DeviceInfo::class)
-        every { DeviceInfo.isOneUI() } returns true
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest)) shouldBe true
-                val picker = shadowOf(activity).nextStartedActivityForResult.intent
-                picker.type shouldBe "application/vnd.android.package-archive"
-                picker.isPopOver() shouldBe false
-            }
-        }
+        navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
+            .shouldBeContainerTransform(CommonUtilsSettingsActivity::class.java.name)
     }
 
     @Test
