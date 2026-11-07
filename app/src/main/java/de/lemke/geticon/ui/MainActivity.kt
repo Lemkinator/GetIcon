@@ -43,6 +43,7 @@ import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.collectState
 import de.lemke.commonutils.ui.utils.configureCommonUtilsSplashScreen
+import de.lemke.commonutils.ui.utils.launchDrawerPage
 import de.lemke.commonutils.ui.utils.onSingleLaunchItemSelected
 import de.lemke.commonutils.ui.utils.onboardIfNeeded
 import de.lemke.commonutils.ui.utils.prepareActivityTransformationFrom
@@ -220,9 +221,9 @@ class MainActivity :
     internal fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
-            R.id.commonutils_about_dest -> transformToActivity<CommonUtilsAboutActivity>(R.id.commonutils_about_dest)
-            R.id.commonutils_about_me_dest -> transformToActivity<CommonUtilsAboutMeActivity>(R.id.commonutils_about_me_dest)
-            R.id.commonutils_settings_dest -> transformToActivity<CommonUtilsSettingsActivity>(R.id.commonutils_settings_dest)
+            R.id.commonutils_about_dest -> launchDrawerPage<CommonUtilsAboutActivity>(R.id.commonutils_about_dest)
+            R.id.commonutils_about_me_dest -> launchDrawerPage<CommonUtilsAboutMeActivity>(R.id.commonutils_about_me_dest)
+            R.id.commonutils_settings_dest -> launchDrawerPage<CommonUtilsSettingsActivity>(R.id.commonutils_settings_dest)
             R.id.leaks_dest -> openLeakCanary()
             else -> return false
         }

@@ -30,6 +30,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker.model.AppData.GridAppDataBuilder
 import androidx.picker.model.AppInfo
+import androidx.reflect.DeviceInfo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import dagger.hilt.android.testing.BindValue
@@ -59,9 +60,14 @@ import de.lemke.geticon.di.AppCoroutinesModule
 import de.lemke.geticon.di.PackageLookupModule
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
 import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -79,10 +85,15 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.fakes.RoboMenuItem
+import org.robolectric.shadows.ShadowActivity.IntentForResult
 import org.robolectric.shadows.ShadowToast
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 import dev.oneuiproject.oneui.design.R as oneuiDesignR
+
+private const val TRANSITION_NAME_KEY = "commonUtilsTransitionNameKey"
+private const val ANIM_TYPE_KEY = "android:activity.animType"
+private const val ANIM_SCENE_TRANSITION = 5
 
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
@@ -128,6 +139,11 @@ class MainActivityTest {
     }
 
     private fun holdLookups(): CompletableDeferred<Unit> = CompletableDeferred<Unit>().also { lookup.gate = it }
+
+    @After
+    fun unmockDeviceInfo() {
+        unmockkStatic(DeviceInfo::class)
+    }
 
     @After
     fun deleteCachedApks() {
@@ -453,6 +469,71 @@ class MainActivityTest {
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
             }
         }
+    }
+
+    private fun navigateFromDrawer(
+        itemId: Int,
+        isOneUi: Boolean,
+    ): IntentForResult {
+        mockkStatic(DeviceInfo::class)
+        every { DeviceInfo.isOneUI() } returns isOneUi
+        var started: IntentForResult? = null
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.onNavigationItemSelected(RoboMenuItem(itemId)) shouldBe true
+                started = shadowOf(activity).nextStartedActivityForResult
+            }
+        }
+        return started!!
+    }
+
+    private fun IntentForResult.shouldBePopOver(className: String) {
+        intent.component?.className shouldBe className
+        (intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP) shouldBe Intent.FLAG_ACTIVITY_SINGLE_TOP
+        intent.hasExtra(TRANSITION_NAME_KEY) shouldBe false
+        options.shouldNotBeNull().getInt(ANIM_TYPE_KEY) shouldNotBe ANIM_SCENE_TRANSITION
+    }
+
+    private fun IntentForResult.shouldBeContainerTransform(className: String) {
+        intent.component?.className shouldBe className
+        (intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP) shouldBe 0
+        intent.getStringExtra(TRANSITION_NAME_KEY) shouldBe "commonUtilsActivityTransitionName"
+        options.shouldNotBeNull().getInt(ANIM_TYPE_KEY) shouldBe ANIM_SCENE_TRANSITION
+    }
+
+    @Test
+    @Config(qualifiers = "sw600dp")
+    fun navItem_about_oneUiTablet_popsOver() {
+        navigateFromDrawer(R.id.commonutils_about_dest, isOneUi = true)
+            .shouldBePopOver(CommonUtilsAboutActivity::class.java.name)
+    }
+
+    @Test
+    @Config(qualifiers = "sw600dp")
+    fun navItem_aboutMe_oneUiTablet_popsOver() {
+        navigateFromDrawer(R.id.commonutils_about_me_dest, isOneUi = true)
+            .shouldBePopOver(CommonUtilsAboutMeActivity::class.java.name)
+    }
+
+    @Test
+    @Config(qualifiers = "sw600dp")
+    fun navItem_settings_oneUiTablet_popsOver() {
+        navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
+            .shouldBePopOver(CommonUtilsSettingsActivity::class.java.name)
+    }
+
+    @Test
+    @Config(qualifiers = "sw600dp")
+    fun navItem_settings_nonOneUiTablet_keepsContainerTransform() {
+        navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = false)
+            .shouldBeContainerTransform(CommonUtilsSettingsActivity::class.java.name)
+    }
+
+    @Test
+    @Config(qualifiers = "sw599dp")
+    fun navItem_settings_oneUiPhone_keepsContainerTransform() {
+        navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
+            .shouldBeContainerTransform(CommonUtilsSettingsActivity::class.java.name)
     }
 
     @Test
