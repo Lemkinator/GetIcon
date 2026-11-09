@@ -24,6 +24,9 @@ Class #909            -
   Class descriptor  : 'Lde/lemke/commonutils/backup/BackupSectionContract;'
   Access flags      : 0x0401 (PUBLIC ABSTRACT)
   Superclass        : 'Ljava/lang/Object;'
+
+Processing 'classes2.dex'...
+Opened 'classes2.dex', DEX version '039'
 Class #0 annotations:
 
 Class #0            -
