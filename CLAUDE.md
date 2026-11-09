@@ -22,6 +22,10 @@ Roborazzi screenshot tests, Konsist architecture tests). Instrumented tests
 ./gradlew pixel9Api35DebugAndroidTest   # downloads ~1 GB image on first run, cached after
 ```
 
+The debug build type sets `enableAndroidTestCoverage`, so the run records coverage. `createManagedDeviceDebugAndroidTestCoverageReport`
+writes the JaCoCo XML to `app/build/reports/coverage/androidTest/debug/managedDevice/report.xml`. CI uploads it to Codecov with the flag
+`instrumentedtests`, beside the Kover report under `unittests`.
+
 The GMD device (`pixel9Api35`: Pixel 9 / API 35 / aosp / x86_64) is declared once in root
 `build.gradle.kts` and shared by `:app` instrumented tests and `:benchmarks` baseline profile generation.
 
@@ -145,7 +149,7 @@ Four tools run as part of `./gradlew build`:
   `show`/`showNow` call whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
   `singleLaunchActivity`, `transformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
-  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`.
+  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `launchDrawerPage`.
 
 **Dependency analysis** — `./gradlew buildHealth` runs in the `check-formatting` CI job. It fails on unused
 dependencies, incorrect configurations and unused annotation processors; other advice warns. The `dependencyAnalysis {}`
@@ -168,7 +172,7 @@ targeted message if `core.autocrlf=true` is detected.
 **After any change** — run the full local CI suite before declaring work done:
 
 ```powershell
-./gradlew spotlessCheck detekt buildHealth lintDebug testDebugUnitTest koverVerifyDebug koverHtmlReportDebug verifyRoborazziDebug pixel9Api35DebugAndroidTest assembleRelease
+./gradlew spotlessCheck detekt buildHealth lintDebug testDebugUnitTest koverVerifyDebug koverHtmlReportDebug verifyRoborazziDebug pixel9Api35DebugAndroidTest createManagedDeviceDebugAndroidTestCoverageReport assembleRelease
 ```
 
 If `spotlessCheck` fails, fix with `./gradlew spotlessApply` then re-run. Screenshot test failures (`verifyRoborazziDebug`) mean the code
@@ -197,6 +201,13 @@ Robolectric surface (Hilt activities, Roborazzi screenshots, Context-backed sett
 large, so most of the suite falls on the JUnit4 side — that's a consequence of what's under test,
 not a different policy than common-utils. Follow the rule per test (Kotest by default, JUnit4+
 Robolectric only when Robolectric is actually required); don't force everything onto one runner.
+
+## Test Doubles
+
+Fakes over mocks. MockK only mocks static Android or library entry points that have no injectable seam:
+`mockkStatic(DeviceInfo::class)` in `MainActivityTest`, and `SeslApplicationPackageManagerReflector` and
+`AppCompatResources` in `DefaultIconRendererTest`. Each is unmocked in a `finally` or `@After`. Everything else runs
+against a real object or a fake.
 
 ## Settings in Tests
 
