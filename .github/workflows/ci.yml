@@ -278,6 +278,13 @@ jobs:
             fi
           done
           exit "$status"
+      - name: Check instrumented coverage report
+        run: |
+          report=app/build/reports/coverage/androidTest/debug/managedDevice/report.xml
+          if [ ! -s "$report" ]; then
+            echo "::error::the managed-device coverage report $report is missing or empty"
+            exit 1
+          fi
       - name: Upload instrumented coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
