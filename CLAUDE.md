@@ -145,7 +145,7 @@ Four tools run as part of `./gradlew build`:
   `show`/`showNow` call whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
   `singleLaunchActivity`, `transformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
-  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`.
+  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `launchDrawerPage`.
 
 **Dependency analysis** — `./gradlew buildHealth` runs in the `check-formatting` CI job. It fails on unused
 dependencies, incorrect configurations and unused annotation processors; other advice warns. The `dependencyAnalysis {}`
@@ -197,6 +197,13 @@ Robolectric surface (Hilt activities, Roborazzi screenshots, Context-backed sett
 large, so most of the suite falls on the JUnit4 side — that's a consequence of what's under test,
 not a different policy than common-utils. Follow the rule per test (Kotest by default, JUnit4+
 Robolectric only when Robolectric is actually required); don't force everything onto one runner.
+
+## Test Doubles
+
+Fakes over mocks. MockK only mocks static Android or library entry points that have no injectable seam:
+`mockkStatic(DeviceInfo::class)` in `MainActivityTest`, and `SeslApplicationPackageManagerReflector` and
+`AppCompatResources` in `DefaultIconRendererTest`. Each is unmocked in a `finally` or `@After`. Everything else runs
+against a real object or a fake.
 
 ## Settings in Tests
 
