@@ -47,15 +47,9 @@ style:
   ForbiddenComment:
     active: true
     comments: [ 'TODO:', 'FIXME:' ]
-  OptionalUnit:
-    active: true
-  UnnecessaryLet:
-    active: true
   UnnecessaryParentheses:
     active: true
     allowForUnclearPrecedence: true
-  UnusedImport:
-    active: true
   UnusedPrivateFunction:
     active: true
   UnusedPrivateProperty:
