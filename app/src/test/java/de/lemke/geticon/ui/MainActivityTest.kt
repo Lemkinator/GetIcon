@@ -489,14 +489,16 @@ class MainActivityTest {
 
     private fun IntentForResult.shouldBePopOver(className: String) {
         intent.component?.className shouldBe className
-        (intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP) shouldBe Intent.FLAG_ACTIVITY_SINGLE_TOP
+        val singleTop = intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP
+        singleTop shouldBe Intent.FLAG_ACTIVITY_SINGLE_TOP
         intent.hasExtra(TRANSITION_NAME_KEY) shouldBe false
         options.shouldNotBeNull().getInt(ANIM_TYPE_KEY) shouldNotBe ANIM_SCENE_TRANSITION
     }
 
     private fun IntentForResult.shouldBeContainerTransform(className: String) {
         intent.component?.className shouldBe className
-        (intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP) shouldBe 0
+        val singleTop = intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP
+        singleTop shouldBe 0
         intent.getStringExtra(TRANSITION_NAME_KEY) shouldBe "commonUtilsActivityTransitionName"
         options.shouldNotBeNull().getInt(ANIM_TYPE_KEY) shouldBe ANIM_SCENE_TRANSITION
     }

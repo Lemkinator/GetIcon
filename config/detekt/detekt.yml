@@ -30,6 +30,8 @@ complexity:
     active: false
   ComplexCondition:
     allowedConditions: 4
+  CyclomaticComplexMethod:
+    ignoreSimpleWhenEntries: true
   LargeClass:
     excludes: ['**/test/**', '**/androidTest/**', '**/testFixtures/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
 
@@ -45,9 +47,21 @@ style:
   ForbiddenComment:
     active: true
     comments: [ 'TODO:', 'FIXME:' ]
+  OptionalUnit:
+    active: true
+  RedundantExplicitType:
+    active: true
+  UnnecessaryLet:
+    active: true
+  UnnecessaryParentheses:
+    active: true
+  UnusedImport:
+    active: true
   UnusedPrivateFunction:
     active: true
   UnusedPrivateProperty:
+    active: true
+  UseIfEmptyOrIfBlank:
     active: true
 
 naming:
