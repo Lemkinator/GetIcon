@@ -145,7 +145,7 @@ Four tools run as part of `./gradlew build`:
   `show`/`showNow` call whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
   `singleLaunchActivity`, `transformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
-  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `launchDrawerPage`.
+  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `popOverOrTransformToActivity` (a One UI pop-over where the device shows one, a container transform elsewhere).
 
 **Dependency analysis** — `./gradlew buildHealth` runs in the `check-formatting` CI job. It fails on unused
 dependencies, incorrect configurations and unused annotation processors; other advice warns. The `dependencyAnalysis {}`
