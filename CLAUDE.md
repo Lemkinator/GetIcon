@@ -147,6 +147,11 @@ Four tools run as part of `./gradlew build`:
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
   `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `popOverOrTransformToActivity` (a One UI pop-over where the device shows one, a container transform elsewhere).
 
+**Hung unit tests in CI** — the `local-tests` step "Run local tests" has a 12-minute step timeout, so a hang fails the
+step and the failure uploads still run (a job-level cancel skips them). After 480 s a watchdog writes thread dumps of the
+test workers and the Gradle JVMs to `app/build/thread-dump-*.txt`; the `unit-test-report` artifact holds them. On CI only,
+the console names each started test and prints Robolectric's artifact download lines.
+
 **Dependency analysis** — `./gradlew buildHealth` runs in the `check-formatting` CI job. It fails on unused
 dependencies, incorrect configurations and unused annotation processors; other advice warns. The `dependencyAnalysis {}`
 block in the root `build.gradle.kts` holds the facade bundles and the narrow guava exclude. Each bundle names its
