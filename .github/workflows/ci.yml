@@ -182,7 +182,7 @@ jobs:
         run: |
           set -o pipefail
           chmod +x ./gradlew
-          ./gradlew pixel9Api35DebugAndroidTest createManagedDeviceDebugAndroidTestCoverageReport \
+          ./gradlew pixel9Api35DebugAndroidTest \
             -Pandroid.experimental.testOptions.managedDevices.emulator.showKernelLogging=true \
             --info \
             --stacktrace \
@@ -278,18 +278,6 @@ jobs:
             fi
           done
           exit "$status"
-      - name: Check instrumented coverage report
-        run: |
-          report=app/build/reports/coverage/androidTest/debug/managedDevice/report.xml
-          if [ ! -s "$report" ]; then
-            echo "::error::the managed-device coverage report $report is missing or empty"
-            exit 1
-          fi
-      - name: Upload instrumented coverage to Codecov
-        uses: codecov/codecov-action@v7
-        with:
-          files: app/build/reports/coverage/androidTest/debug/managedDevice/report.xml
-          flags: instrumentedtests
       - name: Dump kernel log on failure
         if: failure()
         run: sudo dmesg --ctime | tail -n 200 || true

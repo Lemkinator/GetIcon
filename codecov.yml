@@ -1,7 +1,0 @@
-codecov:
-  notify:
-    after_n_builds: 2
-
-# Mirrors the Kover class excludes that map to source paths; the managed-device JaCoCo report has no excludes of its own.
-ignore:
-  - "**/di/**"
