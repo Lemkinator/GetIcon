@@ -102,13 +102,21 @@ jobs:
           chmod +x ./gradlew
           mkdir -p app/build
           (
-            sleep 480
-            for p in $(pgrep -f 'Gradle Test Executor'); do
-              timeout 60 jcmd "$p" Thread.print > "app/build/thread-dump-worker-$p.txt" 2>&1 || true
-            done
-            for p in $(pgrep -f 'GradleDaemon|GradleWrapperMain'); do
-              timeout 60 jcmd "$p" Thread.print > "app/build/thread-dump-gradle-$p.txt" 2>&1 || true
-            done
+            dump() {
+              for p in $(pgrep -f 'Gradle Test Executor'); do
+                timeout 30 jcmd "$p" Thread.print > "app/build/thread-dump-worker-$p$1.txt" 2>&1 &
+              done
+              if [ -z "$1" ]; then
+                for p in $(pgrep -f 'GradleDaemon|GradleWrapperMain'); do
+                  timeout 30 jcmd "$p" Thread.print > "app/build/thread-dump-gradle-$p.txt" 2>&1 &
+                done
+              fi
+              wait
+            }
+            sleep 480 || exit 0
+            dump ""
+            sleep 60 || exit 0
+            dump "-second"
           ) > /dev/null 2>&1 &
           watchdog=$!
           status=0
