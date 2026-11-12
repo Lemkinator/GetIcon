@@ -17,6 +17,8 @@
 @file:OptIn(ExperimentalRoborazziApi::class)
 
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import dev.detekt.gradle.Detekt
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.android.application)
@@ -242,11 +244,30 @@ detekt {
     autoCorrect = false
 }
 
-tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
+tasks.withType<Detekt>().configureEach {
     jvmTarget = libs.versions.jvmTarget.get()
     reports {
         html.required.set(true)
         sarif.required.set(true)
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        (listOf(variant) + variant.nestedComponents).forEach { component ->
+            tasks
+                .withType<Detekt>()
+                .matching { it.name == "detekt${component.name.replaceFirstChar(Char::uppercase)}" }
+                .configureEach {
+                    val kotlinc = tasks.named<KotlinCompile>(component.computeTaskName("compile", "Kotlin"))
+                    val javac = tasks.named<JavaCompile>(component.computeTaskName("compile", "JavaWithJavac"))
+                    classpath.from(
+                        kotlinc.map { it.libraries },
+                        kotlinc.flatMap { it.destinationDirectory },
+                        javac.flatMap { it.destinationDirectory },
+                    )
+                }
+        }
     }
 }
 
