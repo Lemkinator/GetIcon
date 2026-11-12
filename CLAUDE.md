@@ -143,9 +143,9 @@ Four tools run as part of `./gradlew build`:
   `assertHiltTestRuleConventions()` (every Hilt test declares `@get:Rule(order = 0) val hiltRule = HiltTestRule(this)`),
   and enforces the launch latch through `assertLaunchLatchConventions()`: it bans raw activity launches and result registration by name, and a
   `show`/`showNow` call whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
-  `singleLaunchActivity`, `transformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
+  `singleLaunchActivity`, `transformToActivity`, `popOverOrTransformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
-  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `popOverOrTransformToActivity` (a One UI pop-over where the device shows one, a container transform elsewhere).
+  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `popOverOrTransformToActivity` (a pop-over on One UI with a smallest width of at least 600dp, a container transform on every other device).
 
 **Hung unit tests in CI** — the `local-tests` step "Run local tests" has a 12-minute step timeout, so a hang fails the
 step and the failure uploads still run (a job-level cancel skips them). After 480 s a watchdog writes thread dumps of the
@@ -206,7 +206,7 @@ Robolectric only when Robolectric is actually required); don't force everything 
 ## Test Doubles
 
 Fakes over mocks. MockK only mocks static Android or library entry points that have no injectable seam:
-`mockkStatic(DeviceInfo::class)` in `MainActivityTest`, and `SeslApplicationPackageManagerReflector` and
+`mockkStatic(DeviceInfo::class)` with `DeviceInfo.isOneUI()` in `MainActivityTest`, and `SeslApplicationPackageManagerReflector` and
 `AppCompatResources` in `DefaultIconRendererTest`. Each is unmocked in a `finally` or `@After`. Everything else runs
 against a real object or a fake.
 
