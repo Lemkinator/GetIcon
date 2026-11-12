@@ -81,6 +81,7 @@ detekt {
     buildUponDefaultConfig = true
     parallel = true
     autoCorrect = false
+    ignoredBuildTypes = listOf("nonMinifiedRelease")
 }
 
 tasks.withType<dev.detekt.gradle.Detekt>().configureEach {

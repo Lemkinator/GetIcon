@@ -132,8 +132,11 @@ Four tools run as part of `./gradlew build`:
   Detekt has no ktlint wrapper). Fix violations with
   `./gradlew spotlessApply`.
 - **Detekt** — static analysis; config at `config/detekt/detekt.yml`.
-  `autoCorrect = false` — fixes are manual. Run `./gradlew detektMain detektTest`: they analyze every source set
-  of every variant with type resolution. The plain `detekt` task has no type resolution, so rules that need it stay silent.
+  `autoCorrect = false` — fixes are manual. Run `./gradlew detektMain detektTest`: together they analyze every source set
+  once with type resolution. `detekt { ignoredBuildTypes }` drops the variants that only repeat `release`, and the `release`
+  tasks skip the source sets `debug` already analyzes. `app/build.gradle.kts` adds each component's javac output to its
+  task classpath, so generated view binding, `BuildConfig` and Hilt classes resolve. Each report's `number of kt files`
+  line counts the analyzed files. The plain `detekt` task has no type resolution, so rules that need it stay silent.
 - **Kover** — 100% INSTRUCTION + BRANCH coverage required.
   Verify: `./gradlew koverVerifyDebug`. CI strips zero-instruction `<line>` entries from the
   Kover XML (`.github/scripts/strip-zero-instruction-lines.py`) before the Codecov upload.

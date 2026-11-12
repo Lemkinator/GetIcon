@@ -242,6 +242,7 @@ detekt {
     buildUponDefaultConfig = true
     parallel = true
     autoCorrect = false
+    ignoredBuildTypes = listOf("nonMinifiedRelease", "benchmarkRelease")
 }
 
 tasks.withType<Detekt>().configureEach {
@@ -266,6 +267,10 @@ androidComponents {
                         kotlinc.flatMap { it.destinationDirectory },
                         javac.flatMap { it.destinationDirectory },
                     )
+                    if (variant.buildType != "debug") {
+                        val sharedSourceSets = listOf("main", "testFixtures")
+                        exclude { element -> sharedSourceSets.any { element.file.invariantSeparatorsPath.contains("/src/$it/") } }
+                    }
                 }
         }
     }
