@@ -145,12 +145,12 @@ Four tools run as part of `./gradlew build`:
   `show`/`showNow` call whose receiver is not `Snackbar`, `Toast`, `PopupMenu` or `TipPopup`. Launch through
   `singleLaunchActivity`, `transformToActivity`, `popOverOrTransformToActivity` or `registerForSingleLaunchResult`; wrap taps in the
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
-  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `popOverOrTransformToActivity` (a pop-over on One UI with a smallest width of at least 600dp, a container transform on every other device).
+  `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `popOverOrTransformToActivity` (a pop-over when the device runs One UI and the launching activity's smallest width is at least 600dp, a container transform otherwise).
 
 **Hung unit tests in CI** — the `local-tests` step "Run local tests" has a 12-minute step timeout, so a hang fails the
 step and the failure uploads still run (a job-level cancel skips them). After 480 s a watchdog writes thread dumps of the
 test workers and the Gradle JVMs, and 60 s later a second dump of the test workers, to `app/build/thread-dump-*.txt`; the `unit-test-report` artifact holds them. On CI only,
-the console names each started test and prints Robolectric's artifact download lines.
+the console names each started test, prints each test's standard error and prints Robolectric's artifact download lines.
 
 **Dependency analysis** — `./gradlew buildHealth` runs in the `check-formatting` CI job. It fails on unused
 dependencies, incorrect configurations and unused annotation processors; other advice warns. The `dependencyAnalysis {}`
