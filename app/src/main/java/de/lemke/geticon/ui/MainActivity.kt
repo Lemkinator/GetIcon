@@ -134,13 +134,16 @@ class MainActivity :
         if (intent.action == ACTION_SEARCH) binding.drawerLayout.setSearchQueryFromIntent(intent)
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_main, menu).let { true }
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean =
-        when (item.itemId) {
-            R.id.menu_item_search -> startSearch().let { true }
-            else -> super.onOptionsItemSelected(item)
-        }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId != R.id.menu_item_search) return super.onOptionsItemSelected(item)
+        startSearch()
+        return true
+    }
 
     private fun renderInstalledApps(installedApps: InstalledApps) {
         val apps =
