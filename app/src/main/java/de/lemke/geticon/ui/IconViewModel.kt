@@ -108,7 +108,7 @@ class IconViewModel @Inject constructor(
         applicationInfo?.sourceDir?.let { apkImporter.discard(File(it)) }
     }
 
-    private suspend fun loadInitialState(appInfo: ApplicationInfo) {
+    private fun loadInitialState(appInfo: ApplicationInfo) {
         val sourceFile = appInfo.sourceDir?.let { File(it) }
         if (sourceFile != null && apkImporter.isCached(sourceFile) && !sourceFile.exists()) {
             exitWith(IconExit.AppNotFound)

@@ -25,7 +25,7 @@ import de.lemke.commonutils.data.PackageLookup
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class PackageLookupModule {
+interface PackageLookupModule {
     @Binds
-    abstract fun bindPackageLookup(lookup: DefaultPackageLookup): PackageLookup
+    fun bindPackageLookup(lookup: DefaultPackageLookup): PackageLookup
 }

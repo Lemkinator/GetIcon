@@ -25,7 +25,7 @@ import de.lemke.geticon.data.DefaultApkImporter
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class ApkImporterModule {
+interface ApkImporterModule {
     @Binds
-    abstract fun bindApkImporter(importer: DefaultApkImporter): ApkImporter
+    fun bindApkImporter(importer: DefaultApkImporter): ApkImporter
 }
