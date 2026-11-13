@@ -263,10 +263,11 @@ tasks.withType<Detekt>().configureEach {
 }
 
 androidComponents {
-    val debugSourceDirs = mutableListOf<Provider<Set<File>>>()
+    val referenceBuildType = "debug"
+    val referenceSourceDirs = objects.listProperty<File>()
     onVariants { variant ->
         val components = listOf(variant) + variant.nestedComponents
-        if (variant.buildType == "debug") components.forEach { debugSourceDirs += it.sourceDirs() }
+        if (variant.buildType == referenceBuildType) components.forEach { referenceSourceDirs.addAll(it.sourceDirs()) }
         components.forEach { component ->
             tasks
                 .withType<Detekt>()
@@ -280,9 +281,8 @@ androidComponents {
                         kotlinc.flatMap { it.destinationDirectory },
                         javac.flatMap { it.destinationDirectory },
                     )
-                    if (variant.buildType != "debug") {
-                        val shared by lazy { debugSourceDirs.flatMap { it.get() } }
-                        exclude { element -> shared.any { element.file.startsWith(it) } }
+                    if (variant.buildType != referenceBuildType) {
+                        exclude { element -> referenceSourceDirs.get().any { element.file.startsWith(it) } }
                     }
                 }
         }
