@@ -84,6 +84,11 @@ detekt {
     ignoredBuildTypes = listOf("nonMinifiedRelease")
 }
 
+tasks.named("check") {
+    setDependsOn(dependsOn.filterNot { it is TaskProvider<*> && it.name == "detekt" })
+    dependsOn("detektMain", "detektTest")
+}
+
 tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
     jvmTarget = libs.versions.jvmTarget.get()
     reports {

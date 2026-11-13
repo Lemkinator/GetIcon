@@ -16,8 +16,12 @@
 
 @file:OptIn(ExperimentalRoborazziApi::class)
 
+import com.android.build.api.variant.Component
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import dev.detekt.gradle.Detekt
+import java.io.File
+import org.gradle.api.file.Directory
+import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -245,6 +249,11 @@ detekt {
     ignoredBuildTypes = listOf("nonMinifiedRelease", "benchmarkRelease")
 }
 
+tasks.named("check") {
+    setDependsOn(dependsOn.filterNot { it is TaskProvider<*> && it.name == "detekt" })
+    dependsOn("detektMain", "detektTest")
+}
+
 tasks.withType<Detekt>().configureEach {
     jvmTarget = libs.versions.jvmTarget.get()
     reports {
@@ -254,27 +263,36 @@ tasks.withType<Detekt>().configureEach {
 }
 
 androidComponents {
+    val debugSourceDirs = mutableListOf<Provider<Set<File>>>()
     onVariants { variant ->
-        (listOf(variant) + variant.nestedComponents).forEach { component ->
+        val components = listOf(variant) + variant.nestedComponents
+        if (variant.buildType == "debug") components.forEach { debugSourceDirs += it.sourceDirs() }
+        components.forEach { component ->
             tasks
                 .withType<Detekt>()
-                .matching { it.name == "detekt${component.name.replaceFirstChar(Char::uppercase)}" }
+                .named { it == "detekt${component.name.replaceFirstChar(Char::uppercase)}" }
                 .configureEach {
                     val kotlinc = tasks.named<KotlinCompile>(component.computeTaskName("compile", "Kotlin"))
                     val javac = tasks.named<JavaCompile>(component.computeTaskName("compile", "JavaWithJavac"))
+                    // from() discards the plugin's default classpath (compile libraries and classes dirs), so both are added back.
                     classpath.from(
                         kotlinc.map { it.libraries },
                         kotlinc.flatMap { it.destinationDirectory },
                         javac.flatMap { it.destinationDirectory },
                     )
                     if (variant.buildType != "debug") {
-                        val sharedSourceSets = listOf("main", "testFixtures")
-                        exclude { element -> sharedSourceSets.any { element.file.invariantSeparatorsPath.contains("/src/$it/") } }
+                        val shared by lazy { debugSourceDirs.flatMap { it.get() } }
+                        exclude { element -> shared.any { element.file.startsWith(it) } }
                     }
                 }
         }
     }
 }
+
+fun Component.sourceDirs(): Provider<Set<File>> =
+    listOfNotNull(sources.java, sources.kotlin)
+        .map { it.static.map { dirs -> dirs.map(Directory::getAsFile).toSet() } }
+        .reduce { acc, dirs -> acc.zip(dirs) { a, b -> a + b } }
 
 baselineProfile {
     automaticGenerationDuringBuild = false
