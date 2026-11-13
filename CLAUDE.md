@@ -152,10 +152,12 @@ Four tools run as part of `./gradlew build`:
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
   `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `popOverOrTransformToActivity` (a pop-over when the device runs One UI and the launching activity's smallest width is at least 600dp, a container transform otherwise).
 
-**Hung unit tests in CI** — the `local-tests` step "Run local tests" has a 12-minute step timeout, so a hang fails the
-step and the failure uploads still run (a job-level cancel skips them). After 480 s a watchdog writes thread dumps of the
-test workers and the Gradle JVMs, and 60 s later a second dump of the test workers, to `app/build/thread-dump-*.txt`; the `unit-test-report` artifact holds them. On CI only,
-the console names each started test, prints each test's standard error and prints Robolectric's artifact download lines.
+**Robolectric jars** — Gradle resolves the `android-all-instrumented` jars (catalog entries `robolectric-android-all-<api>`,
+one per SDK level the tests use) into `app/build/robolectric-jars` through `syncRobolectricJars`, and the unit-test tasks pass
+that directory as `robolectric.dependency.dir`. Unit tests run without network access. After a Robolectric bump or a new
+`@Config(sdk)`, update the catalog coordinates to the jar names Robolectric's `DefaultSdkProvider` lists; a stale entry fails the
+test with a missing-dependency error. The `local-tests` step has a 12-minute timeout, so a hang fails the step and the failure
+uploads still run (a job-level cancel skips them).
 
 **Dependency analysis** — `./gradlew buildHealth` runs in the `check-formatting` CI job. It fails on unused
 dependencies, incorrect configurations and unused annotation processors; other advice warns. The `dependencyAnalysis {}`

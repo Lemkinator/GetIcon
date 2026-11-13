@@ -98,32 +98,7 @@ jobs:
       # A step timeout fails the step so the failure() uploads below still run; a job-level cancel skips them.
       - name: Run local tests
         timeout-minutes: 12
-        run: |
-          chmod +x ./gradlew
-          mkdir -p app/build
-          (
-            dump() {
-              for p in $(pgrep -f 'Gradle Test Executor'); do
-                timeout 30 jcmd "$p" Thread.print > "app/build/thread-dump-worker-$p$1.txt" 2>&1 &
-              done
-              if [ -z "$1" ]; then
-                for p in $(pgrep -f 'GradleDaemon|GradleWrapperMain'); do
-                  timeout 30 jcmd "$p" Thread.print > "app/build/thread-dump-gradle-$p.txt" 2>&1 &
-                done
-              fi
-              wait
-            }
-            sleep 480 || exit 0
-            dump ""
-            sleep 60 || exit 0
-            dump "-second"
-          ) > /dev/null 2>&1 &
-          watchdog=$!
-          status=0
-          ./gradlew testDebugUnitTest verifyRoborazziDebug koverXmlReportDebug koverHtmlReportDebug koverVerifyDebug --stacktrace || status=$?
-          pkill -P "$watchdog" || true
-          kill "$watchdog" 2>/dev/null || true
-          exit "$status"
+        run: chmod +x ./gradlew && ./gradlew testDebugUnitTest verifyRoborazziDebug koverXmlReportDebug koverHtmlReportDebug koverVerifyDebug --stacktrace
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
@@ -161,7 +136,6 @@ jobs:
           path: |
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
-            app/build/thread-dump-*.txt
 
   instrumented-tests:
     runs-on: ubuntu-26.04
