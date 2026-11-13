@@ -25,7 +25,7 @@ import de.lemke.geticon.data.IconRenderer
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class IconRendererModule {
+interface IconRendererModule {
     @Binds
-    abstract fun bindIconRenderer(renderer: DefaultIconRenderer): IconRenderer
+    fun bindIconRenderer(renderer: DefaultIconRenderer): IconRenderer
 }

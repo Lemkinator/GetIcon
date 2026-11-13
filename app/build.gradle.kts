@@ -16,7 +16,13 @@
 
 @file:OptIn(ExperimentalRoborazziApi::class)
 
+import com.android.build.api.variant.Component
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import dev.detekt.gradle.Detekt
+import java.io.File
+import org.gradle.api.file.Directory
+import org.gradle.api.provider.Provider
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.android.application)
@@ -240,15 +246,53 @@ detekt {
     buildUponDefaultConfig = true
     parallel = true
     autoCorrect = false
+    ignoredBuildTypes = listOf("nonMinifiedRelease", "benchmarkRelease")
 }
 
-tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
+tasks.named("check") {
+    setDependsOn(dependsOn.filterNot { it is TaskProvider<*> && it.name == "detekt" })
+    dependsOn("detektMain", "detektTest")
+}
+
+tasks.withType<Detekt>().configureEach {
     jvmTarget = libs.versions.jvmTarget.get()
     reports {
         html.required.set(true)
         sarif.required.set(true)
     }
 }
+
+androidComponents {
+    val referenceBuildType = "debug"
+    val referenceSourceDirs = objects.listProperty<File>()
+    onVariants { variant ->
+        val components = listOf(variant) + variant.nestedComponents
+        if (variant.buildType == referenceBuildType) components.forEach { referenceSourceDirs.addAll(it.sourceDirs()) }
+        components.forEach { component ->
+            tasks
+                .withType<Detekt>()
+                .named { it == "detekt${component.name.replaceFirstChar(Char::uppercase)}" }
+                .configureEach {
+                    val kotlinc = tasks.named<KotlinCompile>(component.computeTaskName("compile", "Kotlin"))
+                    val javac = tasks.named<JavaCompile>(component.computeTaskName("compile", "JavaWithJavac"))
+                    // from() discards the plugin's default classpath (compile libraries and classes dirs), so both are added back.
+                    classpath.from(
+                        kotlinc.map { it.libraries },
+                        kotlinc.flatMap { it.destinationDirectory },
+                        javac.flatMap { it.destinationDirectory },
+                    )
+                    if (variant.buildType != referenceBuildType) {
+                        exclude { element -> referenceSourceDirs.get().any { element.file.startsWith(it) } }
+                    }
+                }
+        }
+    }
+}
+
+fun Component.sourceDirs(): Provider<Set<File>> =
+    listOfNotNull(sources.java, sources.kotlin)
+        .map { it.static.map { dirs -> dirs.map(Directory::getAsFile).toSet() } }
+        .reduce { acc, dirs -> acc.zip(dirs) { a, b -> a + b } }
 
 baselineProfile {
     automaticGenerationDuringBuild = false

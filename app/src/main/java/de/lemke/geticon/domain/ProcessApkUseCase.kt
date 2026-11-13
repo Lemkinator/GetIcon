@@ -26,12 +26,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
-sealed class ApkProcessResult {
-    data class Success(val applicationInfo: ApplicationInfo) : ApkProcessResult()
+sealed interface ApkProcessResult {
+    data class Success(val applicationInfo: ApplicationInfo) : ApkProcessResult
 
-    data object InvalidApk : ApkProcessResult()
+    data object InvalidApk : ApkProcessResult
 
-    data object Error : ApkProcessResult()
+    data object Error : ApkProcessResult
 }
 
 class ProcessApkUseCase @Inject constructor(

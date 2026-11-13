@@ -85,7 +85,10 @@ class IconActivity :
         collectState(viewModel.exit, minActiveState = RESUMED) { if (it is IconExit.Reason) onExit(it) }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean = menuInflater.inflate(R.menu.menu_icon, menu).let { true }
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_icon, menu)
+        return true
+    }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         val enabled = viewModel.export.value != BitmapExport.Running

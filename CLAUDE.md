@@ -132,7 +132,12 @@ Four tools run as part of `./gradlew build`:
   Detekt has no ktlint wrapper). Fix violations with
   `./gradlew spotlessApply`.
 - **Detekt** — static analysis; config at `config/detekt/detekt.yml`.
-  `autoCorrect = false` — fixes are manual.
+  `autoCorrect = false` — fixes are manual. Run `./gradlew detektMain detektTest`: together they analyze every source set
+  once with type resolution. `detekt { ignoredBuildTypes }` drops the variants that only repeat `release`, and the `release`
+  tasks skip the source sets `debug` already analyzes. `app/build.gradle.kts` adds each component's javac output to its
+  task classpath, so generated view binding, `BuildConfig` and Hilt classes resolve. Each report's `number of kt files`
+  line counts the analyzed files. `check` depends on `detektMain` and `detektTest` and not on the plain `detekt` task, which has no
+  type resolution, so rules that need it stay silent.
 - **Kover** — 100% INSTRUCTION + BRANCH coverage required.
   Verify: `./gradlew koverVerifyDebug`. CI strips zero-instruction `<line>` entries from the
   Kover XML (`.github/scripts/strip-zero-instruction-lines.py`) before the Codecov upload.
@@ -166,14 +171,14 @@ git config core.autocrlf input           # Windows: prevents CRLF violations
 git config core.hooksPath .githooks
 ```
 
-The hook runs `spotlessCheck` and exits 1 with a
+The hook runs `spotlessCheck detektMain detektTest` and exits 1 with a
 `./gradlew spotlessApply` reminder on failure. It also fails fast with a
 targeted message if `core.autocrlf=true` is detected.
 
 **After any change** — run the full local CI suite before declaring work done:
 
 ```powershell
-./gradlew spotlessCheck detekt buildHealth lintDebug testDebugUnitTest koverVerifyDebug koverHtmlReportDebug verifyRoborazziDebug pixel9Api35DebugAndroidTest assembleRelease
+./gradlew spotlessCheck detektMain detektTest buildHealth lintDebug testDebugUnitTest koverVerifyDebug koverHtmlReportDebug verifyRoborazziDebug pixel9Api35DebugAndroidTest assembleRelease
 ```
 
 If `spotlessCheck` fails, fix with `./gradlew spotlessApply` then re-run. Screenshot test failures (`verifyRoborazziDebug`) mean the code
