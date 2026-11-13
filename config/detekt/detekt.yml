@@ -47,8 +47,6 @@ style:
   ForbiddenComment:
     active: true
     comments: [ 'TODO:', 'FIXME:' ]
-  OptionalUnit:
-    active: true
   RedundantExplicitType:
     active: true
   UnnecessaryLet:

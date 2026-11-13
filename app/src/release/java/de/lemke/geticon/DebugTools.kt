@@ -18,6 +18,4 @@ package de.lemke.geticon
 
 import android.content.Context
 
-fun Context.openLeakCanary() {
-    // LeakCanary ships only in debug builds.
-}
+fun Context.openLeakCanary() = Unit
