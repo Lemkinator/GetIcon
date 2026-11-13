@@ -139,11 +139,17 @@ class MainActivity :
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId != R.id.menu_item_search) return super.onOptionsItemSelected(item)
-        startSearch()
-        return true
-    }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean =
+        when (item.itemId) {
+            R.id.menu_item_search -> {
+                startSearch()
+                true
+            }
+
+            else -> {
+                super.onOptionsItemSelected(item)
+            }
+        }
 
     private fun renderInstalledApps(installedApps: InstalledApps) {
         val apps =
