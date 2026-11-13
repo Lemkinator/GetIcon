@@ -56,7 +56,7 @@ val syncRobolectricJars =
     }
 
 class RobolectricDependencyDir(
-    @get:InputDirectory @get:PathSensitive(PathSensitivity.NONE) val dir: Provider<Directory>,
+    @get:InputDirectory @get:PathSensitive(PathSensitivity.NAME_ONLY) val dir: Provider<Directory>,
 ) : CommandLineArgumentProvider {
     override fun asArguments() = listOf("-Drobolectric.dependency.dir=${dir.get().asFile}")
 }
