@@ -164,10 +164,7 @@ android {
                     "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
                     "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
                 )
-                test.testLogging {
-                    events("failed")
-                    exceptionFormat = TestExceptionFormat.FULL
-                }
+                test.testLogging.exceptionFormat = TestExceptionFormat.FULL
                 test.jvmArgumentProviders += RobolectricDependencyDir(layout.dir(syncRobolectricJars.map { it.destinationDir }))
                 test.systemProperty("robolectric.graphicsMode", "NATIVE")
                 test.systemProperty("roborazzi.test.record", project.findProperty("roborazzi.record") ?: "false")
