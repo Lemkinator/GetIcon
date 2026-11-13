@@ -49,10 +49,7 @@ dependencyAnalysis {
             onUnusedDependencies { severity("fail") }
             onIncorrectConfiguration { severity("fail") }
             onUnusedAnnotationProcessors { severity("fail") }
-            onUsedTransitiveDependencies {
-                severity("warn")
-                exclude("com.google.guava:guava")
-            }
+            onUsedTransitiveDependencies { severity("ignore") }
             onRuntimeOnly { severity("warn") }
             onCompileOnly { severity("warn") }
             onRedundantPlugins { severity("warn") }

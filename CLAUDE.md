@@ -156,12 +156,13 @@ Four tools run as part of `./gradlew build`:
 one per SDK level the tests use) into `app/build/robolectric-jars` through `syncRobolectricJars`, and the unit-test tasks pass
 that directory as `robolectric.dependency.dir`. Unit tests run without network access. After a Robolectric bump or a new
 `@Config(sdk)`, update the catalog coordinates to the jar names Robolectric's `DefaultSdkProvider` lists; a stale entry fails the
-test with a missing-dependency error. The `local-tests` step has a 12-minute timeout, so a hang fails the step and the failure
+test with `Path is not a file` naming the missing jar. The `local-tests` step has a 12-minute timeout, so a hang fails the step and the failure
 uploads still run (a job-level cancel skips them).
 
 **Dependency analysis** — `./gradlew buildHealth` runs in the `check-formatting` CI job. It fails on unused
-dependencies, incorrect configurations and unused annotation processors; other advice warns. The `dependencyAnalysis {}`
-block in the root `build.gradle.kts` holds the facade bundles and the narrow guava exclude. Each bundle names its
+dependencies, incorrect configurations and unused annotation processors; other advice warns, except "used transitive
+dependencies" (ignored: a version-less declaration of a transitive artifact protects nothing). The `dependencyAnalysis {}`
+block in the root `build.gradle.kts` holds the facade bundles. Each bundle names its
 primary and only the transitive internals the report lists, so it never masks a declared artifact. The `leakcanary`
 bundle also folds the `testDebug` leakcanary advice. Report: `build/reports/dependency-analysis/build-health-report.txt`.
 
