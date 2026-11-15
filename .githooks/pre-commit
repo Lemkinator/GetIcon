@@ -16,11 +16,11 @@ fi
 gradle=${PRECOMMIT_GRADLE:-./gradlew}
 
 echo "Running static analysis..."
-$gradle spotlessCheck detektMain detektTest --quiet || {
+$gradle spotlessCheck detekt --quiet || {
     echo ""
     echo "ERROR: Static analysis failed."
     echo "Fix formatting with: $gradle spotlessApply"
-    echo "Check Detekt report:  $gradle detektMain detektTest"
+    echo "Check Detekt report:  $gradle detekt"
     echo ""
     exit 1
 }
