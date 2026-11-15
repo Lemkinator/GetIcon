@@ -136,9 +136,9 @@ Four tools run as part of `./gradlew build`:
   once with type resolution. `detekt { ignoredBuildTypes }` drops the variants that only repeat `release`, and the `release`
   tasks skip the source sets `debug` already analyzes. `app/build.gradle.kts` adds each component's javac output to its
   task classpath, so generated view binding, `BuildConfig` and Hilt classes resolve. Each report's `number of kt files`
-  line counts the analyzed files. `check` and CI depend on `detektMain` and `detektTest` and not on the plain `detekt` task, which has no
+  line counts the analyzed files. `check` depends on, and CI runs, `detektMain` and `detektTest`, not the plain `detekt` task, which has no
   type resolution, so rules that need it stay silent. The pre-commit hook runs plain `detekt` only, so type-aware rules run in
-  `check`/CI: run `detektMain detektTest` in every verify before a receipt.
+  `check`/CI. The hook does not replace `./gradlew detektMain detektTest`; run it before you push.
 - **Kover** — 100% INSTRUCTION + BRANCH coverage required.
   Verify: `./gradlew koverVerifyDebug`. CI strips zero-instruction `<line>` entries from the
   Kover XML (`.github/scripts/strip-zero-instruction-lines.py`) before the Codecov upload.
