@@ -45,6 +45,8 @@ import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.di.IoDispatcher
 import de.lemke.commonutils.idleMainLooper
 import de.lemke.commonutils.returnFromLaunchedScreen
+import de.lemke.commonutils.shouldBeContainerTransformTo
+import de.lemke.commonutils.shouldBePopOverTo
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutMeActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
@@ -60,9 +62,7 @@ import de.lemke.geticon.di.AppCoroutinesModule
 import de.lemke.geticon.di.PackageLookupModule
 import dev.oneuiproject.oneui.layout.NavDrawerLayout
 import dev.oneuiproject.oneui.navigation.widget.DrawerNavigationView
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.mockk.every
@@ -90,10 +90,6 @@ import org.robolectric.shadows.ShadowToast
 import androidx.appcompat.R as appcompatR
 import de.lemke.commonutils.R as commonutilsR
 import dev.oneuiproject.oneui.design.R as oneuiDesignR
-
-private const val TRANSITION_NAME_KEY = "commonUtilsTransitionNameKey"
-private const val ANIM_TYPE_KEY = "android:activity.animType"
-private const val ANIM_SCENE_TRANSITION = 5
 
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
@@ -487,53 +483,46 @@ class MainActivityTest {
         return started!!
     }
 
-    private fun IntentForResult.shouldBePopOver(className: String) {
-        intent.component?.className shouldBe className
-        (intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP) shouldBe Intent.FLAG_ACTIVITY_SINGLE_TOP
-        intent.hasExtra(TRANSITION_NAME_KEY) shouldBe false
-        options.shouldNotBeNull().getInt(ANIM_TYPE_KEY) shouldNotBe ANIM_SCENE_TRANSITION
-    }
+    private fun IntentForResult.shouldBePopOver(cls: Class<*>) = intent.shouldBePopOverTo(cls, options)
 
-    private fun IntentForResult.shouldBeContainerTransform(className: String) {
-        intent.component?.className shouldBe className
+    private fun IntentForResult.shouldBeContainerTransform(cls: Class<*>) {
+        intent.shouldBeContainerTransformTo(cls, options)
         (intent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP) shouldBe 0
-        intent.getStringExtra(TRANSITION_NAME_KEY) shouldBe "commonUtilsActivityTransitionName"
-        options.shouldNotBeNull().getInt(ANIM_TYPE_KEY) shouldBe ANIM_SCENE_TRANSITION
     }
 
     @Test
     @Config(qualifiers = "sw600dp")
     fun navItem_about_oneUiTablet_popsOver() {
         navigateFromDrawer(R.id.commonutils_about_dest, isOneUi = true)
-            .shouldBePopOver(CommonUtilsAboutActivity::class.java.name)
+            .shouldBePopOver(CommonUtilsAboutActivity::class.java)
     }
 
     @Test
     @Config(qualifiers = "sw600dp")
     fun navItem_aboutMe_oneUiTablet_popsOver() {
         navigateFromDrawer(R.id.commonutils_about_me_dest, isOneUi = true)
-            .shouldBePopOver(CommonUtilsAboutMeActivity::class.java.name)
+            .shouldBePopOver(CommonUtilsAboutMeActivity::class.java)
     }
 
     @Test
     @Config(qualifiers = "sw600dp")
     fun navItem_settings_oneUiTablet_popsOver() {
         navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
-            .shouldBePopOver(CommonUtilsSettingsActivity::class.java.name)
+            .shouldBePopOver(CommonUtilsSettingsActivity::class.java)
     }
 
     @Test
     @Config(qualifiers = "sw600dp")
     fun navItem_settings_nonOneUiTablet_keepsContainerTransform() {
         navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = false)
-            .shouldBeContainerTransform(CommonUtilsSettingsActivity::class.java.name)
+            .shouldBeContainerTransform(CommonUtilsSettingsActivity::class.java)
     }
 
     @Test
     @Config(qualifiers = "sw599dp")
     fun navItem_settings_oneUiPhone_keepsContainerTransform() {
         navigateFromDrawer(R.id.commonutils_settings_dest, isOneUi = true)
-            .shouldBeContainerTransform(CommonUtilsSettingsActivity::class.java.name)
+            .shouldBeContainerTransform(CommonUtilsSettingsActivity::class.java)
     }
 
     @Test
