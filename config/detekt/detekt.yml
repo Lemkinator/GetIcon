@@ -27,12 +27,8 @@ complexity:
   active: true
   LongParameterList:
     active: true
-    allowedFunctionParameters: 6
-    allowedConstructorParameters: 7
   TooManyFunctions:
     active: false
-  ComplexCondition:
-    allowedConditions: 4
   CyclomaticComplexMethod:
     ignoreSimpleWhenEntries: true
   LargeClass:
