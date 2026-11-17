@@ -53,7 +53,6 @@ class DefaultIconRenderer @Inject constructor(
 ) : IconRenderer {
     override fun label(applicationInfo: ApplicationInfo): String = applicationInfo.loadLabel(context.packageManager).toString()
 
-    @SuppressLint("RestrictedApi")
     override fun render(
         applicationInfo: ApplicationInfo,
         style: IconStyle,
@@ -61,6 +60,8 @@ class DefaultIconRenderer @Inject constructor(
         val size = style.size
         val packageManager = context.packageManager
         val appIcon = loadIcon(applicationInfo, packageManager) ?: return RenderedIcon(createBitmap(size, size), IconKind.LEGACY)
+
+        @SuppressLint("RestrictedApi")
         val maskedAppIcon = semGetApplicationIconForIconTray(packageManager, applicationInfo.packageName, 1)
         val kind =
             when {
