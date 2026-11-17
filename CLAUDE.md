@@ -153,8 +153,9 @@ Four tools run as part of `./gradlew build`:
   input helpers (`onSingleLaunchClick`, `singleLaunchMenuItem`, `onSingleLaunchItemSelected`,
   `singleLaunchSuspending`); show dialogs with `showOnce(tag)`. A drawer destination opens through `popOverOrTransformToActivity` (a pop-over when the device runs One UI and the launching activity's smallest width is at least 600dp, a container transform otherwise).
 
-**Hung unit tests in CI** — the `local-tests` step "Run local tests" has a 12-minute step timeout. Robolectric downloads the Android framework jars it needs on the first run, and a stalled download would otherwise run into the job limit. A hang fails the step and the failure
-uploads still run (a job-level cancel skips them); a rerun fixes it.
+**Hung unit tests in CI** — the `local-tests` step "Run local tests" has a 12-minute step timeout. Robolectric
+downloads the Android framework jars it needs on the first run. If a download stalls, the step fails at 12 minutes
+and a rerun retries it. The failure uploads still run; a job-level cancel skips them.
 
 **Dependency analysis** — `./gradlew buildHealth` runs in the `check-formatting` CI job. It fails on unused
 dependencies, incorrect configurations and unused annotation processors; other advice warns, except "used transitive
