@@ -68,8 +68,7 @@ style:
   UseIfEmptyOrIfBlank:
     active: true
   VarCouldBeVal:
-    active: true
-    ignoreLateinitVar: true
+    ignoreAnnotated: ['org.robolectric.annotation.RealObject']
 
 naming:
   FunctionNaming:
