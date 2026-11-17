@@ -16,14 +16,14 @@
 -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en">
     <string name="app_name" translatable="false">Get Icon</string>
-    <string name="app_description">An app to extract and save app icons.</string>
+    <string name="app_description" tools:ignore="UnusedResources">An app to extract and save app icons.</string>
     <string name="about_app">About GetIcon</string>
 
     <!--Override commonutils strings-->
-    <string name="commonutils_app_description" translatable="false">@string/app_description</string>
+    <string name="commonutils_app_description" translatable="false" tools:ignore="UnusedResources">@string/app_description</string>
     <string name="commonutils_about_app" translatable="false">@string/about_app</string>
-    <string name="commonutils_email" translatable="false">geticon@leonard-lemke.com</string>
-    <string name="commonutils_privacy_website" translatable="false">https://www.leonard-lemke.com/apps/geticon/privacy-policy</string>
+    <string name="commonutils_email" translatable="false" tools:ignore="UnusedResources">geticon@leonard-lemke.com</string>
+    <string name="commonutils_privacy_website" translatable="false" tools:ignore="UnusedResources">https://www.leonard-lemke.com/apps/geticon/privacy-policy</string>
 
     <!--Other-->
     <string name="error_icon_generation_failed">Failed to generate icon</string>
