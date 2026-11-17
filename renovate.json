@@ -61,20 +61,6 @@
       ]
     },
     {
-      "matchPackageNames": [
-        "org.robolectric:robolectric"
-      ],
-      "prBodyNotes": [
-        "A Robolectric bump can need new `robolectric-android-all-<api>` coordinates in `gradle/libs.versions.toml`. If `local-tests` fails with `Path is not a file`, follow the \"Robolectric jars\" section in CLAUDE.md."
-      ]
-    },
-    {
-      "matchPackageNames": [
-        "org.robolectric:android-all-instrumented"
-      ],
-      "enabled": false
-    },
-    {
       "groupName": "github-actions",
       "matchManagers": [
         "github-actions"
