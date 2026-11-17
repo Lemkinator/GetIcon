@@ -15,7 +15,6 @@ coroutines:
     active: true
   InjectDispatcher:
     active: true
-    excludes: ['**/di/**']
   RedundantSuspendModifier:
     active: true
   SleepInsteadOfDelay:
