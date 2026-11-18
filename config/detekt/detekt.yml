@@ -21,7 +21,6 @@ style:
     active: true
   UnnecessaryParentheses:
     active: true
-    allowForUnclearPrecedence: true
   UnusedImport:
     active: true
   UseIfEmptyOrIfBlank:
