@@ -14,7 +14,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<resources>
-    <color name="primary_color">#F48FB1</color>
-    <color name="primary_color_themed">@color/primary_color</color>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <color name="primary_color" tools:ignore="UnusedResources">#F48FB1</color>
+    <color name="primary_color_themed" tools:ignore="UnusedResources">@color/primary_color</color>
 </resources>

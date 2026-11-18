@@ -108,7 +108,8 @@ class UserSettingsTest {
     @Test
     fun `iconSize clamps any value above range to MAX_ICON_SIZE`() =
         runTest {
-            checkAll(Arb.int((MAX_ICON_SIZE + 1)..Int.MAX_VALUE)) { value ->
+            val firstValueAboveRange = MAX_ICON_SIZE + 1
+            checkAll(Arb.int(firstValueAboveRange..Int.MAX_VALUE)) { value ->
                 settings.iconSize = value
                 settings.iconSize shouldBe MAX_ICON_SIZE
             }
