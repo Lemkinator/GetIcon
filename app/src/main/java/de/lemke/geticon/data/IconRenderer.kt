@@ -94,16 +94,14 @@ class DefaultIconRenderer @Inject constructor(
     private fun AdaptiveIconDrawable.drawLayers(style: IconStyle): Bitmap {
         val bitmap = createBitmap(style.size, style.size)
         setBounds(0, 0, style.size, style.size)
-        val background = background.mutate()
         var foreground = foreground.mutate()
         if (style.colorEnabled) {
             if (SDK_INT >= TIRAMISU) monochrome?.let { foreground = it.mutate() }
-            background.setTint(style.backgroundColor)
             foreground.setTint(style.foregroundColor)
         }
         val canvas = Canvas(bitmap)
         if (style.maskEnabled) canvas.clipPath(iconMask)
-        background.draw(canvas)
+        if (style.colorEnabled) canvas.drawColor(style.backgroundColor) else background.draw(canvas)
         foreground.draw(canvas)
         return bitmap
     }
