@@ -18,11 +18,13 @@ package de.lemke.geticon.data
 
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.InsetDrawable
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.reflect.app.SeslApplicationPackageManagerReflector
 import androidx.test.core.app.ApplicationProvider
@@ -108,6 +110,44 @@ class DefaultIconRendererTest {
         result.bitmap.centerPixel() shouldBe Color.GREEN
     }
 
+    @Test
+    fun `fills a transparent background color instead of drawing the app background`() {
+        val result = renderer.render(app { glyphIcon() }, filled(backgroundColor = Color.TRANSPARENT))
+        result.bitmap.getPixel(0, 0) shouldBe Color.TRANSPARENT
+        result.bitmap.getPixel(10, 32) shouldBe Color.TRANSPARENT
+        result.bitmap.centerPixel() shouldBe Color.GREEN
+    }
+
+    @Test
+    fun `fills an opaque background color instead of drawing the app background`() {
+        val result = renderer.render(app { glyphIcon() }, filled(backgroundColor = Color.MAGENTA))
+        result.bitmap.getPixel(0, 0) shouldBe Color.MAGENTA
+        result.bitmap.getPixel(10, 32) shouldBe Color.MAGENTA
+        result.bitmap.centerPixel() shouldBe Color.GREEN
+    }
+
+    @Test
+    fun `blends a half transparent background color`() {
+        val result = renderer.render(app { glyphIcon() }, filled(backgroundColor = 0x7F0000FF))
+        result.bitmap.getPixel(10, 32) shouldBe 0x7F0000FF
+    }
+
+    @Test
+    fun `fills the background color only inside the icon mask`() {
+        val result = renderer.render(app { glyphIcon() }, filled(backgroundColor = Color.MAGENTA, maskEnabled = true))
+        result.bitmap.getPixel(0, 0) shouldBe Color.TRANSPARENT
+        result.bitmap.getPixel(10, 32) shouldBe Color.MAGENTA
+        result.bitmap.centerPixel() shouldBe Color.GREEN
+    }
+
+    @Test
+    fun `draws the app background untouched without color`() {
+        val result = renderer.render(app { glyphIcon() }, plain())
+        result.bitmap.getPixel(0, 0) shouldBe Color.RED
+        result.bitmap.getPixel(10, 32) shouldBe Color.RED
+        result.bitmap.centerPixel() shouldBe Color.BLUE
+    }
+
     @Config(sdk = [32])
     @Test
     fun `tints the foreground layer below Android 13`() {
@@ -188,6 +228,24 @@ class DefaultIconRendererTest {
 
     private fun tinted() =
         IconStyle(64, maskEnabled = false, colorEnabled = true, foregroundColor = Color.GREEN, backgroundColor = Color.YELLOW)
+
+    private fun filled(
+        backgroundColor: Int,
+        maskEnabled: Boolean = false,
+    ) = IconStyle(64, maskEnabled, colorEnabled = true, foregroundColor = Color.GREEN, backgroundColor = backgroundColor)
+
+    private fun glyphIcon() = AdaptiveIconDrawable(UntintableRed(), InsetDrawable(ColorDrawable(Color.BLUE), 0.35f))
+
+    private class UntintableRed : ColorDrawable(Color.RED) {
+        override fun setTintList(tint: ColorStateList?) = Unit
+
+        override fun getConstantState() =
+            object : ConstantState() {
+                override fun newDrawable(): Drawable = UntintableRed()
+
+                override fun getChangingConfigurations() = 0
+            }
+    }
 
     private fun Bitmap.centerPixel(): Int = getPixel(width / 2, height / 2)
 }
