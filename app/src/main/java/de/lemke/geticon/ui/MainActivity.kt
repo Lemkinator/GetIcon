@@ -252,8 +252,7 @@ class MainActivity :
         }
     }
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onAppPickerItemClick(
+    private fun onAppPickerItemClick(
         view: View?,
         appInfo: AppInfo,
     ): Boolean {

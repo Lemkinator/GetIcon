@@ -23,9 +23,12 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.view.menu.MenuItemImpl
 import androidx.core.content.IntentCompat
+import androidx.core.view.children
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker.model.AppData.GridAppDataBuilder
@@ -135,6 +138,23 @@ class MainActivityTest {
         if (!AppWatcher.isInstalled) {
             AppWatcher.manualInstall(ApplicationProvider.getApplicationContext<HiltTestApplication>())
         }
+    }
+
+    private fun addMissingApp() {
+        lookup.installedAppsResult =
+            Result.success(lookup.installedAppsResult.getOrThrow() + GridAppDataBuilder(AppInfo(MISSING_PACKAGE, "")).build())
+    }
+
+    private fun clickApp(
+        activity: MainActivity,
+        packageName: String,
+    ): View {
+        val item =
+            activity.findViewById<ViewGroup>(R.id.appPicker).children.first {
+                (it.findViewById<ImageView>(androidx.picker.R.id.icon)?.tag as? AppInfo)?.packageName == packageName
+            }
+        item.performClick()
+        return item
     }
 
     private fun holdLookups(): CompletableDeferred<Unit> = CompletableDeferred<Unit>().also { lookup.gate = it }
@@ -560,12 +580,10 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_success_returnsTrue() {
+    fun appTap_installedApp_opensIconActivity() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                activity.onAppPickerItemClick(null, appInfo) shouldBe true
-            }
+            idleMainLooper()
+            scenario.onActivity { activity -> clickApp(activity, activity.packageName) }
             idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
@@ -574,65 +592,47 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_withNonNullView_setsTransitionView() {
+    fun appTap_installedApp_transitionsFromTappedItem() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                val view = activity.findViewById<View>(R.id.appPicker)
-                activity.onAppPickerItemClick(view, appInfo) shouldBe true
-            }
+            idleMainLooper()
+            lateinit var item: View
+            scenario.onActivity { activity -> item = clickApp(activity, activity.packageName) }
             idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
-                activity.findViewById<View>(R.id.appPicker).transitionName shouldBe "commonUtilsActivityTransitionName"
+                item.transitionName shouldBe "commonUtilsActivityTransitionName"
             }
         }
     }
 
     @Test
-    fun onAppPickerItemClick_detachedView_launchesWithoutTransition() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            lateinit var view: View
-            scenario.onActivity { activity ->
-                view = View(activity)
-                activity.onAppPickerItemClick(view, AppInfo(packageName = activity.packageName, activityName = ""))
-            }
-            idleMainLooper()
-            scenario.onActivity { activity ->
-                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
-            }
-            view.transitionName shouldBe null
-        }
-    }
-
-    @Test
-    fun onAppPickerItemClick_activityStoppedBeforeLookupEnds_launchesWithoutTransition() {
+    fun appTap_activityStoppedBeforeLookupEnds_launchesWithoutTransition() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
+            idleMainLooper()
             val activity = controller.get()
-            val view = activity.findViewById<View>(R.id.appPicker)
             val lookupGate = holdLookups()
-            activity.onAppPickerItemClick(view, AppInfo(packageName = activity.packageName, activityName = ""))
+            val item = clickApp(activity, activity.packageName)
             controller.pause().stop()
             lookupGate.complete(Unit)
             idleMainLooper()
             controller.restart().start().resume()
             idleMainLooper()
             shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
-            view.transitionName shouldBe null
+            item.transitionName shouldBe null
         } finally {
             controller.destroy()
         }
     }
 
     @Test
-    fun onAppPickerItemClick_doubleTap_startsIconActivityOnce() {
+    fun appTap_doubleTap_startsIconActivityOnce() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            idleMainLooper()
             val lookupGate = holdLookups()
             scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                activity.onAppPickerItemClick(null, appInfo)
-                activity.onAppPickerItemClick(null, appInfo)
+                clickApp(activity, activity.packageName)
+                clickApp(activity, activity.packageName)
             }
             lookupGate.complete(Unit)
             idleMainLooper()
@@ -645,17 +645,16 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_secondAppTappedDuringLookup_opensFirstAppWithItsTransition() {
+    fun appTap_secondAppTappedDuringLookup_opensFirstAppWithItsTransition() {
+        addMissingApp()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            lateinit var secondView: View
+            idleMainLooper()
+            lateinit var firstItem: View
+            lateinit var secondItem: View
             val lookupGate = holdLookups()
             scenario.onActivity { activity ->
-                secondView = activity.findViewById(R.id.noEntryView)
-                activity.onAppPickerItemClick(
-                    activity.findViewById(R.id.appPicker),
-                    AppInfo(packageName = activity.packageName, activityName = ""),
-                )
-                activity.onAppPickerItemClick(secondView, AppInfo(packageName = "com.nonexistent.pkg.test", activityName = ""))
+                firstItem = clickApp(activity, activity.packageName)
+                secondItem = clickApp(activity, MISSING_PACKAGE)
             }
             lookupGate.complete(Unit)
             idleMainLooper()
@@ -668,19 +667,20 @@ class MainActivityTest {
                         ApplicationInfo::class.java,
                     )
                 applicationInfo?.packageName shouldBe activity.packageName
-                activity.findViewById<View>(R.id.appPicker).transitionName shouldBe "commonUtilsActivityTransitionName"
             }
-            secondView.transitionName shouldBe null
+            firstItem.transitionName shouldBe "commonUtilsActivityTransitionName"
+            secondItem.transitionName shouldBe null
             ShadowToast.shownToastCount() shouldBe 0
         }
     }
 
     @Test
-    fun onAppPickerItemClick_latchDropsLaunch_opensIconActivityOnNextResume() {
+    fun appTap_latchDropsLaunch_opensIconActivityOnNextResume() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            idleMainLooper()
             val lookupGate = holdLookups()
             scenario.onActivity { activity ->
-                activity.onAppPickerItemClick(null, AppInfo(packageName = activity.packageName, activityName = ""))
+                clickApp(activity, activity.packageName)
                 activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
             }
             lookupGate.complete(Unit)
@@ -701,15 +701,11 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_rotationDuringLookup_opensIconActivityFromRecreatedActivity() {
+    fun appTap_rotationDuringLookup_opensIconActivityFromRecreatedActivity() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            idleMainLooper()
             val lookupGate = holdLookups()
-            scenario.onActivity { activity ->
-                activity.onAppPickerItemClick(
-                    activity.findViewById(R.id.appPicker),
-                    AppInfo(packageName = activity.packageName, activityName = ""),
-                )
-            }
+            scenario.onActivity { activity -> clickApp(activity, activity.packageName) }
             scenario.recreate()
             lookupGate.complete(Unit)
             idleMainLooper()
@@ -722,13 +718,14 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_doubleTapOnMissingPackage_showsOneToast() {
+    fun appTap_doubleTapOnMissingPackage_showsOneToast() {
+        addMissingApp()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            idleMainLooper()
             val lookupGate = holdLookups()
             scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
-                activity.onAppPickerItemClick(null, appInfo)
-                activity.onAppPickerItemClick(null, appInfo)
+                clickApp(activity, MISSING_PACKAGE)
+                clickApp(activity, MISSING_PACKAGE)
             }
             lookupGate.complete(Unit)
             idleMainLooper()
@@ -737,12 +734,11 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_packageNotFound_showsToast() {
+    fun appTap_packageNotFound_showsToast() {
+        addMissingApp()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
-                activity.onAppPickerItemClick(null, appInfo) shouldBe true
-            }
+            idleMainLooper()
+            scenario.onActivity { activity -> clickApp(activity, MISSING_PACKAGE) }
             idleMainLooper()
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_app_not_found)
@@ -829,5 +825,9 @@ class MainActivityTest {
             scenario.state shouldBe Lifecycle.State.RESUMED
             ShadowToast.shownToastCount() shouldBe 0
         }
+    }
+
+    private companion object {
+        const val MISSING_PACKAGE = "com.nonexistent.pkg.test"
     }
 }
