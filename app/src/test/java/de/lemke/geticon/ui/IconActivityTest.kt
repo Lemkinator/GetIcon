@@ -151,7 +151,9 @@ class IconActivityTest {
         activity: IconActivity,
         buttonId: Int,
     ) {
-        activity.findViewById<Button>(buttonId).performClick()
+        val button = activity.findViewById<Button>(buttonId)
+        button.isEnabled shouldBe true
+        button.performClick()
         confirmRecentColor(slot = 1)
     }
 
@@ -884,15 +886,16 @@ class IconActivityTest {
 
     @Test
     fun colorButtons_click_showColorPicker() {
+        userSettings.colorEnabled = true
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.findViewById<Button>(R.id.colorButtonBackground).performClick()
+                activity.findViewById<Button>(R.id.colorButtonBackground).also { it.isEnabled shouldBe true }.performClick()
                 val backgroundDialog = ShadowDialog.getLatestDialog()
                 backgroundDialog?.isShowing shouldBe true
                 backgroundDialog.dismiss()
                 idleMainLooper()
-                activity.findViewById<Button>(R.id.colorButtonForeground).performClick()
+                activity.findViewById<Button>(R.id.colorButtonForeground).also { it.isEnabled shouldBe true }.performClick()
                 val foregroundDialog = ShadowDialog.getLatestDialog()
                 foregroundDialog?.isShowing shouldBe true
                 foregroundDialog shouldNotBe backgroundDialog
@@ -902,6 +905,7 @@ class IconActivityTest {
 
     @Test
     fun colorPicker_confirmRecentColor_changesBackgroundColor() {
+        userSettings.colorEnabled = true
         userSettings.recentBackgroundColors = listOf(Color.GREEN, Color.RED, DEFAULT_BACKGROUND_COLOR)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
@@ -916,6 +920,7 @@ class IconActivityTest {
 
     @Test
     fun colorPicker_confirmRecentColor_changesForegroundColor() {
+        userSettings.colorEnabled = true
         userSettings.recentForegroundColors = listOf(Color.GREEN, Color.RED, Color.WHITE)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
@@ -930,10 +935,12 @@ class IconActivityTest {
 
     @Test
     fun colorButton_doubleTap_showsOneColorPicker() {
+        userSettings.colorEnabled = true
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
                 val button = activity.findViewById<Button>(R.id.colorButtonBackground)
+                button.isEnabled shouldBe true
                 button.performClick()
                 button.performClick()
                 ShadowDialog.getShownDialogs().size shouldBe 1
@@ -1027,6 +1034,7 @@ class IconActivityTest {
 
     @Test
     fun colorPicker_backgroundSlotPicked_changesOnlyThatColor() {
+        userSettings.colorEnabled = true
         userSettings.recentBackgroundColors = listOf(DEFAULT_BACKGROUND_COLOR, Color.RED)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
@@ -1043,6 +1051,7 @@ class IconActivityTest {
 
     @Test
     fun colorPicker_foregroundSlotPicked_changesOnlyThatColor() {
+        userSettings.colorEnabled = true
         userSettings.recentForegroundColors = listOf(Color.WHITE, Color.BLUE)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
