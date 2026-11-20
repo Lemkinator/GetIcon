@@ -156,6 +156,11 @@ class MainActivityTest {
         return item
     }
 
+    private fun drawerItem(
+        activity: MainActivity,
+        itemId: Int,
+    ) = activity.findViewById<DrawerNavigationView>(R.id.navigationView).findMenuItem(itemId) as MenuItemImpl
+
     private fun holdLookups(): CompletableDeferred<Unit> = CompletableDeferred<Unit>().also { lookup.gate = it }
 
     @After
@@ -400,8 +405,7 @@ class MainActivityTest {
     fun navItem_extractApk_launchesFilePicker() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.extract_icon_from_apk_dest).invoke() shouldBe true
                 shadowOf(activity).nextStartedActivityForResult?.intent?.type shouldBe
                     "application/vnd.android.package-archive"
             }
@@ -412,8 +416,9 @@ class MainActivityTest {
     fun navItem_extractApkTwice_launchesFilePickerOnce() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest))
-                activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest))
+                val extractItem = drawerItem(activity, R.id.extract_icon_from_apk_dest)
+                extractItem.invoke() shouldBe true
+                extractItem.invoke() shouldBe false
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivityForResult?.intent?.type shouldBe "application/vnd.android.package-archive"
                 shadowActivity.nextStartedActivityForResult shouldBe null
@@ -427,7 +432,7 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             lateinit var pickerIntent: Intent
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest))
+                drawerItem(activity, R.id.extract_icon_from_apk_dest).invoke()
                 pickerIntent = shadowOf(activity).nextStartedActivity
             }
             scenario.moveToState(Lifecycle.State.STARTED)
@@ -448,8 +453,7 @@ class MainActivityTest {
     fun drawerItem_doubleTap_navigatesOnce() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val navigationView = activity.findViewById<DrawerNavigationView>(R.id.navigationView)
-                val aboutItem = navigationView.findMenuItem(R.id.commonutils_about_dest) as MenuItemImpl
+                val aboutItem = drawerItem(activity, R.id.commonutils_about_dest)
                 aboutItem.invoke() shouldBe true
                 aboutItem.invoke() shouldBe false
                 val shadowActivity = shadowOf(activity)
@@ -463,8 +467,7 @@ class MainActivityTest {
     fun navItem_about_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_about_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.commonutils_about_dest).invoke() shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
             }
         }
@@ -474,8 +477,7 @@ class MainActivityTest {
     fun navItem_aboutMe_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_about_me_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.commonutils_about_me_dest).invoke() shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsAboutMeActivity::class.java.name
             }
         }
@@ -485,8 +487,7 @@ class MainActivityTest {
     fun navItem_settings_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_settings_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.commonutils_settings_dest).invoke() shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
             }
         }
@@ -501,7 +502,7 @@ class MainActivityTest {
         var started: IntentForResult? = null
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(RoboMenuItem(itemId)) shouldBe true
+                drawerItem(activity, itemId).invoke() shouldBe true
                 started = shadowOf(activity).nextStartedActivityForResult
             }
         }
@@ -555,8 +556,7 @@ class MainActivityTest {
     fun navItem_leaks_opensLeakCanary() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.leaks_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.leaks_dest).invoke() shouldBe true
                 shadowOf(activity)
                     .nextStartedActivity
                     ?.component
