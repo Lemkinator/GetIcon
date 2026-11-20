@@ -22,6 +22,7 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Bundle
+import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -567,10 +568,18 @@ class MainActivityTest {
     }
 
     @Test
-    fun navItem_unknown_returnsFalse() {
+    fun drawerItem_unknownEntry_isNotHandled() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(RoboMenuItem(-1)) shouldBe false
+                val unknownId = View.generateViewId()
+                val navigationView = activity.findViewById<DrawerNavigationView>(R.id.navigationView)
+                val drawerMenu =
+                    DrawerNavigationView::class.java
+                        .getDeclaredField("navDrawerMenu")
+                        .apply { isAccessible = true }
+                        .get(navigationView) as Menu
+                drawerMenu.add(Menu.NONE, unknownId, Menu.NONE, "unknown")
+                drawerItem(activity, unknownId).invoke() shouldBe false
                 shadowOf(activity).nextStartedActivity shouldBe null
             }
         }
