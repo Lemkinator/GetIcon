@@ -30,6 +30,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.PopupMenu
+import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker3.app.SeslColorPickerDialog
@@ -253,7 +254,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 256
                 val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
                 activity.onOptionsItemSelected(item) shouldBe true
                 val startedIntent = shadowOf(activity).nextStartedActivityForResult?.intent
@@ -268,7 +269,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 256
                 val item = RoboMenuItem(R.id.menu_item_icon_share)
                 activity.onOptionsItemSelected(item) shouldBe true
             }
@@ -574,7 +575,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 256
                 val item = RoboMenuItem(android.R.id.home)
                 activity.onOptionsItemSelected(item) shouldBe false
             }
@@ -646,7 +647,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 256
                 activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
             }
             idleMainLooper()
@@ -790,7 +791,7 @@ class IconActivityTest {
     fun sizeEdittext_editorAction_aboveMaxAtMaxSize_showsClampedSizeWithCursorAtEnd() {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
-            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(1024) }
+            scenario.onActivity { activity -> activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 1024 }
             idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("5000"), pressImeActionButton())
             idleMainLooper()
@@ -808,7 +809,7 @@ class IconActivityTest {
     fun sizeEdittext_editorAction_belowMinAtMinSize_showsClampedSize() {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
-            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(16) }
+            scenario.onActivity { activity -> activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 16 }
             idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("3"), pressImeActionButton())
             idleMainLooper()
@@ -856,8 +857,8 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(100)
-                activity.onSeekbarProgressChanged(100) // same size → early return (no-op)
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 100
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 100
             }
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]

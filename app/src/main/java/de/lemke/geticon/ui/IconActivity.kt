@@ -192,8 +192,7 @@ class IconActivity :
         viewModel.onSizeChanged(size)
     }
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onSeekbarProgressChanged(progress: Int) {
+    private fun onSeekbarProgressChanged(progress: Int) {
         viewModel.onSizeChanged(progress)
     }
 
