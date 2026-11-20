@@ -27,6 +27,8 @@ import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
+import androidx.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
@@ -216,7 +218,8 @@ class MainActivity :
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
     }
 
-    private fun onNavigationItemSelected(item: MenuItem): Boolean {
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.extract_icon_from_apk_dest -> pickApkActivityResultLauncher.launch("application/vnd.android.package-archive")
             R.id.commonutils_about_dest -> popOverOrTransformToActivity<CommonUtilsAboutActivity>(R.id.commonutils_about_dest)
