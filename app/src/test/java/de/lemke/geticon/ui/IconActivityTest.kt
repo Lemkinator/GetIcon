@@ -66,6 +66,8 @@ import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.geticon.R
 import de.lemke.geticon.data.FakeIconRenderer
 import de.lemke.geticon.data.IconRenderer
+import de.lemke.geticon.data.UserSettings
+import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.di.AppCoroutinesModule
 import de.lemke.geticon.di.IconRendererModule
 import de.lemke.geticon.domain.model.IconKind
@@ -120,6 +122,9 @@ class IconActivityTest {
     lateinit var settings: SettingsRepository
 
     @Inject
+    lateinit var userSettings: UserSettings
+
+    @Inject
     lateinit var inAppReview: FakeInAppReview
 
     @Before
@@ -140,6 +145,14 @@ class IconActivityTest {
             .performClick()
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         idleMainLooper()
+    }
+
+    private fun pickRecentColor(
+        activity: IconActivity,
+        buttonId: Int,
+    ) {
+        activity.findViewById<Button>(buttonId).performClick()
+        confirmRecentColor(slot = 1)
     }
 
     private fun appInfoIntent(): Intent {
@@ -873,10 +886,12 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.showColorPicker(isBackground = true)
+                activity.findViewById<Button>(R.id.colorButtonBackground).performClick()
                 val backgroundDialog = ShadowDialog.getLatestDialog()
                 backgroundDialog?.isShowing shouldBe true
-                activity.showColorPicker(isBackground = false)
+                backgroundDialog.dismiss()
+                idleMainLooper()
+                activity.findViewById<Button>(R.id.colorButtonForeground).performClick()
                 val foregroundDialog = ShadowDialog.getLatestDialog()
                 foregroundDialog?.isShowing shouldBe true
                 foregroundDialog shouldNotBe backgroundDialog
@@ -886,13 +901,11 @@ class IconActivityTest {
 
     @Test
     fun colorPicker_confirmRecentColor_changesBackgroundColor() {
+        userSettings.recentBackgroundColors = listOf(Color.GREEN, Color.RED, DEFAULT_BACKGROUND_COLOR)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.RED, isBackground = true)
-                activity.onColorPicked(Color.GREEN, isBackground = true)
-                activity.showColorPicker(isBackground = true)
-                confirmRecentColor(slot = 1)
+                pickRecentColor(activity, R.id.colorButtonBackground)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.backgroundColor shouldBe Color.RED
                 state.recentBackgroundColors shouldBe listOf(Color.RED, Color.GREEN, 0xFF0381FE.toInt())
@@ -902,13 +915,11 @@ class IconActivityTest {
 
     @Test
     fun colorPicker_confirmRecentColor_changesForegroundColor() {
+        userSettings.recentForegroundColors = listOf(Color.GREEN, Color.RED, Color.WHITE)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.RED, isBackground = false)
-                activity.onColorPicked(Color.GREEN, isBackground = false)
-                activity.showColorPicker(isBackground = false)
-                confirmRecentColor(slot = 1)
+                pickRecentColor(activity, R.id.colorButtonForeground)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.foregroundColor shouldBe Color.RED
                 state.recentForegroundColors shouldBe listOf(Color.RED, Color.GREEN, Color.WHITE)
@@ -1014,27 +1025,33 @@ class IconActivityTest {
     }
 
     @Test
-    fun onColorPicked_isBackground_true() {
+    fun colorPicker_backgroundSlotPicked_changesOnlyThatColor() {
+        userSettings.recentBackgroundColors = listOf(DEFAULT_BACKGROUND_COLOR, Color.RED)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.RED, true)
+                pickRecentColor(activity, R.id.colorButtonBackground)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.backgroundColor shouldBe Color.RED
+                state.style.foregroundColor shouldBe Color.WHITE
                 state.recentBackgroundColors shouldBe listOf(Color.RED, 0xFF0381FE.toInt())
+                state.recentForegroundColors shouldBe listOf(Color.WHITE)
             }
         }
     }
 
     @Test
-    fun onColorPicked_isBackground_false() {
+    fun colorPicker_foregroundSlotPicked_changesOnlyThatColor() {
+        userSettings.recentForegroundColors = listOf(Color.WHITE, Color.BLUE)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.BLUE, false)
+                pickRecentColor(activity, R.id.colorButtonForeground)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.foregroundColor shouldBe Color.BLUE
+                state.style.backgroundColor shouldBe 0xFF0381FE.toInt()
                 state.recentForegroundColors.first() shouldBe Color.BLUE
+                state.recentBackgroundColors shouldBe listOf(0xFF0381FE.toInt())
             }
         }
     }
@@ -1056,13 +1073,14 @@ class IconActivityTest {
 
     @Test
     fun backgroundColorButton_brightColorPicked_showsColorWithBlackText() {
+        userSettings.recentBackgroundColors = listOf(DEFAULT_BACKGROUND_COLOR, Color.WHITE)
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.WHITE, isBackground = true)
+                pickRecentColor(activity, R.id.colorButtonBackground)
             }
             idleMainLooper()
             scenario.onActivity { activity ->
@@ -1076,13 +1094,14 @@ class IconActivityTest {
 
     @Test
     fun foregroundColorButton_darkColorPicked_showsColorWithWhiteText() {
+        userSettings.recentForegroundColors = listOf(Color.WHITE, Color.BLACK)
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.BLACK, isBackground = false)
+                pickRecentColor(activity, R.id.colorButtonForeground)
             }
             idleMainLooper()
             scenario.onActivity { activity ->
@@ -1096,14 +1115,15 @@ class IconActivityTest {
 
     @Test
     fun foregroundColorButton_translucentDarkColorPicked_usesBlackTextOverLightWindow() {
-        val translucentBlack = Color.argb(0x40, 0, 0, 0)
+        val translucentBlack = Color.argb(0x42, 0, 0, 0)
+        userSettings.recentForegroundColors = listOf(Color.WHITE, translucentBlack)
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(translucentBlack, isBackground = false)
+                pickRecentColor(activity, R.id.colorButtonForeground)
             }
             idleMainLooper()
             scenario.onActivity { activity ->
@@ -1118,14 +1138,15 @@ class IconActivityTest {
     @Test
     @Config(qualifiers = "night")
     fun foregroundColorButton_translucentDarkColorPicked_usesWhiteTextOverDarkWindow() {
-        val translucentBlack = Color.argb(0x40, 0, 0, 0)
+        val translucentBlack = Color.argb(0x42, 0, 0, 0)
+        userSettings.recentForegroundColors = listOf(Color.WHITE, translucentBlack)
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(translucentBlack, isBackground = false)
+                pickRecentColor(activity, R.id.colorButtonForeground)
             }
             idleMainLooper()
             scenario.onActivity { activity ->
