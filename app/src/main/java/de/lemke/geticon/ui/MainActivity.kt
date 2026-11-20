@@ -212,17 +212,11 @@ class MainActivity :
         )
 
     private fun initDrawer() {
-        setLeaksMenuItemVisibility(binding.navigationView.findMenuItem(R.id.leaks_dest))
         binding.navigationView.onSingleLaunchItemSelected(::onNavigationItemSelected)
         binding.drawerLayout.setTitle(getString(R.string.app_name))
         binding.drawerLayout.setupHeaderAndNavRail(getString(R.string.about_app))
         binding.drawerLayout.isImmersiveScroll = true
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
-    }
-
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun setLeaksMenuItemVisibility(item: MenuItem?) {
-        item?.isVisible = BuildConfig.DEBUG
     }
 
     @VisibleForTesting(otherwise = PRIVATE)

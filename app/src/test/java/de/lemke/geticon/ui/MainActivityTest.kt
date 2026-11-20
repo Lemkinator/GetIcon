@@ -59,7 +59,6 @@ import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.COMMONUTILS_KEY_IS_SEARCH_MODE
 import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.commonutils.ui.widget.NoEntryView
-import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.data.ApkImporter
 import de.lemke.geticon.data.FakeApkImporter
@@ -759,24 +758,12 @@ class MainActivityTest {
     }
 
     @Test
-    fun setLeaksMenuItemVisibility_nonNullItem_setsVisibility() {
+    fun drawer_debugBuild_showsLeaksItem() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val item = activity.findViewById<DrawerNavigationView>(R.id.navigationView).findMenuItem(R.id.leaks_dest)!!
-                item.isVisible = false
-                activity.setLeaksMenuItemVisibility(item)
-                item.isVisible shouldBe BuildConfig.DEBUG
+                val navigationView = activity.findViewById<DrawerNavigationView>(R.id.navigationView)
+                navigationView.findMenuItem(R.id.leaks_dest)!!.isVisible shouldBe true
             }
-        }
-    }
-
-    @Test
-    fun setLeaksMenuItemVisibility_nullItem_doesNothing() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.setLeaksMenuItemVisibility(null)
-            }
-            scenario.state shouldBe Lifecycle.State.RESUMED
         }
     }
 
