@@ -22,8 +22,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.CompoundButton
 import androidx.activity.viewModels
-import androidx.annotation.VisibleForTesting
-import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle.State.RESUMED
 import com.google.android.material.appbar.model.ButtonModel
@@ -192,13 +190,11 @@ class IconActivity :
         viewModel.onSizeChanged(size)
     }
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onSeekbarProgressChanged(progress: Int) {
+    private fun onSeekbarProgressChanged(progress: Int) {
         viewModel.onSizeChanged(progress)
     }
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onColorPicked(
+    private fun onColorPicked(
         color: Int,
         isBackground: Boolean,
     ) {
@@ -209,8 +205,7 @@ class IconActivity :
         }
     }
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun showColorPicker(isBackground: Boolean) {
+    private fun showColorPicker(isBackground: Boolean) {
         val state = viewModel.state.value
         val currentColor = if (isBackground) state.style.backgroundColor else state.style.foregroundColor
         val recentColors = if (isBackground) state.recentBackgroundColors else state.recentForegroundColors

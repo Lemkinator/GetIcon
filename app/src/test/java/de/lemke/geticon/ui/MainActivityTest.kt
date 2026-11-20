@@ -23,9 +23,12 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.view.menu.MenuItemImpl
 import androidx.core.content.IntentCompat
+import androidx.core.view.children
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker.model.AppData.GridAppDataBuilder
@@ -33,6 +36,9 @@ import androidx.picker.model.AppInfo
 import androidx.reflect.DeviceInfo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions.replaceText
+import androidx.test.espresso.matcher.ViewMatchers.withId
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
@@ -53,7 +59,6 @@ import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.COMMONUTILS_KEY_IS_SEARCH_MODE
 import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.commonutils.ui.widget.NoEntryView
-import de.lemke.geticon.BuildConfig
 import de.lemke.geticon.R
 import de.lemke.geticon.data.ApkImporter
 import de.lemke.geticon.data.FakeApkImporter
@@ -134,6 +139,28 @@ class MainActivityTest {
         }
     }
 
+    private fun addMissingApp() {
+        lookup.installedAppsResult =
+            Result.success(lookup.installedAppsResult.getOrThrow() + GridAppDataBuilder(AppInfo(MISSING_PACKAGE, "")).build())
+    }
+
+    private fun clickApp(
+        activity: MainActivity,
+        packageName: String,
+    ): View {
+        val item =
+            activity.findViewById<ViewGroup>(R.id.appPicker).children.first {
+                (it.findViewById<ImageView>(androidx.picker.R.id.icon)?.tag as? AppInfo)?.packageName == packageName
+            }
+        item.performClick()
+        return item
+    }
+
+    private fun drawerItem(
+        activity: MainActivity,
+        itemId: Int,
+    ) = activity.findViewById<DrawerNavigationView>(R.id.navigationView).findMenuItem(itemId) as MenuItemImpl
+
     private fun holdLookups(): CompletableDeferred<Unit> = CompletableDeferred<Unit>().also { lookup.gate = it }
 
     @After
@@ -184,17 +211,15 @@ class MainActivityTest {
     }
 
     @Test
-    fun onSaveInstanceState_notReady_returnsEarly() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search))
-                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
-                activity.isUIReady = false
-            }
-            scenario.recreate()
-            scenario.onActivity { activity ->
-                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe false
-            }
+    fun onSaveInstanceState_onboardingRequired_savesNoSearchMode() {
+        settings.lastVersionCode = -1
+        val controller = Robolectric.buildActivity(MainActivity::class.java).create()
+        try {
+            val outState = Bundle()
+            controller.saveInstanceState(outState)
+            outState.containsKey(COMMONUTILS_KEY_IS_SEARCH_MODE) shouldBe false
+        } finally {
+            controller.destroy()
         }
     }
 
@@ -251,11 +276,16 @@ class MainActivityTest {
     }
 
     @Test
-    fun applyFilter_direct_callsSetSearchFilter() {
+    fun search_queryWithoutMatch_showsNoEntryViewAndStoresQuery() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.applyFilter("test")
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search)) shouldBe true
+            }
+            onView(withId(appcompatR.id.search_src_text)).perform(replaceText("test"))
+            idleMainLooper()
+            scenario.onActivity { activity ->
                 activity.findViewById<NoEntryView>(R.id.noEntryView).visibility shouldBe View.VISIBLE
+                settings.search shouldBe "test"
             }
         }
     }
@@ -375,8 +405,7 @@ class MainActivityTest {
     fun navItem_extractApk_launchesFilePicker() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.extract_icon_from_apk_dest).invoke() shouldBe true
                 shadowOf(activity).nextStartedActivityForResult?.intent?.type shouldBe
                     "application/vnd.android.package-archive"
             }
@@ -387,8 +416,9 @@ class MainActivityTest {
     fun navItem_extractApkTwice_launchesFilePickerOnce() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest))
-                activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest))
+                val extractItem = drawerItem(activity, R.id.extract_icon_from_apk_dest)
+                extractItem.invoke() shouldBe true
+                extractItem.invoke() shouldBe false
                 val shadowActivity = shadowOf(activity)
                 shadowActivity.nextStartedActivityForResult?.intent?.type shouldBe "application/vnd.android.package-archive"
                 shadowActivity.nextStartedActivityForResult shouldBe null
@@ -402,7 +432,7 @@ class MainActivityTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             lateinit var pickerIntent: Intent
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(RoboMenuItem(R.id.extract_icon_from_apk_dest))
+                drawerItem(activity, R.id.extract_icon_from_apk_dest).invoke()
                 pickerIntent = shadowOf(activity).nextStartedActivity
             }
             scenario.moveToState(Lifecycle.State.STARTED)
@@ -423,8 +453,7 @@ class MainActivityTest {
     fun drawerItem_doubleTap_navigatesOnce() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val navigationView = activity.findViewById<DrawerNavigationView>(R.id.navigationView)
-                val aboutItem = navigationView.findMenuItem(R.id.commonutils_about_dest) as MenuItemImpl
+                val aboutItem = drawerItem(activity, R.id.commonutils_about_dest)
                 aboutItem.invoke() shouldBe true
                 aboutItem.invoke() shouldBe false
                 val shadowActivity = shadowOf(activity)
@@ -438,8 +467,7 @@ class MainActivityTest {
     fun navItem_about_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_about_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.commonutils_about_dest).invoke() shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsAboutActivity::class.java.name
             }
         }
@@ -449,8 +477,7 @@ class MainActivityTest {
     fun navItem_aboutMe_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_about_me_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.commonutils_about_me_dest).invoke() shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsAboutMeActivity::class.java.name
             }
         }
@@ -460,8 +487,7 @@ class MainActivityTest {
     fun navItem_settings_navigates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.commonutils_settings_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.commonutils_settings_dest).invoke() shouldBe true
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe CommonUtilsSettingsActivity::class.java.name
             }
         }
@@ -476,7 +502,7 @@ class MainActivityTest {
         var started: IntentForResult? = null
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.onNavigationItemSelected(RoboMenuItem(itemId)) shouldBe true
+                drawerItem(activity, itemId).invoke() shouldBe true
                 started = shadowOf(activity).nextStartedActivityForResult
             }
         }
@@ -530,8 +556,7 @@ class MainActivityTest {
     fun navItem_leaks_opensLeakCanary() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val result = activity.onNavigationItemSelected(RoboMenuItem(R.id.leaks_dest))
-                result shouldBe true
+                drawerItem(activity, R.id.leaks_dest).invoke() shouldBe true
                 shadowOf(activity)
                     .nextStartedActivity
                     ?.component
@@ -552,12 +577,10 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_success_returnsTrue() {
+    fun appTap_installedApp_opensIconActivity() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                activity.onAppPickerItemClick(null, appInfo) shouldBe true
-            }
+            idleMainLooper()
+            scenario.onActivity { activity -> clickApp(activity, activity.packageName) }
             idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
@@ -566,65 +589,47 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_withNonNullView_setsTransitionView() {
+    fun appTap_installedApp_transitionsFromTappedItem() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                val view = activity.findViewById<View>(R.id.appPicker)
-                activity.onAppPickerItemClick(view, appInfo) shouldBe true
-            }
+            idleMainLooper()
+            lateinit var item: View
+            scenario.onActivity { activity -> item = clickApp(activity, activity.packageName) }
             idleMainLooper()
             scenario.onActivity { activity ->
                 shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
-                activity.findViewById<View>(R.id.appPicker).transitionName shouldBe "commonUtilsActivityTransitionName"
+                item.transitionName shouldBe "commonUtilsActivityTransitionName"
             }
         }
     }
 
     @Test
-    fun onAppPickerItemClick_detachedView_launchesWithoutTransition() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            lateinit var view: View
-            scenario.onActivity { activity ->
-                view = View(activity)
-                activity.onAppPickerItemClick(view, AppInfo(packageName = activity.packageName, activityName = ""))
-            }
-            idleMainLooper()
-            scenario.onActivity { activity ->
-                shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
-            }
-            view.transitionName shouldBe null
-        }
-    }
-
-    @Test
-    fun onAppPickerItemClick_activityStoppedBeforeLookupEnds_launchesWithoutTransition() {
+    fun appTap_activityStoppedBeforeLookupEnds_launchesWithoutTransition() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
+            idleMainLooper()
             val activity = controller.get()
-            val view = activity.findViewById<View>(R.id.appPicker)
             val lookupGate = holdLookups()
-            activity.onAppPickerItemClick(view, AppInfo(packageName = activity.packageName, activityName = ""))
+            val item = clickApp(activity, activity.packageName)
             controller.pause().stop()
             lookupGate.complete(Unit)
             idleMainLooper()
             controller.restart().start().resume()
             idleMainLooper()
             shadowOf(activity).nextStartedActivity?.component?.className shouldBe IconActivity::class.java.name
-            view.transitionName shouldBe null
+            item.transitionName shouldBe null
         } finally {
             controller.destroy()
         }
     }
 
     @Test
-    fun onAppPickerItemClick_doubleTap_startsIconActivityOnce() {
+    fun appTap_doubleTap_startsIconActivityOnce() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            idleMainLooper()
             val lookupGate = holdLookups()
             scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = activity.packageName, activityName = "")
-                activity.onAppPickerItemClick(null, appInfo)
-                activity.onAppPickerItemClick(null, appInfo)
+                clickApp(activity, activity.packageName)
+                clickApp(activity, activity.packageName)
             }
             lookupGate.complete(Unit)
             idleMainLooper()
@@ -637,17 +642,16 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_secondAppTappedDuringLookup_opensFirstAppWithItsTransition() {
+    fun appTap_secondAppTappedDuringLookup_opensFirstAppWithItsTransition() {
+        addMissingApp()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            lateinit var secondView: View
+            idleMainLooper()
+            lateinit var firstItem: View
+            lateinit var secondItem: View
             val lookupGate = holdLookups()
             scenario.onActivity { activity ->
-                secondView = activity.findViewById(R.id.noEntryView)
-                activity.onAppPickerItemClick(
-                    activity.findViewById(R.id.appPicker),
-                    AppInfo(packageName = activity.packageName, activityName = ""),
-                )
-                activity.onAppPickerItemClick(secondView, AppInfo(packageName = "com.nonexistent.pkg.test", activityName = ""))
+                firstItem = clickApp(activity, activity.packageName)
+                secondItem = clickApp(activity, MISSING_PACKAGE)
             }
             lookupGate.complete(Unit)
             idleMainLooper()
@@ -660,19 +664,20 @@ class MainActivityTest {
                         ApplicationInfo::class.java,
                     )
                 applicationInfo?.packageName shouldBe activity.packageName
-                activity.findViewById<View>(R.id.appPicker).transitionName shouldBe "commonUtilsActivityTransitionName"
             }
-            secondView.transitionName shouldBe null
+            firstItem.transitionName shouldBe "commonUtilsActivityTransitionName"
+            secondItem.transitionName shouldBe null
             ShadowToast.shownToastCount() shouldBe 0
         }
     }
 
     @Test
-    fun onAppPickerItemClick_latchDropsLaunch_opensIconActivityOnNextResume() {
+    fun appTap_latchDropsLaunch_opensIconActivityOnNextResume() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            idleMainLooper()
             val lookupGate = holdLookups()
             scenario.onActivity { activity ->
-                activity.onAppPickerItemClick(null, AppInfo(packageName = activity.packageName, activityName = ""))
+                clickApp(activity, activity.packageName)
                 activity.singleLaunchActivity(Intent(activity, CommonUtilsAboutActivity::class.java)) shouldBe true
             }
             lookupGate.complete(Unit)
@@ -693,15 +698,11 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_rotationDuringLookup_opensIconActivityFromRecreatedActivity() {
+    fun appTap_rotationDuringLookup_opensIconActivityFromRecreatedActivity() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            idleMainLooper()
             val lookupGate = holdLookups()
-            scenario.onActivity { activity ->
-                activity.onAppPickerItemClick(
-                    activity.findViewById(R.id.appPicker),
-                    AppInfo(packageName = activity.packageName, activityName = ""),
-                )
-            }
+            scenario.onActivity { activity -> clickApp(activity, activity.packageName) }
             scenario.recreate()
             lookupGate.complete(Unit)
             idleMainLooper()
@@ -714,13 +715,14 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_doubleTapOnMissingPackage_showsOneToast() {
+    fun appTap_doubleTapOnMissingPackage_showsOneToast() {
+        addMissingApp()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            idleMainLooper()
             val lookupGate = holdLookups()
             scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
-                activity.onAppPickerItemClick(null, appInfo)
-                activity.onAppPickerItemClick(null, appInfo)
+                clickApp(activity, MISSING_PACKAGE)
+                clickApp(activity, MISSING_PACKAGE)
             }
             lookupGate.complete(Unit)
             idleMainLooper()
@@ -729,12 +731,11 @@ class MainActivityTest {
     }
 
     @Test
-    fun onAppPickerItemClick_packageNotFound_showsToast() {
+    fun appTap_packageNotFound_showsToast() {
+        addMissingApp()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                val appInfo = AppInfo(packageName = "com.nonexistent.pkg.test", activityName = "")
-                activity.onAppPickerItemClick(null, appInfo) shouldBe true
-            }
+            idleMainLooper()
+            scenario.onActivity { activity -> clickApp(activity, MISSING_PACKAGE) }
             idleMainLooper()
             scenario.onActivity { activity ->
                 ShadowToast.getTextOfLatestToast() shouldBe activity.getString(commonutilsR.string.commonutils_error_app_not_found)
@@ -755,24 +756,12 @@ class MainActivityTest {
     }
 
     @Test
-    fun setLeaksMenuItemVisibility_nonNullItem_setsVisibility() {
+    fun drawer_debugBuild_showsLeaksItem() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                val item = activity.findViewById<DrawerNavigationView>(R.id.navigationView).findMenuItem(R.id.leaks_dest)!!
-                item.isVisible = false
-                activity.setLeaksMenuItemVisibility(item)
-                item.isVisible shouldBe BuildConfig.DEBUG
+                val navigationView = activity.findViewById<DrawerNavigationView>(R.id.navigationView)
+                navigationView.findMenuItem(R.id.leaks_dest)!!.isVisible shouldBe true
             }
-        }
-    }
-
-    @Test
-    fun setLeaksMenuItemVisibility_nullItem_doesNothing() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.setLeaksMenuItemVisibility(null)
-            }
-            scenario.state shouldBe Lifecycle.State.RESUMED
         }
     }
 
@@ -821,5 +810,9 @@ class MainActivityTest {
             scenario.state shouldBe Lifecycle.State.RESUMED
             ShadowToast.shownToastCount() shouldBe 0
         }
+    }
+
+    private companion object {
+        const val MISSING_PACKAGE = "com.nonexistent.pkg.test"
     }
 }

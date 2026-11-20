@@ -30,6 +30,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.PopupMenu
+import androidx.appcompat.widget.SeslSeekBar
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.picker3.app.SeslColorPickerDialog
@@ -65,6 +66,8 @@ import de.lemke.commonutils.ui.utils.singleLaunchActivity
 import de.lemke.geticon.R
 import de.lemke.geticon.data.FakeIconRenderer
 import de.lemke.geticon.data.IconRenderer
+import de.lemke.geticon.data.UserSettings
+import de.lemke.geticon.data.UserSettings.Companion.DEFAULT_BACKGROUND_COLOR
 import de.lemke.geticon.di.AppCoroutinesModule
 import de.lemke.geticon.di.IconRendererModule
 import de.lemke.geticon.domain.model.IconKind
@@ -119,6 +122,9 @@ class IconActivityTest {
     lateinit var settings: SettingsRepository
 
     @Inject
+    lateinit var userSettings: UserSettings
+
+    @Inject
     lateinit var inAppReview: FakeInAppReview
 
     @Before
@@ -139,6 +145,16 @@ class IconActivityTest {
             .performClick()
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         idleMainLooper()
+    }
+
+    private fun pickRecentColor(
+        activity: IconActivity,
+        buttonId: Int,
+    ) {
+        val button = activity.findViewById<Button>(buttonId)
+        button.isEnabled shouldBe true
+        button.performClick()
+        confirmRecentColor(slot = 1)
     }
 
     private fun appInfoIntent(): Intent {
@@ -253,7 +269,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 256
                 val item = RoboMenuItem(R.id.menu_item_icon_save_as_image)
                 activity.onOptionsItemSelected(item) shouldBe true
                 val startedIntent = shadowOf(activity).nextStartedActivityForResult?.intent
@@ -268,7 +284,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 256
                 val item = RoboMenuItem(R.id.menu_item_icon_share)
                 activity.onOptionsItemSelected(item) shouldBe true
             }
@@ -574,7 +590,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 256
                 val item = RoboMenuItem(android.R.id.home)
                 activity.onOptionsItemSelected(item) shouldBe false
             }
@@ -646,7 +662,7 @@ class IconActivityTest {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(256)
+                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 256
                 activity.findViewById<ImageView>(R.id.icon).performLongClick() shouldBe true
             }
             idleMainLooper()
@@ -790,7 +806,7 @@ class IconActivityTest {
     fun sizeEdittext_editorAction_aboveMaxAtMaxSize_showsClampedSizeWithCursorAtEnd() {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
-            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(1024) }
+            scenario.onActivity { activity -> activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 1024 }
             idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("5000"), pressImeActionButton())
             idleMainLooper()
@@ -808,7 +824,7 @@ class IconActivityTest {
     fun sizeEdittext_editorAction_belowMinAtMinSize_showsClampedSize() {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
-            scenario.onActivity { activity -> activity.onSeekbarProgressChanged(16) }
+            scenario.onActivity { activity -> activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 16 }
             idleMainLooper()
             onView(withId(R.id.size_edittext)).perform(replaceText("3"), pressImeActionButton())
             idleMainLooper()
@@ -852,30 +868,34 @@ class IconActivityTest {
     }
 
     @Test
-    fun seekbar_progressChanged_updatesSizeViaViewModel() {
+    fun seekbar_movedAwayAndBack_rendersEachSizeChange() {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
-            scenario.onActivity { activity ->
-                activity.onSeekbarProgressChanged(100)
-                activity.onSeekbarProgressChanged(100) // same size → early return (no-op)
+            for (progress in listOf(100, 200, 100)) {
+                scenario.onActivity { activity -> activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = progress }
+                idleMainLooper()
             }
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .state.value.style.size shouldBe 100
             }
-            renderer.renders.count { it.style.size == 100 } shouldBe 1
+            renderer.renders.count { it.style.size == 100 } shouldBe 2
+            renderer.renders.count { it.style.size == 200 } shouldBe 1
         }
     }
 
     @Test
     fun colorButtons_click_showColorPicker() {
+        userSettings.colorEnabled = true
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.showColorPicker(isBackground = true)
+                activity.findViewById<Button>(R.id.colorButtonBackground).also { it.isEnabled shouldBe true }.performClick()
                 val backgroundDialog = ShadowDialog.getLatestDialog()
                 backgroundDialog?.isShowing shouldBe true
-                activity.showColorPicker(isBackground = false)
+                backgroundDialog.dismiss()
+                idleMainLooper()
+                activity.findViewById<Button>(R.id.colorButtonForeground).also { it.isEnabled shouldBe true }.performClick()
                 val foregroundDialog = ShadowDialog.getLatestDialog()
                 foregroundDialog?.isShowing shouldBe true
                 foregroundDialog shouldNotBe backgroundDialog
@@ -885,13 +905,12 @@ class IconActivityTest {
 
     @Test
     fun colorPicker_confirmRecentColor_changesBackgroundColor() {
+        userSettings.colorEnabled = true
+        userSettings.recentBackgroundColors = listOf(Color.GREEN, Color.RED, DEFAULT_BACKGROUND_COLOR)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.RED, isBackground = true)
-                activity.onColorPicked(Color.GREEN, isBackground = true)
-                activity.showColorPicker(isBackground = true)
-                confirmRecentColor(slot = 1)
+                pickRecentColor(activity, R.id.colorButtonBackground)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.backgroundColor shouldBe Color.RED
                 state.recentBackgroundColors shouldBe listOf(Color.RED, Color.GREEN, 0xFF0381FE.toInt())
@@ -901,13 +920,12 @@ class IconActivityTest {
 
     @Test
     fun colorPicker_confirmRecentColor_changesForegroundColor() {
+        userSettings.colorEnabled = true
+        userSettings.recentForegroundColors = listOf(Color.GREEN, Color.RED, Color.WHITE)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.RED, isBackground = false)
-                activity.onColorPicked(Color.GREEN, isBackground = false)
-                activity.showColorPicker(isBackground = false)
-                confirmRecentColor(slot = 1)
+                pickRecentColor(activity, R.id.colorButtonForeground)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.foregroundColor shouldBe Color.RED
                 state.recentForegroundColors shouldBe listOf(Color.RED, Color.GREEN, Color.WHITE)
@@ -917,10 +935,12 @@ class IconActivityTest {
 
     @Test
     fun colorButton_doubleTap_showsOneColorPicker() {
+        userSettings.colorEnabled = true
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
                 val button = activity.findViewById<Button>(R.id.colorButtonBackground)
+                button.isEnabled shouldBe true
                 button.performClick()
                 button.performClick()
                 ShadowDialog.getShownDialogs().size shouldBe 1
@@ -1013,27 +1033,35 @@ class IconActivityTest {
     }
 
     @Test
-    fun onColorPicked_isBackground_true() {
+    fun colorPicker_backgroundSlotPicked_changesOnlyThatColor() {
+        userSettings.colorEnabled = true
+        userSettings.recentBackgroundColors = listOf(DEFAULT_BACKGROUND_COLOR, Color.RED)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.RED, true)
+                pickRecentColor(activity, R.id.colorButtonBackground)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.backgroundColor shouldBe Color.RED
+                state.style.foregroundColor shouldBe Color.WHITE
                 state.recentBackgroundColors shouldBe listOf(Color.RED, 0xFF0381FE.toInt())
+                state.recentForegroundColors shouldBe listOf(Color.WHITE)
             }
         }
     }
 
     @Test
-    fun onColorPicked_isBackground_false() {
+    fun colorPicker_foregroundSlotPicked_changesOnlyThatColor() {
+        userSettings.colorEnabled = true
+        userSettings.recentForegroundColors = listOf(Color.WHITE, Color.BLUE)
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.BLUE, false)
+                pickRecentColor(activity, R.id.colorButtonForeground)
                 val state = ViewModelProvider(activity)[IconViewModel::class.java].state.value
                 state.style.foregroundColor shouldBe Color.BLUE
+                state.style.backgroundColor shouldBe 0xFF0381FE.toInt()
                 state.recentForegroundColors.first() shouldBe Color.BLUE
+                state.recentBackgroundColors shouldBe listOf(0xFF0381FE.toInt())
             }
         }
     }
@@ -1055,13 +1083,14 @@ class IconActivityTest {
 
     @Test
     fun backgroundColorButton_brightColorPicked_showsColorWithBlackText() {
+        userSettings.recentBackgroundColors = listOf(DEFAULT_BACKGROUND_COLOR, Color.WHITE)
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.WHITE, isBackground = true)
+                pickRecentColor(activity, R.id.colorButtonBackground)
             }
             idleMainLooper()
             scenario.onActivity { activity ->
@@ -1075,13 +1104,14 @@ class IconActivityTest {
 
     @Test
     fun foregroundColorButton_darkColorPicked_showsColorWithWhiteText() {
+        userSettings.recentForegroundColors = listOf(Color.WHITE, Color.BLACK)
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(Color.BLACK, isBackground = false)
+                pickRecentColor(activity, R.id.colorButtonForeground)
             }
             idleMainLooper()
             scenario.onActivity { activity ->
@@ -1095,14 +1125,15 @@ class IconActivityTest {
 
     @Test
     fun foregroundColorButton_translucentDarkColorPicked_usesBlackTextOverLightWindow() {
-        val translucentBlack = Color.argb(0x40, 0, 0, 0)
+        val translucentBlack = Color.argb(0x42, 0, 0, 0)
+        userSettings.recentForegroundColors = listOf(Color.WHITE, translucentBlack)
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(translucentBlack, isBackground = false)
+                pickRecentColor(activity, R.id.colorButtonForeground)
             }
             idleMainLooper()
             scenario.onActivity { activity ->
@@ -1117,14 +1148,15 @@ class IconActivityTest {
     @Test
     @Config(qualifiers = "night")
     fun foregroundColorButton_translucentDarkColorPicked_usesWhiteTextOverDarkWindow() {
-        val translucentBlack = Color.argb(0x40, 0, 0, 0)
+        val translucentBlack = Color.argb(0x42, 0, 0, 0)
+        userSettings.recentForegroundColors = listOf(Color.WHITE, translucentBlack)
         launchWithAppInfo().use { scenario ->
             scenario.onActivity { activity ->
                 activity.findViewById<CheckBox>(R.id.color_checkbox).performClick()
             }
             idleMainLooper()
             scenario.onActivity { activity ->
-                activity.onColorPicked(translucentBlack, isBackground = false)
+                pickRecentColor(activity, R.id.colorButtonForeground)
             }
             idleMainLooper()
             scenario.onActivity { activity ->

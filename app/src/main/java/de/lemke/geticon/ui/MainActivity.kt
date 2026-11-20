@@ -85,8 +85,7 @@ class MainActivity :
     private val pickApkActivityResultLauncher = registerForSingleLaunchResult(GetContent()) { viewModel.onApkPicked(it) }
     private var transitionView: View? = null
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal var isUIReady = false
+    private var isUIReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -191,8 +190,7 @@ class MainActivity :
         transitionView: View? = null,
     ): Boolean = transformToActivity(transitionView, Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, applicationInfo))
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun applyFilter(query: String = "") {
+    private fun applyFilter(query: String = "") {
         binding.appPicker.setSearchFilter(query) { binding.noEntryView.updateVisibility(it <= 0, binding.appPicker) }
     }
 
@@ -213,17 +211,11 @@ class MainActivity :
         )
 
     private fun initDrawer() {
-        setLeaksMenuItemVisibility(binding.navigationView.findMenuItem(R.id.leaks_dest))
         binding.navigationView.onSingleLaunchItemSelected(::onNavigationItemSelected)
         binding.drawerLayout.setTitle(getString(R.string.app_name))
         binding.drawerLayout.setupHeaderAndNavRail(getString(R.string.about_app))
         binding.drawerLayout.isImmersiveScroll = true
         binding.noEntryView.translateYWithAppBar(binding.drawerLayout.appBarLayout, this)
-    }
-
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun setLeaksMenuItemVisibility(item: MenuItem?) {
-        item?.isVisible = BuildConfig.DEBUG
     }
 
     @VisibleForTesting(otherwise = PRIVATE)
@@ -253,8 +245,7 @@ class MainActivity :
         }
     }
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onAppPickerItemClick(
+    private fun onAppPickerItemClick(
         view: View?,
         appInfo: AppInfo,
     ): Boolean {
