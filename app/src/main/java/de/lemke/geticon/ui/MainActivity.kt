@@ -191,8 +191,7 @@ class MainActivity :
         transitionView: View? = null,
     ): Boolean = transformToActivity(transitionView, Intent(this, IconActivity::class.java).putExtra(KEY_APPLICATION_INFO, applicationInfo))
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal fun applyFilter(query: String = "") {
+    private fun applyFilter(query: String = "") {
         binding.appPicker.setSearchFilter(query) { binding.noEntryView.updateVisibility(it <= 0, binding.appPicker) }
     }
 

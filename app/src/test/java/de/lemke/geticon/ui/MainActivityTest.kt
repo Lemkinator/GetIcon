@@ -33,6 +33,9 @@ import androidx.picker.model.AppInfo
 import androidx.reflect.DeviceInfo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions.replaceText
+import androidx.test.espresso.matcher.ViewMatchers.withId
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
@@ -251,11 +254,16 @@ class MainActivityTest {
     }
 
     @Test
-    fun applyFilter_direct_callsSetSearchFilter() {
+    fun search_queryWithoutMatch_showsNoEntryViewAndStoresQuery() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.applyFilter("test")
+                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search)) shouldBe true
+            }
+            onView(withId(appcompatR.id.search_src_text)).perform(replaceText("test"))
+            idleMainLooper()
+            scenario.onActivity { activity ->
                 activity.findViewById<NoEntryView>(R.id.noEntryView).visibility shouldBe View.VISIBLE
+                settings.search shouldBe "test"
             }
         }
     }
