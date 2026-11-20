@@ -306,7 +306,6 @@ kover {
                 classes(
                     "*.databinding.*",
                     "*.BuildConfig",
-                    "*.di.*",
                     "*Hilt_*",
                     "*_HiltModules*",
                     "*_Factory",
