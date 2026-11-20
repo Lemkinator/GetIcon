@@ -866,18 +866,19 @@ class IconActivityTest {
     }
 
     @Test
-    fun seekbar_progressChanged_updatesSizeViaViewModel() {
+    fun seekbar_movedAwayAndBack_rendersEachSizeChange() {
         launchWithAppInfo().use { scenario ->
             idleMainLooper()
-            scenario.onActivity { activity ->
-                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 100
-                activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = 100
+            for (progress in listOf(100, 200, 100)) {
+                scenario.onActivity { activity -> activity.findViewById<SeslSeekBar>(R.id.size_seekbar).progress = progress }
+                idleMainLooper()
             }
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[IconViewModel::class.java]
                     .state.value.style.size shouldBe 100
             }
-            renderer.renders.count { it.style.size == 100 } shouldBe 1
+            renderer.renders.count { it.style.size == 100 } shouldBe 2
+            renderer.renders.count { it.style.size == 200 } shouldBe 1
         }
     }
 
