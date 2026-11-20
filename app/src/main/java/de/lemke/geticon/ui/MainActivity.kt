@@ -85,8 +85,7 @@ class MainActivity :
     private val pickApkActivityResultLauncher = registerForSingleLaunchResult(GetContent()) { viewModel.onApkPicked(it) }
     private var transitionView: View? = null
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal var isUIReady = false
+    private var isUIReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()

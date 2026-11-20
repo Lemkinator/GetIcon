@@ -206,17 +206,15 @@ class MainActivityTest {
     }
 
     @Test
-    fun onSaveInstanceState_notReady_returnsEarly() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.onOptionsItemSelected(RoboMenuItem(R.id.menu_item_search))
-                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe true
-                activity.isUIReady = false
-            }
-            scenario.recreate()
-            scenario.onActivity { activity ->
-                activity.findViewById<NavDrawerLayout>(R.id.drawerLayout).isSearchMode shouldBe false
-            }
+    fun onSaveInstanceState_onboardingRequired_savesNoSearchMode() {
+        settings.lastVersionCode = -1
+        val controller = Robolectric.buildActivity(MainActivity::class.java).create()
+        try {
+            val outState = Bundle()
+            controller.saveInstanceState(outState)
+            outState.containsKey(COMMONUTILS_KEY_IS_SEARCH_MODE) shouldBe false
+        } finally {
+            controller.destroy()
         }
     }
 
