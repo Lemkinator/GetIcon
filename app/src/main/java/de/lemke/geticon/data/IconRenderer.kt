@@ -102,6 +102,7 @@ class DefaultIconRenderer @Inject constructor(
         if (style.colorEnabled) {
             canvas.drawColor(style.backgroundColor)
             canvas.saveLayer(null, null)
+            foreground.setTintList(null)
             foreground.draw(canvas)
             canvas.drawColor(style.foregroundColor, PorterDuff.Mode.SRC_IN)
             canvas.restore()

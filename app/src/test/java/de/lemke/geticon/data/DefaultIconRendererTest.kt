@@ -148,6 +148,17 @@ class DefaultIconRendererTest {
     }
 
     @Test
+    fun `colors a glyph layer that carries a transparent tint with the foreground color`() {
+        val pretinted = ColorDrawable(Color.BLUE).apply { setTint(Color.TRANSPARENT) }
+        val result =
+            renderer.render(
+                app { AdaptiveIconDrawable(ColorDrawable(Color.RED), pretinted) },
+                filled(backgroundColor = Color.MAGENTA),
+            )
+        result.bitmap.centerPixel() shouldBe Color.GREEN
+    }
+
+    @Test
     fun `blends a half transparent foreground color over the background color`() {
         val style = filled(backgroundColor = Color.MAGENTA, foregroundColor = 0x8000FF00.toInt())
         val result = renderer.render(app { untintableGlyphIcon() }, style)
