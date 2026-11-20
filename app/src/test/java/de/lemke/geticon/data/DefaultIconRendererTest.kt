@@ -141,6 +141,54 @@ class DefaultIconRendererTest {
     }
 
     @Test
+    fun `colors a glyph layer that ignores tints with the foreground color`() {
+        val result = renderer.render(app { untintableGlyphIcon() }, filled(backgroundColor = Color.MAGENTA))
+        result.bitmap.centerPixel() shouldBe Color.GREEN
+        result.bitmap.getPixel(10, 32) shouldBe Color.MAGENTA
+    }
+
+    @Test
+    fun `colors a glyph layer that carries a transparent tint with the foreground color`() {
+        val pretinted = ColorDrawable(Color.BLUE).apply { setTint(Color.TRANSPARENT) }
+        val result =
+            renderer.render(
+                app { AdaptiveIconDrawable(ColorDrawable(Color.RED), pretinted) },
+                filled(backgroundColor = Color.MAGENTA),
+            )
+        result.bitmap.centerPixel() shouldBe Color.GREEN
+    }
+
+    @Test
+    fun `blends a half transparent foreground color over the background color`() {
+        val style = filled(backgroundColor = Color.MAGENTA, foregroundColor = 0x8000FF00.toInt())
+        val result = renderer.render(app { untintableGlyphIcon() }, style)
+        result.bitmap.centerPixel() shouldBe 0xFF7F807F.toInt()
+        result.bitmap.getPixel(10, 32) shouldBe Color.MAGENTA
+    }
+
+    @Test
+    fun `draws no glyph for a fully transparent foreground color`() {
+        val style = filled(backgroundColor = Color.MAGENTA, foregroundColor = 0x0000FF00)
+        val result = renderer.render(app { untintableGlyphIcon() }, style)
+        result.bitmap.centerPixel() shouldBe Color.MAGENTA
+        result.bitmap.getPixel(10, 32) shouldBe Color.MAGENTA
+    }
+
+    @Test
+    fun `keeps the area outside the glyph transparent without background color`() {
+        val result = renderer.render(app { untintableGlyphIcon() }, filled(backgroundColor = 0))
+        result.bitmap.centerPixel() shouldBe Color.GREEN
+        result.bitmap.getPixel(10, 32) shouldBe Color.TRANSPARENT
+    }
+
+    @Test
+    fun `colors a glyph layer that ignores tints only inside the icon mask`() {
+        val result = renderer.render(app { untintableGlyphIcon() }, filled(backgroundColor = Color.MAGENTA, maskEnabled = true))
+        result.bitmap.centerPixel() shouldBe Color.GREEN
+        result.bitmap.getPixel(0, 0) shouldBe Color.TRANSPARENT
+    }
+
+    @Test
     fun `draws the app background untouched without color`() {
         val result = renderer.render(app { glyphIcon() }, plain())
         result.bitmap.getPixel(0, 0) shouldBe Color.RED
@@ -232,16 +280,19 @@ class DefaultIconRendererTest {
     private fun filled(
         backgroundColor: Int,
         maskEnabled: Boolean = false,
-    ) = IconStyle(64, maskEnabled, colorEnabled = true, foregroundColor = Color.GREEN, backgroundColor = backgroundColor)
+        foregroundColor: Int = Color.GREEN,
+    ) = IconStyle(64, maskEnabled, colorEnabled = true, foregroundColor = foregroundColor, backgroundColor = backgroundColor)
 
-    private fun glyphIcon() = AdaptiveIconDrawable(UntintableRed(), InsetDrawable(ColorDrawable(Color.BLUE), 0.35f))
+    private fun glyphIcon() = AdaptiveIconDrawable(UntintableColor(Color.RED), InsetDrawable(ColorDrawable(Color.BLUE), 0.35f))
 
-    private class UntintableRed : ColorDrawable(Color.RED) {
+    private fun untintableGlyphIcon() = AdaptiveIconDrawable(ColorDrawable(Color.RED), InsetDrawable(UntintableColor(Color.BLUE), 0.35f))
+
+    private class UntintableColor(private val color: Int) : ColorDrawable(color) {
         override fun setTintList(tint: ColorStateList?) = Unit
 
         override fun getConstantState() =
             object : ConstantState() {
-                override fun newDrawable(): Drawable = UntintableRed()
+                override fun newDrawable(): Drawable = UntintableColor(color)
 
                 override fun getChangingConfigurations() = 0
             }

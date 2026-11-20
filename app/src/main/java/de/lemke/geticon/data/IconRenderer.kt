@@ -22,6 +22,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.PorterDuff
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build.VERSION.SDK_INT
@@ -95,14 +96,20 @@ class DefaultIconRenderer @Inject constructor(
         val bitmap = createBitmap(style.size, style.size)
         setBounds(0, 0, style.size, style.size)
         var foreground = foreground.mutate()
-        if (style.colorEnabled) {
-            if (SDK_INT >= TIRAMISU) monochrome?.let { foreground = it.mutate() }
-            foreground.setTint(style.foregroundColor)
-        }
+        if (style.colorEnabled && SDK_INT >= TIRAMISU) monochrome?.let { foreground = it.mutate() }
         val canvas = Canvas(bitmap)
         if (style.maskEnabled) canvas.clipPath(iconMask)
-        if (style.colorEnabled) canvas.drawColor(style.backgroundColor) else background.draw(canvas)
-        foreground.draw(canvas)
+        if (style.colorEnabled) {
+            canvas.drawColor(style.backgroundColor)
+            canvas.saveLayer(null, null)
+            foreground.setTintList(null)
+            foreground.draw(canvas)
+            canvas.drawColor(style.foregroundColor, PorterDuff.Mode.SRC_IN)
+            canvas.restore()
+        } else {
+            background.draw(canvas)
+            foreground.draw(canvas)
+        }
         return bitmap
     }
 }
