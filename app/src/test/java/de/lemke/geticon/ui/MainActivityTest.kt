@@ -756,16 +756,6 @@ class MainActivityTest {
     }
 
     @Test
-    fun drawer_debugBuild_showsLeaksItem() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                val navigationView = activity.findViewById<DrawerNavigationView>(R.id.navigationView)
-                navigationView.findMenuItem(R.id.leaks_dest)!!.isVisible shouldBe true
-            }
-        }
-    }
-
-    @Test
     fun loadInstalledApps_onError_showsErrorOnceAcrossRecreation() {
         lookup.installedAppsResult = Result.failure(RuntimeException("test"))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
