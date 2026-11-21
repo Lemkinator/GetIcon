@@ -68,7 +68,7 @@ class LeaksDrawerItemTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val navigationView = activity.findViewById<DrawerNavigationView>(R.id.navigationView)
-                navigationView.findMenuItem(R.id.leaks_dest)!!.isVisible shouldBe true
+                navigationView.findMenuItem(R.id.leaks_dest)?.isVisible shouldBe true
             }
         }
     }
