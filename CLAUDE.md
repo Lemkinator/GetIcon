@@ -14,7 +14,7 @@ All commands run from the repo root on Windows (PowerShell or Git Bash):
 ```
 
 Unit tests live under `app/src/test/java/de/lemke/geticon/` (ViewModels, use cases, settings,
-Roborazzi screenshot tests, Konsist architecture tests). Instrumented tests
+Roborazzi screenshot tests, Konsist architecture tests). Debug-only assertions live in `app/src/testDebug`. Instrumented tests
 (`MainActivityTest`, `IconActivityTest`) live under `app/src/androidTest/java/de/lemke/geticon/`
 — run via Gradle Managed Device (no physical device needed):
 
@@ -172,7 +172,9 @@ git config core.hooksPath .githooks
 ```
 
 The hook runs `spotlessCheck detekt` (plain detekt, no type resolution, for a fast commit) and exits 1 with a
-`./gradlew spotlessApply` reminder on failure. It also fails fast with a
+`./gradlew spotlessApply` reminder on failure. With `PRECOMMIT_GRADLE` set to the build-queue wrapper, exit 75 (wait limit ran out) or 76 (queue error)
+means the check did not run and the hook exits with that same code: 75 prints a retry message, 76 prints that the queue
+reported an error and that the `[build-queue]` line above names the cause. It also fails fast with a
 targeted message if `core.autocrlf=true` is detected.
 
 **After any change** — run the full local CI suite before declaring work done:
