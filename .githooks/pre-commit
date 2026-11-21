@@ -20,10 +20,17 @@ status=0
 $gradle spotlessCheck detekt --quiet || status=$?
 case $status in
     0) ;;
-    75|76)
+    75)
         echo ""
         echo "ERROR: The build queue did not start the static analysis (exit $status). Nothing was checked."
         echo "Retry the commit."
+        echo ""
+        exit "$status"
+        ;;
+    76)
+        echo ""
+        echo "ERROR: The build queue reported an error (exit $status). Nothing was checked."
+        echo "The [build-queue] line above names the cause."
         echo ""
         exit "$status"
         ;;
