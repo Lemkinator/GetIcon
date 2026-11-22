@@ -139,6 +139,7 @@ Four tools run as part of `./gradlew build`:
   line counts the analyzed files. `check` depends on, and CI runs, `detektMain` and `detektTest`, not the plain `detekt` task, which has no
   type resolution, so rules that need it stay silent. The pre-commit hook runs plain `detekt` only, so type-aware rules run in
   `check`/CI. The hook does not replace `./gradlew detektMain detektTest`; run it before you push.
+  `app/lint.xml` lists the approved Overdraw files.
 - **Kover** — 100% INSTRUCTION + BRANCH coverage required.
   Verify: `./gradlew koverVerifyDebug`. CI strips zero-instruction `<line>` entries from the
   Kover XML (`.github/scripts/strip-zero-instruction-lines.py`) before the Codecov upload.
