@@ -127,7 +127,7 @@ Be aware when touching resource IDs.
 
 ## Static Analysis
 
-Four tools run as part of `./gradlew build`:
+These tools run as part of `./gradlew build`:
 
 - **Spotless** — enforces formatting via ktlint (sole ktlint driver;
   Detekt has no ktlint wrapper). Fix violations with
