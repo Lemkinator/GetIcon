@@ -124,7 +124,6 @@ android {
         checkDependencies = true
         checkReleaseBuilds = true
         abortOnError = true
-        baseline = file("lint-baseline.xml")
     }
     testOptions {
         unitTests {
