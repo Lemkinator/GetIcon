@@ -83,7 +83,8 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
 - **`ui/`** — two activities + two ViewModels: `MainActivity` / `MainViewModel`
   (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
 - **`App.kt`** — `@HiltAndroidApp` entry point; injects `settings: SettingsRepository`
-  and calls `settings.applyDarkMode()` in `onCreate()`
+  and in `onCreate()` calls `settings.applyDarkMode()` and sets up the common-utils About and Settings screens
+  (`settingsPreferences` lists the preference XMLs), so a process restored on either screen still has them
 - **`di/`** — Hilt modules. `SettingsModule.kt` holds `SettingsProvideModule`
   (`@Provides @Singleton` builds the single `UserSettings` instance) and
   `SettingsBindModule` (`@Binds` redirects `SettingsRepository`-typed requests

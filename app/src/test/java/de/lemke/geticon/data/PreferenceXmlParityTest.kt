@@ -17,14 +17,14 @@
 package de.lemke.geticon.data
 
 import de.lemke.commonutils.data.assertPreferenceXmlBoundToSettings
+import de.lemke.geticon.settingsPreferences
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import de.lemke.commonutils.R as commonutilsR
 
 /**
- * Pins every preference XML GetIcon composes in `MainActivity.setupCommonUtilsSettingsActivity` against [UserSettings]
+ * Pins every preference XML GetIcon composes in `settingsPreferences` against [UserSettings]
  * — the collision check must run against this subclass, not only against common-utils' own `SettingsRepository`.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -33,10 +33,7 @@ class PreferenceXmlParityTest {
     @Test
     fun `composed preference XMLs are bound to UserSettings`() {
         assertPreferenceXmlBoundToSettings(
-            commonutilsR.xml.preferences_design,
-            commonutilsR.xml.preferences_general_language_and_image_save_location,
-            commonutilsR.xml.preferences_dev_options_delete_app_data,
-            commonutilsR.xml.preferences_more_info,
+            *settingsPreferences.toIntArray(),
             factory = ::UserSettings,
         )
     }
