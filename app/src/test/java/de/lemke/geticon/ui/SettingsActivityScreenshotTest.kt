@@ -27,6 +27,7 @@ import de.lemke.commonutils.bypassOobe
 import de.lemke.commonutils.data.SettingsRepository
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.setupCommonUtilsSettingsActivity
+import de.lemke.geticon.settingsPreferences
 import javax.inject.Inject
 import org.junit.Before
 import org.junit.Rule
@@ -35,7 +36,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import de.lemke.commonutils.R as commonutilsR
 
 // sdk = [36]: Robolectric's SDK 37 shadows lack InputManager.getInstance().
 @HiltAndroidTest
@@ -53,12 +53,7 @@ class SettingsActivityScreenshotTest {
     fun setup() {
         hiltRule.inject()
         settings.bypassOobe()
-        setupCommonUtilsSettingsActivity(
-            commonutilsR.xml.preferences_design,
-            commonutilsR.xml.preferences_general_language_and_image_save_location,
-            commonutilsR.xml.preferences_dev_options_delete_app_data,
-            commonutilsR.xml.preferences_more_info,
-        )
+        setupCommonUtilsSettingsActivity(settingsPreferences)
     }
 
     @Test

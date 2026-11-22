@@ -83,7 +83,8 @@ Layered architecture (data/domain/ui) with ViewModels per activity:
 - **`ui/`** — two activities + two ViewModels: `MainActivity` / `MainViewModel`
   (app picker + APK import), `IconActivity` / `IconViewModel` (icon preview + export)
 - **`App.kt`** — `@HiltAndroidApp` entry point; injects `settings: SettingsRepository`
-  and calls `settings.applyDarkMode()` in `onCreate()`
+  and in `onCreate()` calls `settings.applyDarkMode()` and sets up the common-utils About and Settings screens
+  (`settingsPreferences` lists the preference XMLs), so a process restored on either screen still has them
 - **`di/`** — Hilt modules. `SettingsModule.kt` holds `SettingsProvideModule`
   (`@Provides @Singleton` builds the single `UserSettings` instance) and
   `SettingsBindModule` (`@Binds` redirects `SettingsRepository`-typed requests
@@ -126,7 +127,7 @@ Be aware when touching resource IDs.
 
 ## Static Analysis
 
-Four tools run as part of `./gradlew build`:
+These tools run as part of `./gradlew build`:
 
 - **Spotless** — enforces formatting via ktlint (sole ktlint driver;
   Detekt has no ktlint wrapper). Fix violations with
@@ -139,7 +140,7 @@ Four tools run as part of `./gradlew build`:
   line counts the analyzed files. `check` depends on, and CI runs, `detektMain` and `detektTest`, not the plain `detekt` task, which has no
   type resolution, so rules that need it stay silent. The pre-commit hook runs plain `detekt` only, so type-aware rules run in
   `check`/CI. The hook does not replace `./gradlew detektMain detektTest`; run it before you push.
-  `app/lint.xml` lists the approved Overdraw files.
+- **Lint** — `app/lint.xml` lists the approved Overdraw files.
 - **Kover** — 100% INSTRUCTION + BRANCH coverage required.
   Verify: `./gradlew koverVerifyDebug`. CI strips zero-instruction `<line>` entries from the
   Kover XML (`.github/scripts/strip-zero-instruction-lines.py`) before the Codecov upload.

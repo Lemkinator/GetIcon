@@ -50,8 +50,6 @@ import de.lemke.commonutils.ui.utils.prepareActivityTransformationFrom
 import de.lemke.commonutils.ui.utils.registerForSingleLaunchResult
 import de.lemke.commonutils.ui.utils.restoreSearchAndActionMode
 import de.lemke.commonutils.ui.utils.saveSearchAndActionMode
-import de.lemke.commonutils.ui.utils.setupCommonUtilsAboutActivity
-import de.lemke.commonutils.ui.utils.setupCommonUtilsSettingsActivity
 import de.lemke.commonutils.ui.utils.setupHeaderAndNavRail
 import de.lemke.commonutils.ui.utils.showSoftInput
 import de.lemke.commonutils.ui.utils.singleLaunch
@@ -100,13 +98,6 @@ class MainActivity :
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         configureCommonUtilsSplashScreen(splashScreen, binding.root) { !isUIReady }
-        setupCommonUtilsAboutActivity(appVersion = BuildConfig.VERSION_NAME)
-        setupCommonUtilsSettingsActivity(
-            commonutilsR.xml.preferences_design,
-            commonutilsR.xml.preferences_general_language_and_image_save_location,
-            commonutilsR.xml.preferences_dev_options_delete_app_data,
-            commonutilsR.xml.preferences_more_info,
-        )
         initDrawer()
         initAppPicker()
         collectState(viewModel.installedApps, minActiveState = RESUMED) { if (it is InstalledApps.Failed) onInstalledAppsFailed(it) }
