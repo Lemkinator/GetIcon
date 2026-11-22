@@ -16,10 +16,15 @@
 
 package de.lemke.geticon
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import de.lemke.commonutils.ui.activity.CommonUtilsAboutActivity
 import de.lemke.commonutils.ui.activity.CommonUtilsSettingsActivity
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldNotBeEmpty
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -29,16 +34,24 @@ import de.lemke.commonutils.R as commonutilsR
 @RunWith(RobolectricTestRunner::class)
 @Config(application = App::class, sdk = [36])
 class AppTest {
+    private lateinit var priorPreferences: List<Int>
+    private lateinit var priorAppVersion: String
+
+    @Before
+    fun saveStaticState() {
+        priorPreferences = CommonUtilsSettingsActivity.preferences
+        priorAppVersion = CommonUtilsAboutActivity.appVersion
+    }
+
     @After
-    fun resetStaticState() {
-        CommonUtilsSettingsActivity.preferences = emptyList()
-        CommonUtilsAboutActivity.appVersion = ""
+    fun restoreStaticState() {
+        CommonUtilsSettingsActivity.preferences = priorPreferences
+        CommonUtilsAboutActivity.appVersion = priorAppVersion
     }
 
     @Test
     fun `the application sets the settings preferences without MainActivity`() {
-        CommonUtilsSettingsActivity.preferences shouldBe settingsPreferences
-        settingsPreferences shouldBe
+        CommonUtilsSettingsActivity.preferences shouldBe
             listOf(
                 commonutilsR.xml.preferences_design,
                 commonutilsR.xml.preferences_general_language_and_image_save_location,
@@ -49,6 +62,10 @@ class AppTest {
 
     @Test
     fun `the application sets the about version without MainActivity`() {
-        CommonUtilsAboutActivity.appVersion shouldBe BuildConfig.VERSION_NAME
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val manifestVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName
+
+        manifestVersion.shouldNotBeNull().shouldNotBeEmpty()
+        CommonUtilsAboutActivity.appVersion shouldBe manifestVersion
     }
 }
