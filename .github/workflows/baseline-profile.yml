@@ -38,7 +38,7 @@ jobs:
       # itself is what exercises the real generator end to end - this is the same command the
       # release workflow runs, making this job an early-warning rehearsal for it.
       - name: Build release APK with a freshly generated baseline profile
-        timeout-minutes: 50
+        timeout-minutes: 30
         run: |
           chmod +x ./gradlew
           ./gradlew :app:assembleRelease \
